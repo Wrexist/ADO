@@ -15,7 +15,7 @@ Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DES
 | Phase | Name | Scope | Est. | Status |
 |:-----:|------|-------|:----:|:------:|
 | **0** | Foundation | Monorepo, tokens, per-view mock data, ops manifest, plan council | 0.5–1d | 🟢 |
-| **1** | Functional shell | Shared kit + both views, structurally complete on mock — **not yet pixel-judged** | 2–3d | 🔴 |
+| **1** | Functional shell | Shared kit + both views, structurally complete on mock — **not yet pixel-judged** | 2–3d | 🟡 |
 | **2** | Data core | Server, SQLite, event bus, scanner, GitHub sync, SSE — real data | 3d | 🔴 |
 | **2.5** | Daily-driver gate | Enforced usefulness check: opened ≥5 of trailing 7 days **before** Phase 3 | — | 🔴 |
 | **3** | Agents & builds | Headless runner (semaphore + timeout), registry, live progress, **run logger** | 3–4d | 🔴 |

@@ -24,11 +24,14 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 ## Open (not gate-blocking)
 - [ ] Create `.env` from `.env.example` (GitHub PAT: repo + actions:read · ACC token: `openssl rand -hex 24`) — needed before Phase 2 data core, not for Phase 1
 
-## Next (Phase 1 — Functional shell) — do not start until p0 is green
-- [ ] Prompt 1.0 — shared component kit first (+ custom SVG Sparkline/RadialRing/MiniArea, self-hosted Inter, `/kit` demo route rendering **every state incl. failure/idle/empty/degraded**)
-- [ ] Prompts 1.1–1.4 — View A (`/command`) + View B (`/ops`) structurally complete on **per-view** mock; reserved-width masked slots for live values; **not yet pixel-judged**
-- [ ] Prompt 1.5 — quality floor (⌘K, focus, reduced-motion, 0 console errors, no layout shift) → `/gate p1-functional-shell`
-- [ ] (the 1:1 pixel sign-off now lives at **p3.5-pixel-polish**, after real data — value-first, D1)
+## In progress (Phase 1 — Functional shell) 🟡
+- [x] **Prompt 1.0 — shared component kit** — `apps/web/src/kit`: 17 components (Card, IconTile, StatusDot, Chip, GradientProgress, custom SVG Sparkline/RadialRing/MiniArea, AvatarStack, SectionHeader, StatCard, FeedRow, AgentTile, EmptyState, Icon set) + `/kit` demo route with **every state incl. failure/idle/empty/degraded** (opaque agent, tokens-unavailable, collecting-data lines). Inter self-hosted via @fontsource
+- [x] **Prompt 1.1 — View A chrome** — top bar (⌘K focuses search, bell badge, presence avatar) + full sidebar (all groups/items/badges from mock counts) + 3-column shell; main/rail regions are honest placeholders
+- [ ] Prompt 1.2 — View A main column (header row, 4 stat cards, repo tabs + 3×2 grid, view-all bar, Running Agents strip)
+- [ ] Prompt 1.3 — View A right rail (AI Command Center, Recent Activity, System Status, help card)
+- [ ] Prompt 1.4 — View B (`/ops`) full build on per-view mock
+- [ ] Prompt 1.5 — quality floor sweep (0 console errors ✓ already enforced by screenshot script; focus/reduced-motion in; no-layout-shift check) → `/gate p1-functional-shell`
+- [ ] (the 1:1 pixel sign-off lives at **p3.5-pixel-polish**, after real data — value-first, D1)
 
 ---
 
