@@ -73,3 +73,11 @@ Layout: sidebar 200px · main = 12-col grid, 3 content columns ≈ 5/4/3.
 - **Charts**: custom SVG (Sparkline, RadialRing, MiniArea) in the kit — no charting library
 - **Font**: @fontsource/inter, self-hosted (must render offline)
 - **Regression protection**: at Phase-1 sign-off, capture Playwright screenshots of both views as baselines; Phase 6 wires a visual diff into verify so later phases can't silently break the 1:1 match
+
+## V3 amendments (Prompt 0.2 council — see docs/COUNCIL.md)
+
+- **Reference numbers are illustrative and per-view.** view-a (12/8/24) and view-b (23/12/15) disagree, and view-b's header contradicts its own stat. The 1:1 match is judged on **layout, spacing, color, and component presence — never numeric equality** (council B1). Phase-1 mock is per-view.
+- **1:1 is judged at P3.5, on real data + a frozen `--demo` seed** — not at P1 on mock (value-first, council D1). Visual baselines are captured against the deterministic `--demo` seed with known-dynamic regions masked, so the diff can actually stay green (council B2).
+- **No layout shift, enforced concretely** (council B3, S2): live/elapsed values (build durations, "45s"→"1m 05s") render in **reserved fixed-width masked slots** (min-width `00m 00s`, left-padded); status-chip widths are capped. Degraded states ("tokens unavailable", "running (opaque)") render as **fixed-footprint tokens** — `≈—` with the reason in a tooltip, or a muted indeterminate bar — never reflowing prose.
+- **Every state is designed, not just the happy path** (council S1): the `/kit` demo route must render failure / idle / empty / degraded variants (failed-build bar, idle StatusDot, no-CI card, versionless "Live", empty FeedRow) and get signed off — the references only show the happy path, and inventing states later is forbidden.
+- **Charts need a real numeric basis** (council S3, D3): View B is built full 1:1, but the RadialRing gets an **explicit denominator** (active/total), and the AI-Agents and System-Health sparklines get real snapshot series (see DATA_MAP V3). Below the ≥2-sample floor they show the flat "collecting data" line — the intended look, never an invented curve.

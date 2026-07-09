@@ -30,8 +30,8 @@ It recreates two reference designs 1:1 ([`design/reference/`](./design/reference
 | G3 | **Replaces manual repo/CI checking** | If it isn't opened daily it's procrastination with a UI | Daily-Driver Milestone after Phase 2: the dashboard is where portfolio state is checked, not GitHub tabs |
 | G4 | **Dispatch and watch real work** | Mission control that can't act is a read-only report | A real `TASK.md` item is dispatched from the dashboard and watched to completion with live progress — gate `p3-agents` |
 | G5 | **Command in natural language** | The fastest interface is describing intent | 5 intents end-to-end: status query, dispatch, create task, run gate, summarize activity — gate `p4-command` |
-| G6 | **Learns from its own logs, provably** | "Self-learning" must be measured, not claimed | ≥1 useful proposal generated from real run logs and accepted; success-rate ↑ and tokens/task ↓ charted from a deterministic script — gate `p5-self-learning` |
-| G7 | **Survives the real world** | Empty DB, no network, 50+ repos, a sleeping laptop | Honest states everywhere; visual-diff baselines hold; catch-up scheduler + autostart + nightly backup — gate `p6-hardening` |
+| G6 | **Learns from its own logs, provably** *(post-v1)* | "Self-learning" must be measured, not claimed — but only once there's enough data to be real | The **run logger ships in Phase 3** (the durable asset); the analyzer is parked until ≥100 real runs, then must produce ≥1 accepted proposal + move two charts — parked gate `p5-self-learning` (see council D2) |
+| G7 | **Survives the real world** | Empty DB, no network, 50+ repos, a sleeping laptop | Honest states everywhere; visual-diff baselines hold; WAL-safe backup + autostart — gate `p6-hardening` |
 
 ## What "done" looks like (v1)
 
@@ -41,7 +41,7 @@ Both views pixel-matched to the references but showing **your** portfolio live: 
 
 ## Success criteria
 
-**v1 is successful when** all seven phase gates in [`.claude/ops.yml`](./.claude/ops.yml) are green **and** the Daily-Driver Milestone holds (the dashboard has replaced manual checking for 7+ consecutive days).
+**v1 is successful when** the eight v1 gates in [`.claude/ops.yml`](./.claude/ops.yml) are green — `p0-foundation`, `p1-functional-shell`, `p2-data-core`, **`p2.5-daily-driver`**, `p3-agents`, `p3.5-pixel-polish`, `p4-command`, `p6-hardening` — with `p5-self-learning` parked post-v1. The plan is **value-first** (council D1): real, useful data lands before the pixel-perfect polish, and the **P2.5 Daily-Driver gate can halt the project on data** before the expensive phases if the dashboard isn't actually being used.
 
 **The long-horizon platform** ([`docs/VISION_ADO.md`](./docs/VISION_ADO.md)) eventually supports 1,000+ repositories, 100+ concurrent agents, millions of events, multiple organizations, local + cloud execution, offline mode, and complete vendor independence — reached by extending the v1 core, never by rewriting it.
 
@@ -79,9 +79,9 @@ These carry from v1 all the way to the full platform. They are enforced in [`CLA
 This is project slot #4 (SENTINEL, the tower-defense fun-gate, and the Dynasty Steam port all have open gates). The plan carries a kill switch, honestly:
 
 - **Phases are sequential.** `/gate` refuses to start Phase N+1 while Phase N is open.
-- **Blocked > 1 week → stop and reassess.** A single blocked gate for more than a week halts new phase work; the dashboard must not become the new open thread.
-- **Kill criterion.** If the dashboard isn't opened daily for the 7 days after Phase 3, stop before Phase 5 and reassess — the run log will prove it either way.
-- **Learning volume floor.** The analyzer phase (5) does not begin until ≥25 real runs are logged; below that it would produce confident noise.
+- **Blocked > 1 week → stop and reassess.** A single blocked gate past a hard calendar date halts new phase work; the dashboard must not become the new open thread.
+- **Kill criterion — now an enforced gate, not prose** (council B6). `p2.5-daily-driver` sits **before** the expensive agent/pixel phases and refuses Phase 3 unless the dashboard was opened ≥5 of the trailing 7 days, counted from logged app-open events. The usefulness verdict is made on data, early — not by the author's memory after the work is sunk.
+- **Learning is parked, not rushed** (council D2). The analyzer does not begin until ≥100 real runs are logged; below that it would produce confident noise. The run logger ships in Phase 3 so the asset accumulates meanwhile.
 
 ---
 

@@ -1,26 +1,30 @@
 # ROADMAP — Phased Plan
 
 > The phase-by-phase plan to reach the [goals](./GOALS.md). Each phase has a **go/no-go gate** — the exact, machine-checkable version lives in [`.claude/ops.yml`](./.claude/ops.yml) and is run with `/gate`. **Phases are sequential; no Phase N+1 work while N's gate is open.**
+>
+> **V3 (2026-07-09):** restructured **value-first** after the Prompt 0.2 plan council ([`docs/COUNCIL.md`](./docs/COUNCIL.md)) and Isac's decisions D1–D3. Pixel-match moved *after* the data core (P3.5); a machine-enforced Daily-Driver gate (P2.5) now precedes the expensive phases; self-learning (P5) is parked post-v1; View B is built full 1:1.
 
-Legend: 🔴 not started · 🟡 in progress · 🟢 gate passed
+Legend: 🔴 not started · 🟡 in progress · 🟢 gate passed · ⏸️ parked
 
 ---
 
 ## v1 — AI Control Center (the wedge)
 
-Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DESIGN_SPEC.md`](./docs/DESIGN_SPEC.md) · data sources: [`docs/DATA_MAP.md`](./docs/DATA_MAP.md) · build prompts: [`docs/PROMPTS.md`](./docs/PROMPTS.md)
+Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DESIGN_SPEC.md`](./docs/DESIGN_SPEC.md) · data sources: [`docs/DATA_MAP.md`](./docs/DATA_MAP.md) · build prompts: [`docs/PROMPTS.md`](./docs/PROMPTS.md) · council: [`docs/COUNCIL.md`](./docs/COUNCIL.md)
 
 | Phase | Name | Scope | Est. | Status |
 |:-----:|------|-------|:----:|:------:|
-| **0** | Foundation | Monorepo, tokens, mock data, ops manifest, plan council | 0.5–1d | 🟡 |
-| **1** | Pixel shell | Shared kit + both views, static on mock data, 1:1 to references | 2–3d | 🔴 |
+| **0** | Foundation | Monorepo, tokens, per-view mock data, ops manifest, plan council | 0.5–1d | 🟡 |
+| **1** | Functional shell | Shared kit + both views, structurally complete on mock — **not yet pixel-judged** | 2–3d | 🔴 |
 | **2** | Data core | Server, SQLite, event bus, scanner, GitHub sync, SSE — real data | 3d | 🔴 |
-| **3** | Agents & builds | Headless runner, agent registry, live progress, build queue | 3–4d | 🔴 |
-| **4** | Command center | NL command box → intent → actions; token tracking | 2–3d | 🔴 |
-| **5** | Self-learning | Run logger, nightly analyzer, proposal inbox, metric charts | 3–4d | 🔴 |
-| **6** | Hardening | Error/empty/loading states, perf, visual-diff, autostart, docs | 2d | 🔴 |
+| **2.5** | Daily-driver gate | Enforced usefulness check: opened ≥5 of trailing 7 days **before** Phase 3 | — | 🔴 |
+| **3** | Agents & builds | Headless runner (semaphore + timeout), registry, live progress, **run logger** | 3–4d | 🔴 |
+| **3.5** | Pixel polish | The **1:1 match** — judged on real data + a frozen `--demo` seed; visual baselines | 2–3d | 🔴 |
+| **4** | Command center | Dispatch/status buttons + NL intents; token tracking | 2–3d | 🔴 |
+| **6** | Hardening | Honest states at scale, visual-diff, WAL-safe backup, autostart, docs | 2d | 🔴 |
+| **5** | Self-learning | **Parked post-v1** — the P3 run logger preserves the asset; analyzer built at ≥100 runs | — | ⏸️ |
 
-**Total: ~3 weeks part-time.** Descope lever (named, not hidden): if Phase 1 exceeds 3 days, View B ships *after* Phase 2 instead of blocking it.
+**Honest estimate: ~16–20 working days.** First real value — the **Daily-Driver Milestone** (P2.5) — lands around **week 2**, *before* the pixel polish and agent phases. That reordering is the whole point of value-first. View B is built full 1:1 (D3); the old "View B descope" lever is retained only as an emergency fallback.
 
 ---
 
@@ -29,63 +33,82 @@ Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DES
 *Get a green, buildable monorepo and a reviewed plan before any feature code.*
 
 **Deliverables**
-- npm-workspaces monorepo: `apps/web` (Vite + React 18 + TS + Tailwind + Zustand), `apps/server` (Fastify + TS, drizzle/SQLite, `/health`, SSE stub at `/events`), `packages/shared` (zod contracts skeleton + `tokens.ts`)
-- `tokens.ts` carrying every value from [`DESIGN_SPEC §tokens`](./docs/DESIGN_SPEC.md), wired into the Tailwind theme
-- `scripts/verify.sh` (typecheck · lint · test · build) proven green
-- Typed **mock-data module** in `packages/shared` for every widget, using real project names (SENTINEL, Dynasty Manager, tower-defense, Atlas, Singularity Inc, Bloom)
-- **Plan council** (Prompt 0.2): three adversarial subagents (frontend / infra / skeptical solo-dev) attack the plan; findings merged and blockers addressed
+- npm-workspaces monorepo: `apps/web` (Vite + React 18 + TS + Tailwind + Zustand), `apps/server` (Fastify + TS, drizzle/SQLite, `/health`, SSE stub), `packages/shared` (zod contracts + `tokens.ts`) — **✅ scaffolded, verify green**
+- `tokens.ts` carrying every value from [`DESIGN_SPEC §tokens`](./docs/DESIGN_SPEC.md), wired into the Tailwind theme — **✅**
+- `scripts/verify.sh` proven green — **✅**
+- **Plan council** (Prompt 0.2): three adversarial reviewers → [`docs/COUNCIL.md`](./docs/COUNCIL.md); blockers addressed via decisions D1–D3 — **✅**
+- Typed **per-view mock-data module** (Prompt 0.3): fixtures for every widget using real project names, with **per-view overrides** (view-a and view-b carry different illustrative numbers; see council B1) — **⬜ remaining**
 
-**Gate `p0-foundation`** — monorepo builds & `verify.sh` green · `tokens.ts` matches spec, mock data typed · plan-council review completed and blocking findings addressed
-
-> Prompts: **0.1** scaffold · **0.2** council · **0.3** mock data. See [`docs/PROMPTS.md`](./docs/PROMPTS.md).
+**Gate `p0-foundation`** — monorepo builds & `verify.sh` green · `tokens.ts` matches spec, per-view mock data typed · plan-council completed, blocking findings addressed
 
 ---
 
-### Phase 1 — Pixel shell 🔴
+### Phase 1 — Functional shell 🔴
 
-*Both views, fully static on mock data, matching the reference images 1:1.*
+*Both views, structurally complete on mock data — every component present and wired, but **not yet judged on pixels**. Value-first: get the skeleton usable, polish later (D1).*
 
 **Deliverables**
-- **Shared component kit first** (`apps/web/src/kit`): Card, StatCard, GradientProgress, StatusDot, Chip, FeedRow, AgentTile, SectionHeader, IconTile, AvatarStack + custom SVG Sparkline, RadialRing, MiniArea. Inter self-hosted via `@fontsource`. A `/kit` demo route renders every component in every state. **Views compose kit components only.**
-- **View A — Command Center** (`/command`): top bar, sidebar, 4 stat cards, repository filter tabs + 3×2 card grid, Running Agents strip, right rail (AI Command Center, Recent Activity, System Status, help)
-- **View B — Ops Dashboard** (`/ops`): sidebar variant + Pro Plan card, 5 stat cards (radial, sparklines), Projects Overview table, Build Queue, Activity Feed, AI Agents roster, AI Assistant, System Monitor, Quick Actions, Recent Deployments
-- Quality floor: ⌘K focuses search, visible keyboard focus, reduced-motion honored, 0 console errors, no layout shift on value change
+- **Shared component kit first** (`apps/web/src/kit`): Card, StatCard, GradientProgress, StatusDot, Chip, FeedRow, AgentTile, SectionHeader, IconTile, AvatarStack + custom SVG Sparkline, RadialRing, MiniArea. Inter self-hosted. A `/kit` demo route renders every component in **every state — including failure / idle / empty / degraded** (council S1), signed off as canonical for the states the references omit. Views compose kit components only.
+- **View A — Command Center** (`/command`) and **View B — Ops Dashboard** (`/ops`), full component inventory per [`DESIGN_SPEC`](./docs/DESIGN_SPEC.md), on **per-view mock** data, structurally matching the references (all widgets present, correct layout regions) — pixel-perfection deferred to P3.5.
+- **Layout-stability rules baked in now:** live/elapsed values render in reserved fixed-width masked slots; degraded states are fixed-footprint tokens, not reflowing prose (council B3, S2).
+- Quality floor: ⌘K focuses search, visible keyboard focus, reduced-motion honored, 0 console errors, no layout shift when mock values change.
 
-**Gate `p1-pixel-shell`** — kit built first & views compose only from it · both views match references side-by-side at 1536px · 0 console errors, focus visible, reduced-motion respected · **Isac has compared both views against the images and logged approval in `TASK.md`**
-
-> Canonical viewport **1536px** (graceful to 1280, horizontal scroll below). No mobile in v1.
+**Gate `p1-functional-shell`** — kit built first (incl. custom SVG) & views compose only from it · both views structurally complete on per-view mock at 1536px · failure/idle/empty/degraded states designed in `/kit` · live values in reserved-width slots, no layout shift · 0 console errors, focus visible, reduced-motion respected
 
 ---
 
 ### Phase 2 — Data core 🔴
 
-*Replace mock values (never the layout) with your real portfolio.*
+*Replace mock values (never the layout) with your real portfolio. This is where it starts being useful.*
 
 **Deliverables**
-- Typed **event bus** end-to-end: zod contracts for every event in [`DATA_MAP`](./docs/DATA_MAP.md), SQLite persistence (events + daily snapshots + samples), SSE stream, web-side bus client feeding Zustand slices. UI renders exclusively from slices.
-- **Scanner**: walks `PROJECT_DIRS`, reads git status/branch/last-commit, parses `.claude/ops.yml` + `TASK.md`, fs-watches for changes, emits typed events
-- **GitHub sync** (octokit, ETag conditional requests): repos, stars, PRs, language, latest Actions run → progress bars; releases → deployments
-- **System layer**: `systeminformation` samples (10s), health checks (60s), stale/offline UI states (kill server → honest banner)
-- **Security & resilience**: `X-ACC-Token` on mutating endpoints, strict CORS, SSE read-only; SQLite WAL + drizzle migrations + nightly backup (keep 7)
+- Typed **event bus** end-to-end: zod contracts for every event in [`DATA_MAP`](./docs/DATA_MAP.md), SQLite persistence (events + daily snapshots + samples), SSE, web-side bus client feeding Zustand slices. UI renders exclusively from slices.
+- **SSE resilience** (council S5): monotonic event IDs, a **full snapshot on every (re)connect** before live deltas, `Last-Event-ID` replay from the events table, and a "reconnecting/stale" indicator — so a laptop sleep never renders stale state as live.
+- **Scanner**: walks `PROJECT_DIRS`, git status/branch/last-commit, parses `.claude/ops.yml` + `TASK.md`, fs-watches for changes, emits typed events.
+- **GitHub sync** (octokit, ETag conditional requests): repos, stars, PRs, language, latest Actions run → progress bars; releases → deployments.
+- **System layer**: `systeminformation` samples (10s), health checks (60s), stale/offline UI states. **System Health %** uses a **documented deterministic formula** (health-checks + failed-builds + runner-errors) — no dependency on the parked analyzer (council D3/S3).
+- **Security & resilience** (council S0 — treated as hard criteria): **Host-header allow-list on all routes incl. `/events`** (the real DNS-rebinding defense), `X-ACC-Token` on mutating endpoints, strict CORS, SSE token via same-origin cookie/query; SQLite WAL + drizzle migrations.
+- **App-open logging** so the P2.5 gate can be measured.
 
-**Gate `p2-data-core`** — scanner + GitHub + sysmon + health live, both views on real data · data-integrity audit clean · killing the server → honest offline/stale state · mutating endpoints reject missing `X-ACC-Token`, CORS locked · WAL + migrations + conditional requests
+**Gate `p2-data-core`** — real data both views · integrity audit clean, System Health formula documented · kill server → honest offline/stale, SSE snapshot + replay · Host-header allow-list on all routes, X-ACC-Token, CORS locked · WAL + migrations + ETags · app-opens logged
 
 > 🎯 **Daily-Driver Milestone** lands here: this must replace your manual repo/CI checking.
 
 ---
 
+### Phase 2.5 — Daily-driver gate 🔴 *(new — the enforced off-ramp, council B6)*
+
+*The anti-pivot clause, moved out of prose and into the manifest — **before** the two most expensive phases.*
+
+**Gate `p2.5-daily-driver`** — dashboard opened on **≥5 of the trailing 7 distinct days** (from logged app-open events) · it has replaced manual repo/CI checking.
+
+**On fail:** STOP before Phase 3 and reassess. This is the project's real kill switch — the same `/gate` mechanism that governs everything else, evaluated on data, not on the author's memory a week later.
+
+---
+
 ### Phase 3 — Agents & builds 🔴
 
-*Mission control that can act, and a run log that becomes the learning asset.*
+*Mission control that can act, and a run log that becomes the durable learning asset.*
 
 **Deliverables**
-- **Runner**: dispatch endpoint spawning `claude -p --output-format stream-json`, explicit turn cap, cwd allow-list, minimal env allow-list; **versioned adapter** parses the stream (unknown format → "running (opaque)", still logs start/end/exit); registry survives restart (orphans reconciled on boot)
-- Wire Running Agents strip + AI Agents roster + Build Queue + Activity Feed to real runner/Actions events; agent avatars replace mock stacks
-- **Run logger** ([`SELF_LEARNING §1`](./docs/SELF_LEARNING.md)): every run records repo, task, model, tokens, duration, verify verdict, human action
+- **Runner**: dispatch endpoint spawning `claude -p --output-format stream-json` with a **dispatch semaphore** (default max 3–4, backs the Build Queue — excess dispatches show "queued", not spawned), **per-run wall-clock timeout + token budget**, reduced OS priority, turn cap, cwd + minimal-env allow-lists (council B4). **Versioned adapter** parses the stream (unknown → "running (opaque)", still logs start/end/exit); registry survives restart (orphans reconciled on boot).
+- **Scanner hardening** (council S4): watch only `ops.yml`/`TASK.md` with an ignore-list (`node_modules`/`.git`/`dist`), debounce rescans 2–5 s, suppress rescans for a cwd a runner owns, cap walk depth, skip symlinks.
+- Wire Running Agents strip + AI Agents roster + Build Queue + Activity Feed to real events; agent avatars replace mock stacks.
+- **Run logger** ([`SELF_LEARNING §1`](./docs/SELF_LEARNING.md)): every run records repo, task, model, tokens, duration, verify verdict, human action — **the asset the parked analyzer will mine later**.
 
-**Gate `p3-agents`** — a real dispatched task runs headless to completion with live progress · build queue + activity feed reflect real events, registry survives restart · simulated stream-format change degrades gracefully without crashing · spawned agents get minimal env
+**Gate `p3-agents`** — a real dispatched task runs to completion with live progress · runner enforces semaphore + timeout + budget · registry survives restart · stream adapter degrades to "running (opaque)" · scanner scoped/debounced/FD-safe · run logger persists every run
 
-> ⚠️ **Kill criterion checkpoint:** if the dashboard isn't opened daily for 7 days after this phase, stop before Phase 5 and reassess.
+---
+
+### Phase 3.5 — Pixel polish 🔴 *(new — the 1:1 match, now judged on real data, council D1/B1/B2)*
+
+*The pixel-perfect pass, run **after** the dashboard is real and proven useful — so polish lands on something you actually open.*
+
+**Deliverables**
+- With **real data + a frozen deterministic `--demo` seed** (fixed clock, fixed sample arrays, fixed numbers), pixel-match both views to the references on **layout, spacing, color, and component presence — not digits** (reference numbers are illustrative and per-view).
+- Capture **Playwright visual baselines against the `--demo` seed**, with known-dynamic regions masked (council B2) — a baseline that can actually stay green.
+
+**Gate `p3.5-pixel-polish`** — both views match `design/reference/*.png` on layout/spacing/color/component-presence at 1536px · baselines captured against the `--demo` seed with dynamic regions masked · **Isac has compared both views against the images and logged approval in `TASK.md`**
 
 ---
 
@@ -94,30 +117,12 @@ Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DES
 *Describe intent; the dashboard acts.*
 
 **Deliverables**
-- **Intent parsing** (Claude API, structured output) for 5 v1 intents with a confirmation step before any dispatching intent runs: `status_query`, `dispatch_task`, `create_task` (writes `TASK.md`), `run_gate`, `summarize_activity`. Quick-action chips wired to the same server actions.
-- **Token accounting**: parse Claude Code session logs (same versioned-adapter pattern; unknown → "tokens unavailable") into hourly rollups; AI Tokens Used card + per-run tokens, all shown with `≈`
-- ⌘K search over repos / agents / tasks
-- **macOS notifications** (node-notifier): failed build, gate → blocked, new proposal (mute toggle) + **catch-up scheduler** (jobs table, overdue >20h fires on boot)
+- **Dispatch + status as quick-action buttons** from the start (the run logger sits behind them regardless — this guarantees the log fills even if NL is little-used; council N1).
+- **Intent parsing** (Claude API, structured output) for 5 v1 intents with a confirmation step: `status_query`, `dispatch_task`, `create_task` (writes `TASK.md`), `run_gate`, `summarize_activity`.
+- **Token accounting**: parse Claude Code session logs (versioned adapter; unknown format → fixed-footprint "tokens unavailable", never a guess; council S2) into hourly rollups; AI Tokens Used card + per-run tokens, shown with `≈`.
+- ⌘K search over repos / agents / tasks; macOS notifications (failed build, gate → blocked); catch-up scheduler (overdue jobs fire on boot).
 
-**Gate `p4-command`** — 5 intents end-to-end · token usage per run recorded and shown with `≈`
-
----
-
-### Phase 5 — Self-learning 🔴
-
-*The headline feature: the system mines its own history and proposes concrete improvements — proven by two moving metrics.* ([`SELF_LEARNING.md`](./docs/SELF_LEARNING.md))
-
-**Precondition:** ≥25 runs logged (volume floor — below this the analyzer produces confident noise).
-
-**Deliverables**
-- **Nightly analyzer**: Haiku aggregation pass + Sonnet proposal pass → proposal rows (diff, evidence links, expected effect, class). Read-only log access; no repo writes.
-- **Proposal inbox** (notification badge): diff view, evidence, apply/reject/snooze; apply = one revertable commit via the runner; rejections logged and fed back
-- **Metrics**: deterministic script computes 7-day trailing success rate + median tokens per completed task; both charted on View B; System Health formula documented in its tooltip
-- Schedules: nightly analyzer, Friday self-report, monthly reasoning-skill regeneration
-
-**Gate `p5-self-learning`** — ≥25 runs precondition met · catch-up scheduler proven (overdue job fires on boot) · ≥1 real proposal accepted · success-rate + tokens/task charts render from deterministic output · rejected proposals influence next analysis
-
-> This gate closes *days later* by design — it needs a real accepted proposal.
+**Gate `p4-command`** — dispatch/status buttons live with run logging · 5 intents end-to-end · token usage per run recorded, shown with `≈`, degrades honestly
 
 ---
 
@@ -126,12 +131,20 @@ Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DES
 *Survive the real world.*
 
 **Deliverables**
-- Error/empty/loading states for every widget (empty DB, no network, no token, 50+ repos with virtualized lists where needed)
-- **Playwright visual baselines** captured at Phase-1 sign-off, wired into `verify.sh` so later phases can't silently break the 1:1 match
-- **Autostart** (launchd/pm2) so the server survives reboots + **nightly db backup** with 7-copy rotation
-- `.env.example` + README quickstart takes a fresh clone → running dashboard; `/code-review high` on the full diff, fix findings
+- Error/empty/loading states for every widget (empty DB, no network, no token, 50+ repos with virtualized lists where needed).
+- **Playwright visual-diff** (baselines from P3.5) wired into `verify.sh`.
+- **Autostart** (launchd/pm2) + **WAL-safe nightly backup**: `VACUUM INTO` (not a file copy), assert a row count before 7-copy rotation (council B5).
+- `.env.example` + README quickstart takes a fresh clone → running dashboard; `/code-review high` on the full diff, fix findings.
 
-**Gate `p6-hardening`** — `/verify` green end-to-end · empty-DB / no-network / 50-repo all render honest states · visual baselines wired and passing · autostart + backup exist · README quickstart works from a fresh clone
+**Gate `p6-hardening`** — `/verify` green end-to-end · empty-DB / no-network / 50-repo render honest states · visual baselines wired and passing · autostart + WAL-safe backup exist · README quickstart works from a fresh clone
+
+---
+
+### Phase 5 — Self-learning ⏸️ *(parked post-v1, council D2)*
+
+*The system mines its own run history to propose improvements — deferred, not abandoned.* The **run logger already ships in Phase 3**, so the asset accumulates from day one; the analyzer is built later, once the log is thick enough to cluster on.
+
+**Un-park precondition:** ≥100 real runs logged (raised from 25 — at solo pace, 25 heterogeneous runs is statistically nil for routing decisions). When built: nightly Haiku+Sonnet analyzer → proposal inbox (diff, evidence, apply/reject) → two charts (7-day success rate ↑, median tokens/task ↓) from a deterministic script. **Guardrail (council S6):** auto-apply is permanently barred for any class emitting executable content (verify scripts, `ops.yml`, shell) — inert formats only, via PR + a second-model injection screen. Full design retained in [`SELF_LEARNING.md`](./docs/SELF_LEARNING.md).
 
 ---
 
@@ -146,10 +159,9 @@ The v1 phases are not throwaway — each is the seed of a platform capability in
 | Headless runner + registry + adapters (P3) | **Platform Phase 2** — AI Runtime (provider abstraction, streaming, cost) |
 | Run log + repo parsing (P3) | **Platform Phase 3** — Repository Intelligence (graphs, health, risk) |
 | Agent roster + intent routing (P3–4) | **Platform Phase 4** — AI Organization (Planner→…→Learning) |
-| (future) knowledge graph over the run log | **Platform Phase 5** — Knowledge Engine (semantic search, memory) |
-| Catch-up scheduler + automation hooks (P4–5) | **Platform Phase 6** — Automation Engine |
-| Deterministic metrics + trend charts (P5) | **Platform Phase 7** — Predictive Intelligence |
-| Nightly analyzer + proposal loop (P5) | **Platform Phase 8** — Learning Platform (self-improvement) |
+| (parked) analyzer over the run log | **Platform Phase 5/8** — Knowledge Engine + Learning Platform |
+| Catch-up scheduler + automation hooks (P4) | **Platform Phase 6** — Automation Engine |
+| Deterministic metrics + trend charts (post-v1) | **Platform Phase 7** — Predictive Intelligence |
 | localhost + `.env` today | **Platform Phase 9** — Enterprise (orgs, SSO, distributed workers, cloud) |
 
 **Long-term versions:** v1.0 stable platform → v2.0 autonomous AI team → v3.0 self-learning platform → v4.0 AI CTO / PM / Release Manager with autonomous planning, review, and release.
@@ -158,8 +170,8 @@ The v1 phases are not throwaway — each is the seed of a platform capability in
 
 ## Working agreement
 
-- **Gate-driven:** run `/gate <name>` at each boundary; `.claude/ops.yml` refuses to skip.
-- **Commit per turn**, update [`TASK.md`](./TASK.md) each session, one learning per line in `LEARNINGS.md` (the nightly analyzer consumes it).
-- **Model routing:** use the lowest-capable model that does a coding subtask reliably; reserve the top model for architecture, gate evaluation, and debugging that resisted one attempt.
+- **Gate-driven:** run `/gate <name>` at each boundary; `.claude/ops.yml` refuses to skip. **P2.5 is the enforced off-ramp** — it can halt the project on data.
+- **Commit per turn**, update [`TASK.md`](./TASK.md) each session, one learning per line in `LEARNINGS.md`.
+- **Model routing:** lowest-capable model that does a coding subtask reliably; reserve the top model for architecture, gate evaluation, and stubborn debugging.
 - **No loops on copy:** UI text, marketing, and naming are single-shot drafts for Isac to edit; loops run only on verifiable work.
-- **Track the competition on-screen:** the Friday sweeper watches this repo like the others; a blocked gate > 1 week halts new phase work.
+- **No fabricated numbers:** every value traces to a stored typed event; missing data shows stale/offline; reference digits are illustrative, judged on layout not equality.

@@ -73,3 +73,18 @@ Setup first: create the repo, drop this package's files in (CLAUDE.md at root, o
 **4.3 (new)** — macOS notifications via node-notifier: failed build, gate → blocked, new proposal. Respect a mute toggle in the UI. Also implement the catch-up scheduler (jobs table with last_run; overdue >20h fires on boot) — the analyzer will depend on it.
 
 **6.1 additions** — capture Playwright screenshot baselines of both views (from the Phase-1 approved state) and wire visual diff into scripts/verify.sh; launchd (or pm2) autostart config + README section; nightly db backup with 7-copy rotation.
+
+## V3 amendments to the sequence (Prompt 0.2 council — see docs/COUNCIL.md)
+
+The council + Isac's decisions reorder the sequence **value-first** and adjust several prompts. Where a V2 and V3 note conflict, **V3 wins**.
+
+- **0.3 (revised)** — the mock-data module is **per-view**: view-a and view-b carry different illustrative numbers (they disagree in the references; council B1). Mark clearly as fixtures.
+- **Phase 1 is now the *functional shell*, not the pixel shell (D1).** Prompts 1.0–1.4 still build the kit-first and both views on mock, but the gate is `p1-functional-shell`: structurally complete, all components present and wired, every state (failure/idle/empty/degraded) rendered in `/kit` (council S1). **Drop the "pixel-match the PNG" acceptance from 1.x** — it moves to the new pixel-polish prompt. Bake in reserved-width masks + fixed-footprint degraded states now (council B3, S2).
+- **New prompt 3.5 (pixel polish)** — after Phase 3, with real data + a frozen `--demo` seed, pixel-match both views to the references on layout/spacing/color/component-presence (not digits); capture Playwright baselines against the `--demo` seed with dynamic regions masked (council B1/B2). This carries Isac's 1:1 sign-off.
+- **2.1 addition** — SSE emits monotonic event IDs, a full snapshot on connect, and `Last-Event-ID` replay (council S5). Add a **Host-header allow-list on all routes incl. `/events`** and carry the SSE token via same-origin cookie/query (council S0).
+- **2.4 addition** — System Health % is a documented deterministic formula (no analyzer dependency); log app-open events for the P2.5 gate.
+- **2.2 addition** — scanner watches only `ops.yml`/`TASK.md` with an ignore-list, debounced, FD-safe, symlink-skipping, depth-capped (council S4).
+- **3.1 addition (revised)** — the runner adds a **dispatch semaphore** (default 3–4, backs the Build Queue) + per-run wall-clock timeout + token budget + reduced priority (council B4), on top of the existing versioned adapter + env allow-list.
+- **New P2.5 gate** — before Phase 3, run `/gate p2.5-daily-driver`: opened ≥5 of the trailing 7 days, else STOP and reassess (council B6).
+- **Phase 5 prompts (5.1–5.3) are parked (D2).** The run logger from 3.2 ships; the analyzer/inbox/metrics are built post-v1 at ≥100 runs. If built, bar executable-content auto-apply and route via PR + second-model screen (council S6).
+- **6.1 (revised)** — nightly backup uses `VACUUM INTO` + a row-count assert before rotation, not a raw file copy (council B5). Visual baselines come from the P3.5 approved state.

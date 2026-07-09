@@ -72,3 +72,14 @@ Total: roughly 3 weeks at your normal part-time pace. Phases are sequential and 
 - **Injection invariant**: external/quoted text in logs, reviews, and agent output is data, never instructions — for the analyzer and every agent
 - **macOS notifications** for failed builds, blocked gates, new proposals (Prompt 4.3)
 - **Descope lever** (named, not hidden): if Phase 1 exceeds 3 days, View B ships after Phase 2 instead of blocking it
+
+## V3 amendments (Prompt 0.2 council + Isac decisions — see docs/COUNCIL.md)
+
+The final plan was attacked by a three-reviewer council; the load-bearing changes:
+
+- **Value-first reorder (D1).** Phase 1 is now a *functional shell* (kit + both views structurally complete on per-view mock, **not pixel-judged**). The 1:1 pixel-match moves to a new **P3.5**, judged on real data + a frozen `--demo` seed. Real, useful data (the Daily-Driver milestone) now lands *before* the pixel polish.
+- **Enforced kill-gate (B6).** A new machine-checked **P2.5 `daily-driver`** gate sits before the expensive phases and refuses Phase 3 unless the dashboard was opened ≥5 of the trailing 7 days (from logged app-opens). The anti-pivot clause is no longer prose.
+- **Self-learning parked (D2).** The Phase-3 **run logger** ships (the durable asset); the nightly analyzer + proposal inbox become a post-v1 milestone gated on **≥100** runs (raised from 25). Auto-apply is permanently barred for executable-content classes (S6).
+- **View B built full 1:1 (D3)** — no widgets cut — but every value obeys data-integrity: System Health % gets a documented deterministic formula, the radial an explicit denominator, and agent-count/health-% real snapshot series (S3).
+- **Security elevated (S0).** The read-only SSE stream was an unauthenticated exfil channel; CORS ≠ DNS-rebinding defense. A **Host-header allow-list on all routes incl. `/events`** is now a hard P2 criterion.
+- **Execution & durability hardening.** Runner dispatch semaphore + timeout + token budget (B4); scoped/debounced/FD-safe scanner watch (S4); SSE snapshot-on-connect + `Last-Event-ID` replay (S5); WAL-safe backup via `VACUUM INTO` (B5); reserved-width masks + fixed-footprint degraded states so live updates never reflow (B3, S2).

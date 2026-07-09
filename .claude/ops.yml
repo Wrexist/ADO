@@ -1,4 +1,7 @@
 # .claude/ops.yml — ai-control-center (wrexist-ops manifest)
+# V3 (2026-07-09): gates restructured value-first per the Prompt 0.2 council + Isac's
+# decisions D1-D3 (see docs/COUNCIL.md). Pixel-match moved to p3.5; p2.5-daily-driver
+# added; p5-self-learning parked post-v1; engineering amendments folded into criteria.
 project: ai-control-center
 stack: vite-react
 
@@ -11,7 +14,7 @@ commands:
 
 run:
   url: http://localhost:5173
-  boot_check: "both /command and /ops render with data (mock in P1, live after P2); SSE connected indicator green after P2"
+  boot_check: "both /command and /ops render from the kit (per-view mock in P1, live after P2); SSE connected indicator green after P2; 1:1 pixel-match judged at P3.5"
 
 modules:
   data_integrity: true       # dashboards must not invent numbers
@@ -24,7 +27,8 @@ thresholds:
 
 integrity:
   source_dirs: [apps/web/src, apps/server/src]
-  live_gate: "every rendered value maps to a typed bus event with stored source; no numeric literals rendered as data; sparklines require >=2 real samples"
+  live_gate: "every rendered value maps to a typed bus event with stored source; no numeric literals rendered as data; sparklines require >=2 real samples; radial rings require an explicit denominator; degraded states render as fixed-footprint tokens, never prose that reflows"
+  reference_numbers: "the digits in design/reference/*.png are illustrative and per-view; the 1:1 match is judged on layout/spacing/color/component-presence, not numeric equality"
 
 conventions:
   - Typed zod event contracts for all server->client data; no `any`
@@ -33,59 +37,83 @@ conventions:
   - Copy/marketing text is never produced by loops
   - Commit per turn; TASK.md updated each session
 
+# Gates are sequential and value-first (D1). p2.5 forces the usefulness verdict BEFORE
+# the expensive agent/pixel phases. Half-numbered gates (p2.5, p3.5) insert without
+# renumbering the originals. p5 is parked post-v1 (D2).
 gates:
   - name: p0-foundation
     criteria:
       - monorepo builds; scripts/verify.sh runs green
-      - tokens.ts matches DESIGN_SPEC values; mock data module typed
-      - plan-council review completed and blocking findings addressed
+      - tokens.ts matches DESIGN_SPEC values; per-view mock data module typed
+      - plan-council (Prompt 0.2) completed; blocking findings addressed or accepted (docs/COUNCIL.md)
     attempts: 3
     status: open
-  - name: p1-pixel-shell
+  - name: p1-functional-shell        # was p1-pixel-shell; pixel-match moved to p3.5 (D1)
     criteria:
       - shared component kit built first (incl. custom SVG Sparkline/RadialRing/MiniArea); both views compose only kit components
-      - /command and /ops fully built on mock data, matching design/reference PNGs side-by-side at the 1536px canonical viewport (layout, spacing, colors, all components present)
+      - /command and /ops structurally complete on per-view mock data (all components present and wired to Zustand-ready slices) at the 1536px canonical viewport
+      - failure / idle / empty / degraded states designed in the /kit demo route and signed off (not just the happy path)
+      - live/elapsed values render in reserved fixed-width masked slots; no layout shift when mock values change
       - zero console errors; keyboard focus visible; reduced-motion respected
-      - Isac has compared both views against the images and logged approval in TASK.md
     attempts: 5
     status: open
   - name: p2-data-core
     criteria:
       - scanner + GitHub sync + sysmon + health checks live; both views show real portfolio data
-      - /verify data-integrity audit clean
-      - killing the server puts the UI in an honest offline/stale state
-      - mutating endpoints reject requests without X-ACC-Token; CORS locked to web origin
-      - SQLite runs WAL with drizzle migrations; GitHub polling uses conditional requests
+      - /verify data-integrity audit clean; System Health % uses a documented deterministic formula (no analyzer dependency)
+      - killing the server puts the UI in an honest offline/stale state; SSE sends a full snapshot on connect and replays via Last-Event-ID
+      - Host-header allow-list on ALL routes incl. /events (DNS-rebinding defense); mutating endpoints reject requests without X-ACC-Token; CORS locked to web origin
+      - SQLite runs WAL with drizzle migrations; GitHub polling uses conditional requests (ETags)
+      - app-open events logged (feeds the p2.5 daily-driver check)
     attempts: 5
+    status: open
+  - name: p2.5-daily-driver          # NEW (B6): enforce the usefulness verdict in the manifest, not prose
+    criteria:
+      - dashboard opened on >=5 of the trailing 7 distinct days (counted from logged app-open events)
+      - it has replaced manual repo/CI checking (Daily-Driver Milestone)
+    on_fail: "STOP before Phase 3 and reassess — the anti-pivot off-ramp; do not start p3 work"
+    attempts: 1
     status: open
   - name: p3-agents
     criteria:
       - a real task dispatched from the dashboard runs headless to completion with live progress
-      - build queue and activity feed reflect real events; agent registry survives server restart
+      - runner enforces a dispatch semaphore (default max 3-4, backs the Build Queue) + per-run wall-clock timeout + token budget; excess dispatches show "queued", not spawned
+      - build queue and activity feed reflect real events; agent registry survives server restart (orphans reconciled on boot)
       - stream-json parsed via versioned adapter; simulated format change degrades to "running (opaque)" without crashing
-      - spawned agents receive minimal env allow-list
+      - spawned agents receive a minimal env allow-list; scanner watch is scoped (ops.yml/TASK.md only, ignore node_modules/.git/dist), debounced, and FD-safe
+      - run logger persists every run (repo, task, model, tokens, duration, verify verdict, human action) — the durable asset for the parked analyzer
+    attempts: 5
+    status: open
+  - name: p3.5-pixel-polish          # NEW (D1/B1/B2): the 1:1 match, now judged AFTER real data
+    criteria:
+      - with real data + a frozen deterministic --demo seed, both views match design/reference/*.png on layout, spacing, color, and component presence (NOT digits)
+      - Playwright visual baselines captured against the --demo seed with known-dynamic regions masked
+      - Isac has compared both views against the images and logged approval in TASK.md
     attempts: 5
     status: open
   - name: p4-command
     criteria:
+      - dispatch + status available as quick-action buttons (run logger sits behind them) from the start
       - 5 intents end-to-end (status_query, dispatch_task, create_task, run_gate, summarize_activity)
-      - token usage per run recorded and shown with approximation marker
-    attempts: 5
-    status: open
-  - name: p5-self-learning
-    criteria:
-      - precondition met: >=25 runs in the run log before analyzer work began
-      - catch-up scheduler proven: overdue job fires on server boot
-      - nightly analyzer produced at least one proposal from real run logs that Isac accepted
-      - success-rate and tokens-per-task charts render from deterministic script output
-      - rejected proposals are logged and influence the next analysis
+      - token usage per run recorded and shown with approximation marker; unknown session-log format degrades to a fixed-footprint "tokens unavailable", never a guess
     attempts: 5
     status: open
   - name: p6-hardening
     criteria:
       - /verify green end to end; empty-DB, no-network, and 50-repo cases all render honest states
-      - Playwright visual baselines (from Phase-1 sign-off) wired into verify and passing
-      - server autostarts on login (launchd/pm2); nightly db backup exists with 7-copy rotation
+      - Playwright visual baselines (from p3.5) wired into verify and passing
+      - server autostarts on login (launchd/pm2); nightly db backup uses VACUUM INTO (WAL-safe) + asserts a row count before 7-copy rotation
       - README quickstart takes a fresh clone to running dashboard
     attempts: 4
     status: open
+
+  # Parked post-v1 (D2): the run logger (p3) preserves the asset; build the analyzer only
+  # once the log actually fills. If built, bar executable-content classes from auto-apply (S6).
+  - name: p5-self-learning
+    status: parked
+    precondition: ">=100 real runs in the run log (raised from 25); build only if the log fills"
+    criteria:
+      - nightly analyzer produces >=1 proposal from real run logs that Isac accepted
+      - success-rate and tokens-per-task charts render from deterministic script output
+      - auto-apply barred for any class emitting executable content (verify scripts, ops.yml, shell); inert formats only, via PR + second-model injection screen
+      - rejected proposals are logged and influence the next analysis

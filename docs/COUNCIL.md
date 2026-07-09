@@ -63,15 +63,17 @@ Four roots were hit by **two or more** reviewers coming from different direction
 
 ---
 
-## 4. Decisions required before Phase 1
+## 4. Decisions (Isac, 2026-07-09) — LOCKED
 
-The engineering amendments **B2–B5, S0, S2, S4, S5, S6** are low-controversy hardening — recommend folding all in. The remaining items are genuine product forks for Isac:
+The engineering amendments **B2–B5, S0, S2, S3, S4, S5, S6** are adopted wholesale (low-controversy hardening). The three product forks were decided:
 
-- **D1 · Sequencing & the `p1` gate** (B1, B6, S1, S8, S9): keep pixel-first with a *fixed, judgeable* gate, or reorder to value-first (functional shell → real data → pixel-match)?
-- **D2 · Phase 5 self-learning** (S7): keep in v1 with the safety fixes, or defer post-v1 and keep only the run logger?
-- **D3 · View B scope** (S9, N1): build full 1:1, or cut/simplify the decorative widgets and loosen the gate?
+- **D1 → Value-first, fixed gate.** Reorder: functional shell (kit + both views, structurally complete on per-view mock) → real data (Daily-Driver) → a dedicated pixel-match pass. The 1:1 gate moves *after* the data core and judges **layout/spacing/color/component-presence, not digits** (reference numbers are illustrative and per-view). → `p1` reframed as `p1-functional-shell`; new `p3.5-pixel-polish` carries the 1:1 sign-off + baseline capture.
+- **D2 → Defer the analyzer, keep the run logger.** The Phase-3 run logger ships (the durable asset); the nightly analyzer + proposal inbox become a **post-v1 milestone** gated on **≥100 real runs**. → `p5-self-learning` is **parked**; run-logger criteria folded into `p3-agents`.
+- **D3 → Build View B full 1:1.** No widgets cut. But every value still obeys data-integrity: System Health % gets a **documented deterministic formula** (health-checks + failed-builds + runner-errors, computed from Phase-2 data — not the deferred analyzer); the radial gets an explicit denominator; agent-count and health-% snapshot jobs are added so those sparklines have a real series (S3). Decoration stays; fabrication doesn't.
 
-Once decided, the chosen amendments are folded into MASTER_PLAN / DESIGN_SPEC / DATA_MAP / ops.yml, and `/gate p0-foundation` can close.
+**Elevated:** **S0** (SSE/DNS-rebinding exfil) is treated as a hard `p2-data-core` criterion, not a nice-to-have.
+
+Amendments are now folded into ROADMAP / ops.yml / GOALS and appended as "V3 council amendments" to MASTER_PLAN / DESIGN_SPEC / DATA_MAP / PROMPTS. Remaining Phase-0 work: build the per-view mock-data module (Prompt 0.3), then `/gate p0-foundation`.
 
 ---
 

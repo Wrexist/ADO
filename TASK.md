@@ -15,28 +15,24 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] `packages/shared/tokens.ts` from DESIGN_SPEC §tokens; zod event-contract skeleton
 - [x] `scripts/verify.sh` (typecheck · lint · test · build); `.gitignore`
 - [x] `npm install` and prove `verify.sh` green end-to-end — typecheck (3 workspaces) · test 2/2 · web prod build · server boots on `/health` + SSE `/events`
-- [x] **Prompt 0.2 — plan council** — 3 adversarial reviewers ran; findings merged into `docs/COUNCIL.md` (6 blockers + 1 elevated security should-fix + 9 should-fix/note). **Awaiting Isac's decisions D1–D3 before folding amendments in and starting Phase 1.**
-- [ ] **Prompt 0.3 — mock-data module**: typed fixtures for every widget using real project names (SENTINEL, Dynasty Manager, tower-defense, Atlas, Singularity Inc, Bloom)
+- [x] **Prompt 0.2 — plan council** — 3 adversarial reviewers ran; findings merged into `docs/COUNCIL.md` (6 blockers + 1 elevated security should-fix + 9 should-fix/note)
+- [x] **Decisions D1–D3 locked & amendments folded in** — value-first · defer analyzer, keep run logger · View B full 1:1. Updated `.claude/ops.yml` (value-first gates incl. new p2.5/p3.5, p5 parked), `ROADMAP.md`, `GOALS.md`, V3 sections in MASTER_PLAN/DESIGN_SPEC/DATA_MAP/PROMPTS, and the roadmap artifact
+- [ ] **Prompt 0.3 — per-view mock-data module**: typed fixtures for every widget using real project names (SENTINEL, Dynasty Manager, tower-defense, Atlas, Singularity Inc, Bloom), with per-view overrides (view-a and view-b carry different illustrative numbers — council B1)
 - [ ] Create `.env` from `.env.example` (GitHub PAT: repo + actions:read · ACC token: `openssl rand -hex 24`)
 - [ ] **Gate `p0-foundation`** → run `/gate p0-foundation`
 
-## Next (Phase 1 — Pixel shell) — do not start until p0 is green
-- [ ] Prompt 1.0 — shared component kit first (+ custom SVG Sparkline/RadialRing/MiniArea, self-hosted Inter, `/kit` demo route)
-- [ ] Prompts 1.1–1.3 — View A (`/command`) on mock data, side-by-side polish vs `view-a.png`
-- [ ] Prompt 1.4 — View B (`/ops`) on mock data, side-by-side polish vs `view-b.png`
-- [ ] Prompt 1.5 — quality floor (⌘K, focus, reduced-motion, 0 console errors) → **Isac visual sign-off logged here** → `/gate p1-pixel-shell`
+## Next (Phase 1 — Functional shell) — do not start until p0 is green
+- [ ] Prompt 1.0 — shared component kit first (+ custom SVG Sparkline/RadialRing/MiniArea, self-hosted Inter, `/kit` demo route rendering **every state incl. failure/idle/empty/degraded**)
+- [ ] Prompts 1.1–1.4 — View A (`/command`) + View B (`/ops`) structurally complete on **per-view** mock; reserved-width masked slots for live values; **not yet pixel-judged**
+- [ ] Prompt 1.5 — quality floor (⌘K, focus, reduced-motion, 0 console errors, no layout shift) → `/gate p1-functional-shell`
+- [ ] (the 1:1 pixel sign-off now lives at **p3.5-pixel-polish**, after real data — value-first, D1)
 
 ---
 
 ## Decisions log
 - 2026-07-07: plan v2 locked after 3-pass audit (see `AUDIT.md`). Canonical viewport 1536. View B descope lever named. Kill criterion accepted.
 - 2026-07-09: project kickoff. Repo restructured — `Plan_codex` → `docs/VISION_ADO.md`; source zip archived to `docs/archive/`; plan package materialized into `docs/`, `design/reference/`, `.claude/`. `GOALS.md` + `ROADMAP.md` authored as the goals-and-phases foundation. Phase 0 monorepo skeleton scaffolded.
-
-## Awaiting decision (blocks Phase 1)
-- **D1 — sequencing & the p1 gate**: keep pixel-first (with a fixed, judgeable gate) vs. reorder value-first (functional shell → real data → pixel-match). Ref COUNCIL B1/B6/S1/S8/S9.
-- **D2 — Phase 5 self-learning**: keep in v1 (with safety fixes) vs. defer post-v1, keep only the run logger. Ref COUNCIL S7.
-- **D3 — View B scope**: full 1:1 vs. cut/simplify decorative widgets + loosen gate. Ref COUNCIL S9/N1.
-- Low-controversy engineering amendments (B2–B5, S0, S2, S4, S5, S6) recommended for adoption regardless.
+- 2026-07-09: Prompt 0.2 council run (see `docs/COUNCIL.md`). Decisions **D1 value-first**, **D2 defer analyzer / keep run logger**, **D3 View B full 1:1**. Plan restructured value-first: 1:1 pixel-match moved to new `p3.5`, enforced `p2.5-daily-driver` off-ramp added before the expensive phases, `p5-self-learning` parked (un-park at ≥100 runs), SSE/DNS-rebinding exfil elevated to a hard p2 criterion.
 
 ## Blocked
 - (none) — Phase 0 scaffold verified green. `npm audit` reports dev-dependency advisories (vite/esbuild chain); triaged in Phase 6 hardening, not blocking.

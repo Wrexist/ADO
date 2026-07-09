@@ -38,3 +38,13 @@ Rule: a widget ships mock (Phase 1) → real (its phase below) → never "plausi
 - New output channel: **macOS notifications** (node-notifier) for failed build, gate → blocked, new proposal (Phase 4)
 - SQLite: WAL mode, drizzle migrations, nightly file backup keeping 7 copies — the run log is the learning system's asset
 - All mutating endpoints require `X-ACC-Token` header; SSE is read-only; CORS locked to the web origin
+
+## V3 amendments (Prompt 0.2 council — see docs/COUNCIL.md)
+
+- **Host-header allow-list on ALL routes incl. `/events`** (council S0). CORS is not a DNS-rebinding defense; without a Host check a rebound page can `EventSource('/events')` and exfiltrate the whole portfolio. Accept only `Host ∈ {127.0.0.1:PORT, localhost:PORT}`; carry the token on SSE via same-origin cookie/query.
+- **SSE gains event IDs + snapshot-on-connect + `Last-Event-ID` replay** (council S5). One read-only stream with no replay renders pre-sleep values as live after every lid-close. Emit monotonic IDs, push a full snapshot before live deltas on each (re)connect, replay gaps from the events table, show a "reconnecting/stale" indicator.
+- **Chart sources defined** (council S3): RadialRing (Active Builds) gets an explicit denominator; add **agent-count** and **health-%** snapshot jobs to the cadence so those two View-B sparklines have a real series. **System Health %** is a documented deterministic formula (health-checks + failed-builds + runner-errors) computed in Phase 2 — **not** the parked analyzer.
+- **Scanner watch is scoped** (council S4): watch only `ops.yml`/`TASK.md` with an ignore-list (`node_modules`/`.git`/`dist`), debounce 2–5 s, suppress rescans for a cwd a runner owns, cap depth, skip symlinks — a recursive watch over 20 repos otherwise exhausts file descriptors.
+- **Runner backpressure** (council B4): dispatch semaphore (default 3–4) backs the Build Queue; excess dispatches are "queued", not spawned; per-run wall-clock timeout + token budget.
+- **Nightly backup is WAL-safe** (council B5): `VACUUM INTO` (not a file copy) + row-count assert before 7-copy rotation.
+- **Phase mapping updated** (council D1/D2): the **run logger** lands in Phase 3 (kept); the **AI Tokens / metrics analyzer is parked post-v1** (≥100 runs); pixel-match moves to P3.5; **app-open events** are logged from Phase 2 to feed the P2.5 daily-driver gate.
