@@ -1,0 +1,91 @@
+# .claude/ops.yml — ai-control-center (wrexist-ops manifest)
+project: ai-control-center
+stack: vite-react
+
+commands:
+  typecheck: npm run typecheck
+  lint: npm run lint
+  test: npm test
+  build: npm run build
+  dev: npm run dev
+
+run:
+  url: http://localhost:5173
+  boot_check: "both /command and /ops render with data (mock in P1, live after P2); SSE connected indicator green after P2"
+
+modules:
+  data_integrity: true       # dashboards must not invent numbers
+  performance: false
+  native: false
+
+thresholds:
+  console_errors: 0
+  min_fps: null
+
+integrity:
+  source_dirs: [apps/web/src, apps/server/src]
+  live_gate: "every rendered value maps to a typed bus event with stored source; no numeric literals rendered as data; sparklines require >=2 real samples"
+
+conventions:
+  - Typed zod event contracts for all server->client data; no `any`
+  - Design tokens only; no raw hex in components
+  - Zustand slices per domain; no business state in components
+  - Copy/marketing text is never produced by loops
+  - Commit per turn; TASK.md updated each session
+
+gates:
+  - name: p0-foundation
+    criteria:
+      - monorepo builds; scripts/verify.sh runs green
+      - tokens.ts matches DESIGN_SPEC values; mock data module typed
+      - plan-council review completed and blocking findings addressed
+    attempts: 3
+    status: open
+  - name: p1-pixel-shell
+    criteria:
+      - shared component kit built first (incl. custom SVG Sparkline/RadialRing/MiniArea); both views compose only kit components
+      - /command and /ops fully built on mock data, matching design/reference PNGs side-by-side at the 1536px canonical viewport (layout, spacing, colors, all components present)
+      - zero console errors; keyboard focus visible; reduced-motion respected
+      - Isac has compared both views against the images and logged approval in TASK.md
+    attempts: 5
+    status: open
+  - name: p2-data-core
+    criteria:
+      - scanner + GitHub sync + sysmon + health checks live; both views show real portfolio data
+      - /verify data-integrity audit clean
+      - killing the server puts the UI in an honest offline/stale state
+      - mutating endpoints reject requests without X-ACC-Token; CORS locked to web origin
+      - SQLite runs WAL with drizzle migrations; GitHub polling uses conditional requests
+    attempts: 5
+    status: open
+  - name: p3-agents
+    criteria:
+      - a real task dispatched from the dashboard runs headless to completion with live progress
+      - build queue and activity feed reflect real events; agent registry survives server restart
+      - stream-json parsed via versioned adapter; simulated format change degrades to "running (opaque)" without crashing
+      - spawned agents receive minimal env allow-list
+    attempts: 5
+    status: open
+  - name: p4-command
+    criteria:
+      - 5 intents end-to-end (status_query, dispatch_task, create_task, run_gate, summarize_activity)
+      - token usage per run recorded and shown with approximation marker
+    attempts: 5
+    status: open
+  - name: p5-self-learning
+    criteria:
+      - precondition met: >=25 runs in the run log before analyzer work began
+      - catch-up scheduler proven: overdue job fires on server boot
+      - nightly analyzer produced at least one proposal from real run logs that Isac accepted
+      - success-rate and tokens-per-task charts render from deterministic script output
+      - rejected proposals are logged and influence the next analysis
+    attempts: 5
+    status: open
+  - name: p6-hardening
+    criteria:
+      - /verify green end to end; empty-DB, no-network, and 50-repo cases all render honest states
+      - Playwright visual baselines (from Phase-1 sign-off) wired into verify and passing
+      - server autostarts on login (launchd/pm2); nightly db backup exists with 7-copy rotation
+      - README quickstart takes a fresh clone to running dashboard
+    attempts: 4
+    status: open

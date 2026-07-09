@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.vite/
+*.tsbuildinfo
+
+# runtime data & secrets
+.env
+.env.local
+.env.*.local
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+backups/
+
+# logs & coverage
+*.log
+coverage/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
