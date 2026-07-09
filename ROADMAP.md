@@ -14,7 +14,7 @@ Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DES
 
 | Phase | Name | Scope | Est. | Status |
 |:-----:|------|-------|:----:|:------:|
-| **0** | Foundation | Monorepo, tokens, per-view mock data, ops manifest, plan council | 0.5–1d | 🟡 |
+| **0** | Foundation | Monorepo, tokens, per-view mock data, ops manifest, plan council | 0.5–1d | 🟢 |
 | **1** | Functional shell | Shared kit + both views, structurally complete on mock — **not yet pixel-judged** | 2–3d | 🔴 |
 | **2** | Data core | Server, SQLite, event bus, scanner, GitHub sync, SSE — real data | 3d | 🔴 |
 | **2.5** | Daily-driver gate | Enforced usefulness check: opened ≥5 of trailing 7 days **before** Phase 3 | — | 🔴 |
@@ -28,7 +28,7 @@ Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DES
 
 ---
 
-### Phase 0 — Foundation 🟡
+### Phase 0 — Foundation 🟢 (passed 2026-07-09)
 
 *Get a green, buildable monorepo and a reviewed plan before any feature code.*
 
@@ -37,7 +37,7 @@ Full spec: [`docs/MASTER_PLAN.md`](./docs/MASTER_PLAN.md) · designs: [`docs/DES
 - `tokens.ts` carrying every value from [`DESIGN_SPEC §tokens`](./docs/DESIGN_SPEC.md), wired into the Tailwind theme — **✅**
 - `scripts/verify.sh` proven green — **✅**
 - **Plan council** (Prompt 0.2): three adversarial reviewers → [`docs/COUNCIL.md`](./docs/COUNCIL.md); blockers addressed via decisions D1–D3 — **✅**
-- Typed **per-view mock-data module** (Prompt 0.3): fixtures for every widget using real project names, with **per-view overrides** (view-a and view-b carry different illustrative numbers; see council B1) — **⬜ remaining**
+- Typed **per-view mock-data module** (Prompt 0.3): fixtures for every widget using real project names, with **per-view overrides** (view-a and view-b carry different illustrative numbers; see council B1) — **✅ `packages/shared/src/mock`, 7 consistency tests**
 
 **Gate `p0-foundation`** — monorepo builds & `verify.sh` green · `tokens.ts` matches spec, per-view mock data typed · plan-council completed, blocking findings addressed
 

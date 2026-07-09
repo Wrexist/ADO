@@ -47,7 +47,7 @@ gates:
       - tokens.ts matches DESIGN_SPEC values; per-view mock data module typed
       - plan-council (Prompt 0.2) completed; blocking findings addressed or accepted (docs/COUNCIL.md)
     attempts: 3
-    status: open
+    status: passed   # 2026-07-09 — verify green (9/9 tests); tokens spec-tested; per-view mocks in packages/shared/src/mock; council done, D1-D3 locked
   - name: p1-functional-shell        # was p1-pixel-shell; pixel-match moved to p3.5 (D1)
     criteria:
       - shared component kit built first (incl. custom SVG Sparkline/RadialRing/MiniArea); both views compose only kit components

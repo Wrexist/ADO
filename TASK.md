@@ -2,11 +2,11 @@
 
 Living tracker. Updated every session. Current phase drives what's actionable; `/gate` refuses Phase N+1 while N is open.
 
-**Current phase: 0 — Foundation** 🟡
+**Current phase: 1 — Functional shell** 🔴 (p0 passed 2026-07-09; Phase 1 ready to start)
 
 ---
 
-## In progress (Phase 0)
+## Done (Phase 0)
 - [x] Materialize & organize the locked plan package into the repo (docs/, design/reference/, .claude/, CLAUDE.md, .env.example)
 - [x] Author `GOALS.md` (goals, success criteria, non-goals, guardrails, anti-pivot clause)
 - [x] Author `ROADMAP.md` (7 phases with gates + rollup into the platform vision)
@@ -17,9 +17,12 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] `npm install` and prove `verify.sh` green end-to-end — typecheck (3 workspaces) · test 2/2 · web prod build · server boots on `/health` + SSE `/events`
 - [x] **Prompt 0.2 — plan council** — 3 adversarial reviewers ran; findings merged into `docs/COUNCIL.md` (6 blockers + 1 elevated security should-fix + 9 should-fix/note)
 - [x] **Decisions D1–D3 locked & amendments folded in** — value-first · defer analyzer, keep run logger · View B full 1:1. Updated `.claude/ops.yml` (value-first gates incl. new p2.5/p3.5, p5 parked), `ROADMAP.md`, `GOALS.md`, V3 sections in MASTER_PLAN/DESIGN_SPEC/DATA_MAP/PROMPTS, and the roadmap artifact
-- [ ] **Prompt 0.3 — per-view mock-data module**: typed fixtures for every widget using real project names (SENTINEL, Dynasty Manager, tower-defense, Atlas, Singularity Inc, Bloom), with per-view overrides (view-a and view-b carry different illustrative numbers — council B1)
-- [ ] Create `.env` from `.env.example` (GitHub PAT: repo + actions:read · ACC token: `openssl rand -hex 24`)
-- [ ] **Gate `p0-foundation`** → run `/gate p0-foundation`
+- [x] **Prompt 0.3 — per-view mock-data module** — `packages/shared/src/mock` (types + view-a + view-b fixtures, real project names, per-view illustrative numbers, frozen MOCK_NOW clock = future `--demo` seed; 7 consistency tests incl. B1-divergence, S3 radial denominator, S1 non-happy states)
+- [x] **Gate `p0-foundation` → PASSED 2026-07-09** — verify green (typecheck ×3, 9/9 tests, prod build), tokens spec-tested, per-view mocks typed, council done with D1–D3 locked
+- [x] Screenshot tooling: `scripts/screenshot.mjs` (1536px, both views) + standing instruction recorded as CLAUDE.md convention 14
+
+## Open (not gate-blocking)
+- [ ] Create `.env` from `.env.example` (GitHub PAT: repo + actions:read · ACC token: `openssl rand -hex 24`) — needed before Phase 2 data core, not for Phase 1
 
 ## Next (Phase 1 — Functional shell) — do not start until p0 is green
 - [ ] Prompt 1.0 — shared component kit first (+ custom SVG Sparkline/RadialRing/MiniArea, self-hosted Inter, `/kit` demo route rendering **every state incl. failure/idle/empty/degraded**)
@@ -33,6 +36,7 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - 2026-07-07: plan v2 locked after 3-pass audit (see `AUDIT.md`). Canonical viewport 1536. View B descope lever named. Kill criterion accepted.
 - 2026-07-09: project kickoff. Repo restructured — `Plan_codex` → `docs/VISION_ADO.md`; source zip archived to `docs/archive/`; plan package materialized into `docs/`, `design/reference/`, `.claude/`. `GOALS.md` + `ROADMAP.md` authored as the goals-and-phases foundation. Phase 0 monorepo skeleton scaffolded.
 - 2026-07-09: Prompt 0.2 council run (see `docs/COUNCIL.md`). Decisions **D1 value-first**, **D2 defer analyzer / keep run logger**, **D3 View B full 1:1**. Plan restructured value-first: 1:1 pixel-match moved to new `p3.5`, enforced `p2.5-daily-driver` off-ramp added before the expensive phases, `p5-self-learning` parked (un-park at ≥100 runs), SSE/DNS-rebinding exfil elevated to a hard p2 criterion.
+- 2026-07-09: **p0-foundation passed.** Standing instruction from Isac: every UI-changing turn ends with progress screenshots of both views sent for visual review (CLAUDE.md convention 14, `scripts/screenshot.mjs`).
 
 ## Blocked
 - (none) — Phase 0 scaffold verified green. `npm audit` reports dev-dependency advisories (vite/esbuild chain); triaged in Phase 6 hardening, not blocking.
