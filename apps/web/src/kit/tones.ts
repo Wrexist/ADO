@@ -12,7 +12,7 @@ export const toneText: Record<Tone, string> = {
   warning: 'text-warning',
   info: 'text-info',
   danger: 'text-danger',
-  pink: 'text-pink',
+  pink: 'text-magenta',
   muted: 'text-text3',
 };
 
@@ -22,7 +22,7 @@ export const toneBg: Record<Tone, string> = {
   warning: 'bg-warning',
   info: 'bg-info',
   danger: 'bg-danger',
-  pink: 'bg-pink',
+  pink: 'bg-magenta',
   muted: 'bg-text3',
 };
 
@@ -33,6 +33,6 @@ export const toneTint: Record<Tone, string> = {
   warning: 'bg-warning/15 text-warning',
   info: 'bg-info/15 text-info',
   danger: 'bg-danger/15 text-danger',
-  pink: 'bg-pink/15 text-pink',
+  pink: 'bg-magenta/15 text-magenta',
   muted: 'bg-elevated text-text2',
 };

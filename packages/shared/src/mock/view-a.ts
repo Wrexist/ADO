@@ -173,16 +173,17 @@ export const MOCK_VIEW_A: ViewAMock = {
   ],
 
   runningAgents: [
-    { id: 'code-assistant', name: 'Code Assistant', statusLine: 'Analyzing code…', pct: 95, tone: 'success' },
-    { id: 'game-builder', name: 'Game Builder', statusLine: 'Building features…', pct: 87, tone: 'violet' },
-    { id: 'ui-generator', name: 'UI Generator', statusLine: 'Generating UI…', pct: 76, tone: 'info' },
-    { id: 'test-agent', name: 'Test Agent', statusLine: 'Running tests…', pct: 89, tone: 'warning' },
-    { id: 'docs-agent', name: 'Docs Agent', statusLine: 'Updating docs…', pct: 93, tone: 'pink' },
+    { id: 'code-assistant', name: 'Code Assistant', statusLine: 'Analyzing code…', pct: 95, tone: 'success', icon: 'code' },
+    { id: 'game-builder', name: 'Game Builder', statusLine: 'Building features…', pct: 87, tone: 'violet', icon: 'games' },
+    { id: 'ui-generator', name: 'UI Generator', statusLine: 'Generating UI…', pct: 76, tone: 'info', icon: 'wand' },
+    { id: 'test-agent', name: 'Test Agent', statusLine: 'Running tests…', pct: 89, tone: 'warning', icon: 'workflow' },
+    { id: 'docs-agent', name: 'Docs Agent', statusLine: 'Updating docs…', pct: 93, tone: 'pink', icon: 'templates' },
   ],
 
   activity: [
     {
       id: 'act-a1',
+      icon: 'check',
       title: 'SENTINEL',
       detail: 'Build completed successfully',
       ts: '2026-07-09T06:00:00.000Z',
@@ -191,6 +192,7 @@ export const MOCK_VIEW_A: ViewAMock = {
     },
     {
       id: 'act-a2',
+      icon: 'cloud',
       title: 'Bloom',
       detail: 'iOS build uploaded to TestFlight',
       ts: '2026-07-09T04:00:00.000Z',
@@ -199,6 +201,7 @@ export const MOCK_VIEW_A: ViewAMock = {
     },
     {
       id: 'act-a3',
+      icon: 'branch',
       title: 'Singularity Inc',
       detail: 'New commit pushed',
       ts: '2026-07-09T02:00:00.000Z',
@@ -207,6 +210,7 @@ export const MOCK_VIEW_A: ViewAMock = {
     },
     {
       id: 'act-a4',
+      icon: 'check',
       title: 'wrexist-ops',
       detail: 'Tests passed',
       ts: '2026-07-08T08:00:00.000Z',
@@ -215,6 +219,7 @@ export const MOCK_VIEW_A: ViewAMock = {
     },
     {
       id: 'act-a5',
+      icon: 'rocket',
       title: 'Atlas',
       detail: 'Deployment successful',
       ts: '2026-07-08T08:00:00.000Z',
@@ -223,6 +228,7 @@ export const MOCK_VIEW_A: ViewAMock = {
     },
     {
       id: 'act-a6',
+      icon: 'clock',
       title: 'tower-defense',
       detail: 'Fun-gate check queued',
       ts: '2026-07-06T08:00:00.000Z',

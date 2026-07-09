@@ -25,8 +25,9 @@ const config: Config = {
         warning: '#F59E0B',
         info: '#38BDF8',
         danger: '#EF4444',
-        // single-value alias (gradient end) so tone maps can use text-pink/bg-pink
-        pink: '#EC4899',
+        // single-value alias (gradient end) for the 'pink' tone. Named `magenta` so it
+        // can never collide with Tailwind's default `pink` palette object.
+        magenta: '#EC4899',
       },
       borderColor: {
         DEFAULT: 'rgba(255,255,255,0.07)',

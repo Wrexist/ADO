@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { MOCK_VIEW_A, MOCK_VIEW_B } from '@ado/shared/mock';
 import {
   AgentTile,
   AvatarStack,
+  Button,
   Card,
   Chip,
   CountBadge,
@@ -12,6 +13,7 @@ import {
   Icon,
   IconTile,
   MiniArea,
+  PillTabs,
   RadialRing,
   SectionHeader,
   Sparkline,
@@ -55,6 +57,7 @@ const TONES: Tone[] = ['violet', 'success', 'warning', 'info', 'danger', 'pink',
 export function KitPage() {
   const agentPoints = MOCK_VIEW_B.stats.find((s) => s.id === 'ai-agents')!.chart!;
   const cpu = MOCK_VIEW_B.monitor[0];
+  const [demoTab, setDemoTab] = useState('all');
 
   return (
     <div className="min-h-screen min-w-[1280px] bg-app p-8 text-text1">
@@ -88,7 +91,7 @@ export function KitPage() {
           </div>
         </Section>
 
-        <Section title="StatusDot" note="'muted' is the honest idle/unknown tone">
+        <Section title="StatusDot" note="'muted' is the honest idle/unknown tone; dotAfter for status rows">
           <div className="flex flex-wrap gap-5">
             <StatusDot tone="success" label="Active" />
             <StatusDot tone="success" label="Operational" />
@@ -96,6 +99,33 @@ export function KitPage() {
             <StatusDot tone="danger" label="Down" />
             <StatusDot tone="muted" label="Idle" />
             <StatusDot tone="info" label="Deploying" />
+            <StatusDot tone="success" label="Operational" dotAfter />
+          </div>
+        </Section>
+
+        <Section title="Button / PillTabs" note="primary · outline · ghost · disabled; active tab = elevated pill">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button>
+                <Icon name="plus" size={14} />
+                New
+              </Button>
+              <Button variant="outline">
+                <Icon name="sparkle" size={14} />
+                AI Assistant
+              </Button>
+              <Button variant="ghost">
+                Sort: Recently Updated
+                <Icon name="chevronDown" size={13} />
+              </Button>
+              <Button disabled>Disabled</Button>
+              <Button size="sm">Small</Button>
+            </div>
+            <PillTabs
+              tabs={MOCK_VIEW_A.repoTabs}
+              activeId={demoTab}
+              onChange={setDemoTab}
+            />
           </div>
         </Section>
 
@@ -175,7 +205,7 @@ export function KitPage() {
         <Section title="FeedRow" note="reserved tabular time slot — live updates never reflow the row">
           <div className="flex flex-col divide-y divide-white/[0.05]">
             {MOCK_VIEW_A.activity.slice(0, 3).map((a) => (
-              <FeedRow key={a.id} icon="check" tone={a.tone as Tone} title={a.title} detail={a.detail} time={a.agoLabel} />
+              <FeedRow key={a.id} icon={a.icon as IconName} tone={a.tone as Tone} title={a.title} detail={a.detail} time={a.agoLabel} />
             ))}
           </div>
         </Section>

@@ -81,6 +81,7 @@ export interface RunningAgentFixture {
   statusLine: string; // "Analyzing code…"
   pct: number;
   tone: Tone;
+  icon: string; // icon token name — data decides, views never guess
 }
 
 export interface ActivityItemFixture {
@@ -90,6 +91,7 @@ export interface ActivityItemFixture {
   ts: string;
   agoLabel: string;
   tone: Tone;
+  icon: string; // icon token name — data decides, views never guess
 }
 
 export interface SystemStatusRowFixture {

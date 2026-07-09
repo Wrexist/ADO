@@ -27,8 +27,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 ## In progress (Phase 1 — Functional shell) 🟡
 - [x] **Prompt 1.0 — shared component kit** — `apps/web/src/kit`: 17 components (Card, IconTile, StatusDot, Chip, GradientProgress, custom SVG Sparkline/RadialRing/MiniArea, AvatarStack, SectionHeader, StatCard, FeedRow, AgentTile, EmptyState, Icon set) + `/kit` demo route with **every state incl. failure/idle/empty/degraded** (opaque agent, tokens-unavailable, collecting-data lines). Inter self-hosted via @fontsource
 - [x] **Prompt 1.1 — View A chrome** — top bar (⌘K focuses search, bell badge, presence avatar) + full sidebar (all groups/items/badges from mock counts) + 3-column shell; main/rail regions are honest placeholders
-- [ ] Prompt 1.2 — View A main column (header row, 4 stat cards, repo tabs + 3×2 grid, view-all bar, Running Agents strip)
-- [ ] Prompt 1.3 — View A right rail (AI Command Center, Recent Activity, System Status, help card)
+- [x] **Prompt 1.2 — View A main column** — header row (+ layout toggles, + New), 4 stat cards, working repo filter tabs + 3×2 grid (RepoCard: status, meta, gradient progress, agent stacks), view-all bar, Running Agents strip (5 tiles, per-tone bars)
+- [x] **Prompt 1.3 — View A right rail** — AI Command Center (input + send), Recent Activity (6 fixture-iconed rows), System Status (dotAfter rows), violet help card. Kit grew: Button, PillTabs, StatusDot dotAfter — all demoed on /kit
 - [ ] Prompt 1.4 — View B (`/ops`) full build on per-view mock
 - [ ] Prompt 1.5 — quality floor sweep (0 console errors ✓ already enforced by screenshot script; focus/reduced-motion in; no-layout-shift check) → `/gate p1-functional-shell`
 - [ ] (the 1:1 pixel sign-off lives at **p3.5-pixel-polish**, after real data — value-first, D1)

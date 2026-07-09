@@ -154,6 +154,7 @@ export const MOCK_VIEW_B: ViewBMock = {
   activity: [
     {
       id: 'act-b1',
+      icon: 'check',
       title: 'SENTINEL',
       detail: 'Build completed successfully',
       ts: '2026-07-09T07:58:00.000Z',
@@ -162,6 +163,7 @@ export const MOCK_VIEW_B: ViewBMock = {
     },
     {
       id: 'act-b2',
+      icon: 'cloud',
       title: 'Bloom',
       detail: 'Deployment to TestFlight',
       ts: '2026-07-09T07:55:00.000Z',
@@ -170,6 +172,7 @@ export const MOCK_VIEW_B: ViewBMock = {
     },
     {
       id: 'act-b3',
+      icon: 'code',
       title: 'Code Review Agent',
       detail: 'Code review completed',
       ts: '2026-07-09T07:48:00.000Z',
@@ -178,6 +181,7 @@ export const MOCK_VIEW_B: ViewBMock = {
     },
     {
       id: 'act-b4',
+      icon: 'database',
       title: 'Atlas',
       detail: 'Database backup completed',
       ts: '2026-07-09T07:00:00.000Z',
@@ -186,6 +190,7 @@ export const MOCK_VIEW_B: ViewBMock = {
     },
     {
       id: 'act-b5',
+      icon: 'clock',
       title: 'Dynasty Manager',
       detail: 'Build #54 queued',
       ts: '2026-07-09T06:00:00.000Z',

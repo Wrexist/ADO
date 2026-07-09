@@ -10,6 +10,8 @@ export { Card, HoverCard } from './Card';
 export { IconTile } from './IconTile';
 export { StatusDot } from './StatusDot';
 export { Chip, CountBadge } from './Chip';
+export { Button } from './Button';
+export { PillTabs } from './PillTabs';
 export { GradientProgress } from './GradientProgress';
 export { Sparkline } from './Sparkline';
 export { RadialRing } from './RadialRing';

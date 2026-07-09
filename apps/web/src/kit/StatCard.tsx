@@ -47,7 +47,7 @@ export function StatCard({
         <p className="text-body text-text2">{label}</p>
         <p className="mt-1.5 text-stat font-semibold tabular-nums text-text1">{value}</p>
         {delta ? (
-          <p className={cx('mt-1.5 flex items-center gap-1 text-body', toneText[delta.tone])}>
+          <p className={cx('mt-1.5 flex items-center gap-1 whitespace-nowrap text-body', toneText[delta.tone])}>
             <span aria-hidden>{delta.trend === 'up' ? '↑' : '↓'}</span>
             <span>{delta.label}</span>
           </p>
