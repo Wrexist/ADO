@@ -22,7 +22,12 @@ export function StatusDot({
 }) {
   const dot = <span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', toneBg[tone])} />;
   const text = label ? (
-    <span className={cx('text-body', labelTone === 'body' ? 'text-text2' : toneText[tone])}>
+    <span
+      className={cx(
+        'whitespace-nowrap text-body',
+        labelTone === 'body' ? 'text-text2' : toneText[tone],
+      )}
+    >
       {label}
     </span>
   ) : null;

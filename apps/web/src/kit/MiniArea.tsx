@@ -10,19 +10,26 @@ export function MiniArea({
   tone = 'info',
   width = 132,
   height = 44,
+  responsive,
   className,
 }: {
   points: number[];
   tone?: Tone;
+  /** Coordinate space; with `responsive` the svg scales to its container width. */
   width?: number;
   height?: number;
+  responsive?: boolean;
   className?: string;
 }) {
   const pad = 3;
+  const sizing = responsive
+    ? { viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'none' as const }
+    : { width, height };
+  const sizeClass = responsive ? 'h-auto w-full' : undefined;
 
   if (points.length < 2) {
     return (
-      <svg width={width} height={height} className={cx('text-text3', className)} aria-label="collecting data">
+      <svg {...sizing} className={cx('text-text3', sizeClass, className)} aria-label="collecting data">
         <line
           x1={pad}
           y1={height / 2}
@@ -47,7 +54,7 @@ export function MiniArea({
   const area = `${line} L${x(points.length - 1).toFixed(1)},${height - pad} L${x(0).toFixed(1)},${height - pad} Z`;
 
   return (
-    <svg width={width} height={height} className={cx(toneText[tone], className)} aria-hidden>
+    <svg {...sizing} className={cx(toneText[tone], sizeClass, className)} aria-hidden>
       {/* faint baseline grid */}
       <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="currentColor" strokeWidth={1} opacity={0.12} />
       <path d={area} fill="currentColor" opacity={0.13} stroke="none" />

@@ -2,11 +2,19 @@
 
 Living tracker. Updated every session. Current phase drives what's actionable; `/gate` refuses Phase N+1 while N is open.
 
-**Current phase: 1 — Functional shell** 🔴 (p0 passed 2026-07-09; Phase 1 ready to start)
+**Current phase: 2 — Data core** 🔴 (p0 + p1 passed 2026-07-09; Phase 2 ready — needs `.env` first)
 
 ---
 
-## Done (Phase 0)
+## Next (Phase 2 — Data core)
+- [ ] `.env` from `.env.example` — **needs Isac**: GitHub PAT (repo + actions:read), `ACC_TOKEN` (`openssl rand -hex 24`), `PROJECT_DIRS`
+- [ ] Prompt 2.1 — typed event bus end-to-end (zod contracts per DATA_MAP, SQLite events/snapshots/samples, SSE w/ event IDs + snapshot-on-connect + Last-Event-ID replay, Zustand slices; delete direct mock imports) + Host-header allow-list, X-ACC-Token, CORS, WAL + migrations
+- [ ] Prompt 2.2 — scanner (PROJECT_DIRS walk, git status, ops.yml/TASK.md parse, scoped debounced fs-watch)
+- [ ] Prompt 2.3 — GitHub sync (octokit + ETags; Actions → progress; releases → deployments)
+- [ ] Prompt 2.4 — sysmon + health checks + stale/offline states + documented System Health formula + app-open logging → `/gate p2-data-core`
+- [ ] 🎯 Daily-Driver Milestone, then `/gate p2.5-daily-driver` (opens ≥5 of trailing 7 days) before Phase 3
+
+## Done (Phase 1 — Functional shell) 🟢
 - [x] Materialize & organize the locked plan package into the repo (docs/, design/reference/, .claude/, CLAUDE.md, .env.example)
 - [x] Author `GOALS.md` (goals, success criteria, non-goals, guardrails, anti-pivot clause)
 - [x] Author `ROADMAP.md` (7 phases with gates + rollup into the platform vision)
@@ -24,14 +32,14 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 ## Open (not gate-blocking)
 - [ ] Create `.env` from `.env.example` (GitHub PAT: repo + actions:read · ACC token: `openssl rand -hex 24`) — needed before Phase 2 data core, not for Phase 1
 
-## In progress (Phase 1 — Functional shell) 🟡
+## Done (Phase 1 details)
 - [x] **Prompt 1.0 — shared component kit** — `apps/web/src/kit`: 17 components (Card, IconTile, StatusDot, Chip, GradientProgress, custom SVG Sparkline/RadialRing/MiniArea, AvatarStack, SectionHeader, StatCard, FeedRow, AgentTile, EmptyState, Icon set) + `/kit` demo route with **every state incl. failure/idle/empty/degraded** (opaque agent, tokens-unavailable, collecting-data lines). Inter self-hosted via @fontsource
 - [x] **Prompt 1.1 — View A chrome** — top bar (⌘K focuses search, bell badge, presence avatar) + full sidebar (all groups/items/badges from mock counts) + 3-column shell; main/rail regions are honest placeholders
 - [x] **Prompt 1.2 — View A main column** — header row (+ layout toggles, + New), 4 stat cards, working repo filter tabs + 3×2 grid (RepoCard: status, meta, gradient progress, agent stacks), view-all bar, Running Agents strip (5 tiles, per-tone bars)
 - [x] **Prompt 1.3 — View A right rail** — AI Command Center (input + send), Recent Activity (6 fixture-iconed rows), System Status (dotAfter rows), violet help card. Kit grew: Button, PillTabs, StatusDot dotAfter — all demoed on /kit
-- [ ] Prompt 1.4 — View B (`/ops`) full build on per-view mock
-- [ ] Prompt 1.5 — quality floor sweep (0 console errors ✓ already enforced by screenshot script; focus/reduced-motion in; no-layout-shift check) → `/gate p1-functional-shell`
-- [ ] (the 1:1 pixel sign-off lives at **p3.5-pixel-polish**, after real data — value-first, D1)
+- [x] **Prompt 1.4 — View B (`/ops`) full build** — TopBarB + SidebarB (+ Pro Plan card), 5 stat cards (radial w/ denominator, real-series sparklines, tinted health), Projects Overview (working tabs, language dots from tokens, status chips), Build Queue (reserved duration slots, honest "Queued"), Activity Feed, AI Agents roster (idle state), AI Assistant panel, System Monitor (responsive MiniAreas), Quick Actions, Recent Deployments
+- [x] **Prompt 1.5 — quality floor** — 0 console errors (enforced by `scripts/screenshot.mjs` on every capture), ⌘K focuses search in BOTH top bars, `:focus-visible` ring global, reduced-motion honored, live values in reserved tabular slots
+- [x] **Gate `p1-functional-shell` → PASSED 2026-07-09** (the 1:1 pixel sign-off lives at **p3.5-pixel-polish**, after real data — value-first, D1)
 
 ---
 

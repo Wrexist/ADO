@@ -56,7 +56,7 @@ gates:
       - live/elapsed values render in reserved fixed-width masked slots; no layout shift when mock values change
       - zero console errors; keyboard focus visible; reduced-motion respected
     attempts: 5
-    status: open
+    status: passed   # 2026-07-09 — kit-first (19 components, /kit shows every state incl. degraded); both views structurally complete on per-view mock; reserved-width slots; 0 console errors enforced by screenshot script; cmd/ctrl+K works in both bars
   - name: p2-data-core
     criteria:
       - scanner + GitHub sync + sysmon + health checks live; both views show real portfolio data
