@@ -1,3 +1,4 @@
-/** @ado/shared — design tokens + typed event contracts shared by web and server. */
+/** @ado/shared — design tokens + typed event contracts + bus state shared by web and server. */
 export * from './tokens';
 export * from './events';
+export * from './state';

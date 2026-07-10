@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Icon, type IconName, cx } from '../kit';
+import { ConnectionBadge } from './ConnectionBadge';
 
 /**
  * View A top bar — logo + title block, centered ⌘K search, actions, avatar.
@@ -76,6 +77,7 @@ export function TopBarA() {
 
       {/* actions + avatar */}
       <div className="flex shrink-0 items-center gap-2">
+        <ConnectionBadge />
         <TopBarButton icon="plus" label="Create" />
         <TopBarButton icon="calendar" label="Calendar" />
         <TopBarButton icon="bell" label="Notifications" badge="3" />

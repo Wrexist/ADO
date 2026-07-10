@@ -1,20 +1,29 @@
 /**
- * Typed event contracts — the spine of the system.
+ * Typed event contracts — the spine of the system (full catalog per docs/DATA_MAP.md).
  *
  * Every server→client value flows through one of these zod-validated events and is
- * persisted with its source (see GOALS.md guardrails 1–2, .claude/ops.yml integrity).
- * The UI renders ONLY what arrived as an event; a value with no event is missing/stale,
- * never a plausible guess.
+ * persisted with its source. The UI renders ONLY what arrived as an event; a value
+ * with no event is missing/stale — never a plausible guess.
  *
- * Phase 0 ships the envelope + a representative skeleton of the union to lock the pattern.
- * Phase 2 fills in the full catalog from docs/DATA_MAP.md (repos, builds, deployments,
- * agents, activity, system samples, health, snapshots).
+ * Emission schedule: scanner/github/sysmon/health events go live in Prompts 2.2–2.4,
+ * runner events in Phase 3, tokens in Phase 4. `--demo` seeds fixture-shaped events
+ * so the pipeline is exercised end-to-end before real sources exist.
  */
 import { z } from 'zod';
+import {
+  Agent,
+  ActivityItem,
+  Build,
+  BusState,
+  Deployment,
+  HealthService,
+  Repo,
+  ServiceState,
+} from './state';
 
 /** Where a value came from — required so nothing on screen is sourceless. */
 export const EventSource = z.object({
-  kind: z.enum(['scanner', 'github', 'runner', 'sysmon', 'health', 'learn', 'mock']),
+  kind: z.enum(['scanner', 'github', 'runner', 'sysmon', 'health', 'learn', 'tokens', 'app', 'demo']),
   ref: z.string().describe('stable id of the origin: repo path, run id, sample id, …'),
 });
 export type EventSource = z.infer<typeof EventSource>;
@@ -26,30 +35,48 @@ const base = {
   source: EventSource,
 };
 
-// —— Representative event skeleton (extended in Phase 2) ————————————————————————
+// —— catalog ——————————————————————————————————————————————————————————————————
 
-export const RepoUpdatedEvent = z.object({
+export const RepoUpsertedEvent = z.object({
   ...base,
-  type: z.literal('repo.updated'),
-  payload: z.object({
-    repo: z.string(),
-    branch: z.string(),
-    lastCommitTs: z.string().datetime({ offset: true }),
-    openTasks: z.number().int().nonnegative(),
-    category: z.enum(['game', 'app', 'web', 'api', 'library', 'service']),
-  }),
+  type: z.literal('repo.upserted'),
+  payload: z.object({ repo: Repo }),
 });
 
-export const AgentProgressEvent = z.object({
+export const RepoRemovedEvent = z.object({
   ...base,
-  type: z.literal('agent.progress'),
-  payload: z.object({
-    agentId: z.string(),
-    name: z.string(),
-    status: z.string(), // e.g. "Analyzing code…"
-    /** null when the stream format is opaque — render "running (opaque)", never guess a % */
-    percent: z.number().min(0).max(100).nullable(),
-  }),
+  type: z.literal('repo.removed'),
+  payload: z.object({ repoId: z.string() }),
+});
+
+export const BuildUpdatedEvent = z.object({
+  ...base,
+  type: z.literal('build.updated'),
+  payload: z.object({ build: Build }),
+});
+
+export const DeployRecordedEvent = z.object({
+  ...base,
+  type: z.literal('deploy.recorded'),
+  payload: z.object({ deployment: Deployment }),
+});
+
+export const AgentUpsertedEvent = z.object({
+  ...base,
+  type: z.literal('agent.upserted'),
+  payload: z.object({ agent: Agent }),
+});
+
+export const AgentRemovedEvent = z.object({
+  ...base,
+  type: z.literal('agent.removed'),
+  payload: z.object({ agentId: z.string() }),
+});
+
+export const ActivityAppendedEvent = z.object({
+  ...base,
+  type: z.literal('activity.appended'),
+  payload: z.object({ item: ActivityItem }),
 });
 
 export const SystemSampleEvent = z.object({
@@ -62,17 +89,61 @@ export const SystemSampleEvent = z.object({
   }),
 });
 
+export const HealthCheckedEvent = z.object({
+  ...base,
+  type: z.literal('health.checked'),
+  payload: z.object({ service: HealthService, state: ServiceState }),
+});
+
+export const TokensRollupEvent = z.object({
+  ...base,
+  type: z.literal('tokens.rollup'),
+  payload: z.object({
+    approxTokens: z.number().nonnegative().nullable(), // null = honest "unavailable"
+    windowLabel: z.string(),
+  }),
+});
+
+/** Logged on every dashboard open — feeds the p2.5 daily-driver gate. */
+export const AppOpenedEvent = z.object({
+  ...base,
+  type: z.literal('app.opened'),
+  payload: z.object({ sessionId: z.string() }),
+});
+
 /** The discriminated union all consumers switch on. */
 export const AccEvent = z.discriminatedUnion('type', [
-  RepoUpdatedEvent,
-  AgentProgressEvent,
+  RepoUpsertedEvent,
+  RepoRemovedEvent,
+  BuildUpdatedEvent,
+  DeployRecordedEvent,
+  AgentUpsertedEvent,
+  AgentRemovedEvent,
+  ActivityAppendedEvent,
   SystemSampleEvent,
+  HealthCheckedEvent,
+  TokensRollupEvent,
+  AppOpenedEvent,
 ]);
-
 export type AccEvent = z.infer<typeof AccEvent>;
 export type AccEventType = AccEvent['type'];
 
 /** Parse an unknown payload from the bus/SSE into a typed event (throws on mismatch). */
 export function parseEvent(input: unknown): AccEvent {
   return AccEvent.parse(input);
+}
+
+// —— SSE protocol frames ——————————————————————————————————————————————————————
+// On connect the server sends a full `snapshot` frame (id = current seq); afterwards
+// each event arrives as an `evt` frame (id = its seq). Reconnects with Last-Event-ID
+// replay `evt` frames from the persisted log instead (council S5).
+
+export const SnapshotFrame = z.object({
+  seq: z.number().int().nonnegative(),
+  state: BusState,
+});
+export type SnapshotFrame = z.infer<typeof SnapshotFrame>;
+
+export function parseSnapshot(input: unknown): SnapshotFrame {
+  return SnapshotFrame.parse(input);
 }

@@ -8,7 +8,7 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ## Next (Phase 2 — Data core)
 - [ ] `.env` from `.env.example` — **needs Isac**: GitHub PAT (repo + actions:read), `ACC_TOKEN` (`openssl rand -hex 24`), `PROJECT_DIRS`
-- [ ] Prompt 2.1 — typed event bus end-to-end (zod contracts per DATA_MAP, SQLite events/snapshots/samples, SSE w/ event IDs + snapshot-on-connect + Last-Event-ID replay, Zustand slices; delete direct mock imports) + Host-header allow-list, X-ACC-Token, CORS, WAL + migrations
+- [x] **Prompt 2.1 — typed event bus end-to-end** — 11-event zod catalog + shared reducer (`state.ts`, one fold for server snapshot AND web deltas); SQLite (WAL, drizzle migrations: events/samples/snapshots/jobs); event-sourced boot replay; SSE with monotonic ids + snapshot-on-connect + Last-Event-ID gap replay; **security:** Host allow-list on ALL routes (DNS-rebinding), X-ACC-Token on mutations, token-gated SSE, strict CORS, timing-safe compare; Zustand bus store + Live/Reconnecting badge; app-open logging (p2.5 feed); **all direct mock imports deleted from apps/web** (grep = 0; fixtures survive only behind `--demo`); every rendered number now derived from stored events (deltas hidden until snapshots exist — honest). 21/21 tests incl. security + replay
 - [ ] Prompt 2.2 — scanner (PROJECT_DIRS walk, git status, ops.yml/TASK.md parse, scoped debounced fs-watch)
 - [ ] Prompt 2.3 — GitHub sync (octokit + ETags; Actions → progress; releases → deployments)
 - [ ] Prompt 2.4 — sysmon + health checks + stale/offline states + documented System Health formula + app-open logging → `/gate p2-data-core`

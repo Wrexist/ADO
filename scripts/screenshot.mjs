@@ -37,7 +37,9 @@ page.on('pageerror', (err) => consoleErrors.push(`${page.url()} — ${err.messag
 
 for (const route of routes) {
   const name = route.replace(/\W+/g, '-').replace(/^-|-$/g, '') || 'root';
-  await page.goto(base + route, { waitUntil: 'networkidle' });
+  // NOT networkidle: the SSE stream keeps one connection open forever by design.
+  await page.goto(base + route, { waitUntil: 'load' });
+  await page.waitForTimeout(1200); // let the snapshot frame land and paint
   const path = `${outDir}/${name}.png`;
   await page.screenshot({ path, fullPage: true });
   console.log(`captured ${path}`);

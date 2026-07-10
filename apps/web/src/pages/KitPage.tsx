@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import { MOCK_VIEW_A, MOCK_VIEW_B } from '@ado/shared/mock';
 import {
   AgentTile,
   AvatarStack,
@@ -54,9 +53,23 @@ const ICONS: IconName[] = [
 
 const TONES: Tone[] = ['violet', 'success', 'warning', 'info', 'danger', 'pink', 'muted'];
 
+// Local sample props — this page demos component STATES; it renders no data claims,
+// so it imports neither the fixtures package nor the bus (the mock-import grep stays zero).
+const SPARK_12 = [8, 9, 9, 10, 10, 11, 11, 11, 12, 12, 12, 12];
+const AREA_CPU = [28, 34, 30, 42, 38, 31, 29, 36, 44, 33, 30, 32];
+const DEMO_TABS = [
+  { id: 'all', label: 'All', count: 12 },
+  { id: 'games', label: 'Games', count: 5 },
+  { id: 'apps', label: 'Apps', count: 4 },
+  { id: 'libraries', label: 'Libraries', count: 3 },
+];
+const DEMO_ROWS = [
+  { id: 'r1', icon: 'check', tone: 'success', title: 'SENTINEL', detail: 'Build completed successfully', time: '2h ago' },
+  { id: 'r2', icon: 'cloud', tone: 'info', title: 'Bloom', detail: 'iOS build uploaded to TestFlight', time: '4h ago' },
+  { id: 'r3', icon: 'branch', tone: 'violet', title: 'Singularity Inc', detail: 'New commit pushed', time: '6h ago' },
+] as const;
+
 export function KitPage() {
-  const agentPoints = MOCK_VIEW_B.stats.find((s) => s.id === 'ai-agents')!.chart!;
-  const cpu = MOCK_VIEW_B.monitor[0];
   const [demoTab, setDemoTab] = useState('all');
 
   return (
@@ -121,11 +134,7 @@ export function KitPage() {
               <Button disabled>Disabled</Button>
               <Button size="sm">Small</Button>
             </div>
-            <PillTabs
-              tabs={MOCK_VIEW_A.repoTabs}
-              activeId={demoTab}
-              onChange={setDemoTab}
-            />
+            <PillTabs tabs={DEMO_TABS} activeId={demoTab} onChange={setDemoTab} />
           </div>
         </Section>
 
@@ -172,12 +181,12 @@ export function KitPage() {
 
         <Section title="Sparkline / RadialRing / MiniArea" note="custom SVG, no chart deps; <2 samples = flat 'collecting data' line — never an invented curve">
           <div className="flex flex-wrap items-end gap-8">
-            <div><Label>sparkline (12 samples)</Label><Sparkline points={agentPoints.kind === 'sparkline' ? agentPoints.points : []} tone="success" /></div>
+            <div><Label>sparkline (12 samples)</Label><Sparkline points={SPARK_12} tone="success" /></div>
             <div><Label>2 samples (floor)</Label><Sparkline points={[4, 9]} tone="info" /></div>
             <div><Label>collecting data (&lt;2)</Label><Sparkline points={[]} /></div>
             <div><Label>radial 8 of 10</Label><RadialRing value={8} max={10} /></div>
             <div><Label>radial 3 of 10</Label><RadialRing value={3} max={10} tone="info" /></div>
-            <div><Label>mini area (CPU)</Label><MiniArea points={cpu.points} tone={cpu.tone as Tone} /></div>
+            <div><Label>mini area (CPU)</Label><MiniArea points={AREA_CPU} tone="info" /></div>
             <div><Label>mini area collecting</Label><MiniArea points={[]} /></div>
           </div>
         </Section>
@@ -204,8 +213,8 @@ export function KitPage() {
 
         <Section title="FeedRow" note="reserved tabular time slot — live updates never reflow the row">
           <div className="flex flex-col divide-y divide-white/[0.05]">
-            {MOCK_VIEW_A.activity.slice(0, 3).map((a) => (
-              <FeedRow key={a.id} icon={a.icon as IconName} tone={a.tone as Tone} title={a.title} detail={a.detail} time={a.agoLabel} />
+            {DEMO_ROWS.map((a) => (
+              <FeedRow key={a.id} icon={a.icon as IconName} tone={a.tone as Tone} title={a.title} detail={a.detail} time={a.time} />
             ))}
           </div>
         </Section>

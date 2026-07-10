@@ -1,4 +1,3 @@
-import { MOCK_VIEW_B } from '@ado/shared/mock';
 import { Button, Card, Icon, IconTile, cx, type IconName } from '../kit';
 
 /**
@@ -69,7 +68,8 @@ function NavItem({ icon, label, active }: NavEntry) {
 }
 
 export function SidebarB() {
-  const { proPlan } = MOCK_VIEW_B;
+  // Static copy — honest placeholder card per DATA_MAP ("not wired yet" > fake feature).
+  const proPlan = { title: 'Pro Plan', body: 'Unlimited access', cta: 'Upgrade' };
   return (
     <aside className="flex w-[200px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
       <nav className="flex flex-1 flex-col gap-0.5">

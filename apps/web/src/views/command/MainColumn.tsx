@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { MOCK_VIEW_A } from '@ado/shared/mock';
 import {
   AgentTile,
   Button,
@@ -11,12 +10,15 @@ import {
   type IconName,
   type Tone,
 } from '../../kit';
+import { useBus } from '../../store/bus';
+import { reposList, repoTabs, runningAgents } from '../../lib/selectors';
+import { approxTokens } from '../../lib/time';
 import { RepoCard } from './RepoCard';
 
 /**
- * View A main column (Prompt 1.2): header row, 4 stat cards, All Repositories
- * (tabs + 3×2 grid + view-all bar), Running Agents strip. All values from
- * @ado/shared/mock — replaced by Zustand slices in Phase 2.
+ * View A main column — renders EXCLUSIVELY from the bus store (Prompt 2.1).
+ * Deltas ("↑2 this week") are hidden until daily snapshots exist (2.4): no
+ * history → no delta, never an invented one (DATA_MAP rule).
  */
 
 const TAB_CATEGORY: Record<string, string | null> = {
@@ -27,18 +29,25 @@ const TAB_CATEGORY: Record<string, string | null> = {
 };
 
 export function MainColumn() {
-  const m = MOCK_VIEW_A;
+  const state = useBus((s) => s.state);
   const [tab, setTab] = useState('all');
+
+  const repos = reposList(state);
+  const tabs = repoTabs(state);
+  const running = runningAgents(state);
+  const agentsTotal = Object.keys(state.agents).length;
   const category = TAB_CATEGORY[tab] ?? null;
-  const repos = (category ? m.repos.filter((r) => r.category === category) : m.repos).slice(0, 6);
+  const visible = (category ? repos.filter((r) => r.category === category) : repos).slice(0, 6);
 
   return (
     <main className="min-w-[640px] flex-1 p-6">
-      {/* header row */}
+      {/* header row — copy is a single-shot draft (convention 6) */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-title font-semibold text-text1">{m.header.greeting}</h1>
-          <p className="mt-1 text-body text-text2">{m.header.subtitle}</p>
+          <h1 className="text-title font-semibold text-text1">Welcome back, Isac! 👋</h1>
+          <p className="mt-1 text-body text-text2">
+            Here's what's happening with your projects today.
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <div className="flex items-center gap-1 rounded-tile border bg-card p-1">
@@ -63,27 +72,42 @@ export function MainColumn() {
         </div>
       </div>
 
-      {/* stat cards */}
+      {/* stat cards — every value derived from the store */}
       <div className="mt-6 grid grid-cols-4 gap-4">
-        {m.stats.map((s) => (
-          <StatCard
-            key={s.id}
-            label={s.label}
-            value={s.value}
-            delta={s.delta}
-            sub={s.sub}
-            subDotTone={s.id === 'active-agents' ? 'success' : undefined}
-            icon={s.icon as IconName}
-            iconTone={s.iconTone as Tone}
-          />
-        ))}
+        <StatCard
+          label="Total Repositories"
+          value={String(repos.length)}
+          icon="repos"
+          iconTone="violet"
+        />
+        <StatCard
+          label="Active Agents"
+          value={String(agentsTotal)}
+          sub={`${running.length} running`}
+          subDotTone="success"
+          icon="agents"
+          iconTone="success"
+        />
+        <StatCard
+          label="Deployments"
+          value={String(state.deployments.length)}
+          icon="rocket"
+          iconTone="info"
+        />
+        <StatCard
+          label="AI Tokens Used"
+          value={approxTokens(state.tokens?.approxTokens ?? null)}
+          sub={state.tokens?.approxTokens != null ? `last ${state.tokens.windowLabel}` : 'tokens unavailable'}
+          icon="tokens"
+          iconTone="warning"
+        />
       </div>
 
       {/* all repositories */}
       <div className="mt-8">
         <div className="flex items-center gap-4">
           <h2 className="shrink-0 text-section font-semibold text-text1">All Repositories</h2>
-          <PillTabs tabs={m.repoTabs} activeId={tab} onChange={setTab} />
+          <PillTabs tabs={tabs} activeId={tab} onChange={setTab} />
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <Button variant="ghost" size="sm">
               Sort: Recently Updated
@@ -96,7 +120,7 @@ export function MainColumn() {
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-4">
-          {repos.map((r) => (
+          {visible.map((r) => (
             <RepoCard key={r.id} repo={r} />
           ))}
         </div>
@@ -109,11 +133,11 @@ export function MainColumn() {
         </button>
       </div>
 
-      {/* running agents */}
+      {/* running agents — live runner processes only */}
       <div className="mt-8">
         <SectionHeader title="Running Agents" action="View all agents" />
         <div className="mt-4 grid grid-cols-5 gap-3">
-          {m.runningAgents.map((a) => (
+          {running.map((a) => (
             <AgentTile
               key={a.id}
               icon={a.icon as IconName}

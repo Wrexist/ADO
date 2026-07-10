@@ -8,7 +8,11 @@ import '@fontsource/inter/600.css';
 import { CommandPage } from './pages/CommandPage';
 import { OpsPage } from './pages/OpsPage';
 import { KitPage } from './pages/KitPage';
+import { startBus } from './bus/connect';
 import './index.css';
+
+// Connect to the event bus (SSE) — the only data source views render from.
+startBus();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -1,24 +1,23 @@
-import { MOCK_VIEW_A } from '@ado/shared/mock';
 import { CountBadge, Icon, type IconName, cx } from '../kit';
+import { useBus } from '../store/bus';
+import { sidebarCounts } from '../lib/selectors';
 
 /**
  * View A sidebar — 224px, grouped nav with 11px uppercase eyebrows, count badges,
- * violet-tinted active pill, user card at the bottom. Counts come from the mock
- * module (Phase 2 wires them to scanner categories per DATA_MAP).
+ * violet-tinted active pill, user card at the bottom. Counts are DERIVED from the
+ * bus store (scanner categories after 2.2; demo seed until then).
  */
 type NavEntry = { icon: IconName; label: string; count?: number; active?: boolean };
 type NavGroup = { eyebrow?: string; items: NavEntry[] };
 
-const { sidebarCounts } = MOCK_VIEW_A;
-
-const GROUPS: NavGroup[] = [
+const buildGroups = (counts: { repositories: number; games: number; agents: number }): NavGroup[] => [
   { items: [{ icon: 'overview', label: 'Overview', active: true }] },
   {
     eyebrow: 'Workspace',
     items: [
-      { icon: 'repos', label: 'Repositories', count: sidebarCounts.repositories },
-      { icon: 'games', label: 'Games', count: sidebarCounts.games },
-      { icon: 'agents', label: 'Agents', count: sidebarCounts.agents },
+      { icon: 'repos', label: 'Repositories', count: counts.repositories },
+      { icon: 'games', label: 'Games', count: counts.games },
+      { icon: 'agents', label: 'Agents', count: counts.agents },
       { icon: 'templates', label: 'Templates' },
       { icon: 'keys', label: 'Secrets & Keys' },
       { icon: 'integrations', label: 'Integrations' },
@@ -71,10 +70,14 @@ function NavItem({ icon, label, count, active }: NavEntry) {
 }
 
 export function SidebarA() {
+  // Select the stable state reference; derive OUTSIDE the selector (a derived object
+  // inside the selector would change identity every call → infinite re-render).
+  const state = useBus((s) => s.state);
+  const groups = buildGroups(sidebarCounts(state));
   return (
     <aside className="flex w-[224px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
       <nav className="flex flex-1 flex-col gap-0.5">
-        {GROUPS.map((group, gi) => (
+        {groups.map((group, gi) => (
           <div key={group.eyebrow ?? gi} className="flex flex-col gap-0.5">
             {group.eyebrow ? (
               <p className="px-3 pb-1 pt-5 text-label font-medium uppercase tracking-wider text-text3">

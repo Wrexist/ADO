@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
+  // VITE_* vars come from the repo-root .env (single env file for server + web)
+  envDir: fileURLToPath(new URL('../..', import.meta.url)),
   resolve: {
     alias: {
       // resolve the shared workspace package straight from source

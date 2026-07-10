@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Icon, type IconName } from '../kit';
+import { ConnectionBadge } from './ConnectionBadge';
 
 /**
  * View B top bar — "AI CONTROL / DASHBOARD" logo block left; search pill,
@@ -53,6 +54,7 @@ export function TopBarB() {
 
       {/* right cluster */}
       <div className="flex shrink-0 items-center gap-2">
+        <ConnectionBadge />
         <div className="relative">
           <Icon
             name="search"

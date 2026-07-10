@@ -1,4 +1,4 @@
-import type { RepoCardFixture, RepoCategory } from '@ado/shared/mock';
+import type { Repo } from '@ado/shared';
 import {
   AvatarStack,
   Chip,
@@ -7,37 +7,13 @@ import {
   Icon,
   IconTile,
   StatusDot,
-  type IconName,
-  type Tone,
 } from '../../kit';
+import { CATEGORY_ICON, CATEGORY_TAG, CI_TONE, REPO_STATUS_LOOK } from '../../lib/repoLook';
+import { timeAgo } from '../../lib/time';
 
-/** Category → icon tile look (data decides the category; the map is presentation). */
-const CATEGORY_ICON: Record<RepoCategory, { icon: IconName; tone: Tone }> = {
-  game: { icon: 'games', tone: 'violet' },
-  app: { icon: 'sparkle', tone: 'success' },
-  web: { icon: 'cloud', tone: 'info' },
-  api: { icon: 'code', tone: 'violet' },
-  library: { icon: 'templates', tone: 'warning' },
-  service: { icon: 'database', tone: 'info' },
-};
-
-const STATUS: Record<RepoCardFixture['status'], { tone: Tone; label: string }> = {
-  active: { tone: 'success', label: 'Active' },
-  testing: { tone: 'warning', label: 'Testing' },
-  blocked: { tone: 'danger', label: 'Blocked' },
-  archived: { tone: 'muted', label: 'Archived' },
-};
-
-const PROGRESS_TONE: Record<RepoCardFixture['progress']['state'], 'gradient' | Tone> = {
-  success: 'gradient',
-  running: 'warning',
-  queued: 'warning',
-  failed: 'danger',
-};
-
-export function RepoCard({ repo }: { repo: RepoCardFixture }) {
+export function RepoCard({ repo }: { repo: Repo }) {
   const cat = CATEGORY_ICON[repo.category];
-  const status = STATUS[repo.status];
+  const status = REPO_STATUS_LOOK[repo.status];
 
   return (
     <HoverCard className="flex flex-col gap-3 p-4">
@@ -46,7 +22,7 @@ export function RepoCard({ repo }: { repo: RepoCardFixture }) {
         <IconTile icon={cat.icon} tone={cat.tone} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-body font-semibold text-text1">{repo.name}</p>
-          <Chip size="sm" className="mt-1">{repo.tagLabel}</Chip>
+          <Chip size="sm" className="mt-1">{CATEGORY_TAG[repo.category]}</Chip>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <StatusDot tone={status.tone} label={status.label} />
@@ -68,22 +44,26 @@ export function RepoCard({ repo }: { repo: RepoCardFixture }) {
           <Icon name="branch" size={12} />
           {repo.branch}
         </span>
-        <span>Updated {repo.updatedLabel}</span>
+        <span>Updated {timeAgo(repo.updatedTs)}</span>
       </div>
 
-      {/* progress row — pct sits in a reserved tabular slot (no reflow) */}
-      <div className="flex items-center gap-2">
-        <span className="shrink-0 text-label text-text2">{repo.progress.label}</span>
-        {repo.progress.state === 'success' ? (
-          <Icon name="check" size={12} className="shrink-0 text-success" />
-        ) : null}
-        <GradientProgress pct={repo.progress.pct} tone={PROGRESS_TONE[repo.progress.state]} />
-        <span className="w-10 shrink-0 text-right text-label tabular-nums text-text2">
-          {repo.progress.pct}%
-        </span>
-      </div>
+      {/* progress row — pct in a reserved tabular slot; absent CI = honest state */}
+      {repo.ci ? (
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-label text-text2">{repo.ci.label}</span>
+          {repo.ci.state === 'success' ? (
+            <Icon name="check" size={12} className="shrink-0 text-success" />
+          ) : null}
+          <GradientProgress pct={repo.ci.pct} tone={CI_TONE[repo.ci.state]} />
+          <span className="w-10 shrink-0 text-right text-label tabular-nums text-text2">
+            {repo.ci.pct}%
+          </span>
+        </div>
+      ) : (
+        <p className="text-label text-text3">No CI runs yet</p>
+      )}
 
-      <AvatarStack ids={repo.agents} overflow={repo.agentsOverflow} />
+      <AvatarStack ids={repo.agents} />
     </HoverCard>
   );
 }
