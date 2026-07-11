@@ -14,7 +14,8 @@ export class HealthChecker {
 
   constructor(
     private bus: Bus,
-    private anthropicKey: string,
+    /** Resolved per-check so a key saved in Settings takes effect on the next tick. */
+    private getAnthropicKey: () => string,
     private log: (msg: string) => void = () => {},
   ) {}
 
@@ -29,10 +30,11 @@ export class HealthChecker {
   }
 
   private async checkAnthropic(): Promise<void> {
-    if (!this.anthropicKey) return; // no key → leave unknown (honest "No data")
+    const key = this.getAnthropicKey();
+    if (!key) return; // no key → leave unknown (honest "No data")
     try {
       const res = await fetch('https://api.anthropic.com/v1/models', {
-        headers: { 'x-api-key': this.anthropicKey, 'anthropic-version': '2023-06-01' },
+        headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       });
       this.emit('anthropic', res.ok ? 'operational' : 'degraded');
     } catch {

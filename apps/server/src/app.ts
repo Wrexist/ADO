@@ -3,12 +3,16 @@
  * tests can build an app against :memory: without binding a port.
  */
 import { randomUUID } from 'node:crypto';
-import Fastify, { type FastifyInstance } from 'fastify';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import { CONNECTOR_BY_ID } from '@ado/shared';
 import { openDb } from './db';
 import type { Env } from './env';
 import { Bus } from './bus';
-import { registerSecurity, sseAuthorized } from './security';
+import { registerSecurity, sseAuthorized, tokenMatches } from './security';
+import { ConnectionsStore } from './connections/store';
 import { seedDemo } from './demo';
 import { Scanner } from './scanner';
 import { GitHubSync } from './integrations/github/sync';
@@ -48,7 +52,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
   await app.register(cors, {
     origin: env.webOrigin, // exactly one origin — no wildcards
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id'],
   });
   registerSecurity(app, env);
@@ -126,6 +130,26 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     app.log.info('demo seed applied (deterministic fixture events)');
   }
 
+  // Secrets store: stored keys override .env; secrets never leave the server.
+  const ENV_FALLBACK: Record<string, string> = {
+    github: 'GITHUB_TOKEN',
+    anthropic: 'ANTHROPIC_API_KEY',
+    openai: 'OPENAI_API_KEY',
+    google: 'GOOGLE_API_KEY',
+    supabase: 'SUPABASE_ACCESS_TOKEN',
+    vercel: 'VERCEL_TOKEN',
+    netlify: 'NETLIFY_TOKEN',
+    figma: 'FIGMA_TOKEN',
+  };
+  const connectionsPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-conn-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'connections.json');
+  const connections = new ConnectionsStore(connectionsPath, (id) => {
+    const key = ENV_FALLBACK[id];
+    return key ? process.env[key] : undefined;
+  });
+
   // Real data source: scan configured project dirs (skipped in demo/no-dirs runs).
   let scanner: Scanner | null = null;
   if (!env.demo && env.projectDirs.length > 0) {
@@ -133,13 +157,20 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     void scanner.start().catch((err) => app.log.error(err));
   }
 
-  // GitHub enrichment: on when a token is configured (or a client is injected).
+  // GitHub enrichment: token comes from the connections store (or an injected client).
+  // Restartable so the Settings page connects GitHub live — no server restart needed.
   let github: GitHubSync | null = null;
-  if (!env.demo && (env.githubToken || deps.githubClient)) {
-    const client = deps.githubClient ?? new OctokitClient(env.githubToken);
+  const startGithub = () => {
+    github?.stop();
+    github = null;
+    if (env.demo) return;
+    const token = connections.resolve('github');
+    const client = deps.githubClient ?? (token ? new OctokitClient(token) : null);
+    if (!client) return;
     github = new GitHubSync(bus, client, (msg) => app.log.info(msg));
     github.start();
-  }
+  };
+  startGithub();
 
   // Runner: dispatch headless agents. cwd allow-list comes from the scanner (only
   // scanned repos are dispatchable); demo maps ids straight through for the sim agent.
@@ -172,9 +203,42 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   if (!env.demo && deps.startSystem !== false) {
     sysmon = new Sysmon(bus, (msg) => app.log.warn(msg));
     sysmon.start();
-    health = new HealthChecker(bus, process.env.ANTHROPIC_API_KEY ?? '', (msg) => app.log.info(msg));
+    health = new HealthChecker(bus, () => connections.resolve('anthropic') ?? '', (msg) => app.log.info(msg));
     health.start();
   }
+
+  // Connections (Settings page). Every route requires the token — GET included, since
+  // connection status shouldn't be world-readable. Secrets are NEVER returned.
+  const requireToken = (req: FastifyRequest, reply: FastifyReply): boolean => {
+    const t = req.headers['x-acc-token'];
+    if (!tokenMatches(env.accToken, typeof t === 'string' ? t : undefined)) {
+      reply.code(401).send({ error: 'unauthorized' });
+      return false;
+    }
+    return true;
+  };
+  app.get('/api/connections', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { connections: connections.statusAll() };
+  });
+  app.post('/api/connections/:id', async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    if (!CONNECTOR_BY_ID[id]) return reply.code(404).send({ error: 'unknown connector' });
+    try {
+      connections.set(id, ((req.body ?? {}) as { value?: string }).value ?? '');
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+    if (id === 'github') startGithub(); // connect live
+    return { status: connections.status(id) };
+  });
+  app.delete('/api/connections/:id', async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    if (!CONNECTOR_BY_ID[id]) return reply.code(404).send({ error: 'unknown connector' });
+    connections.remove(id);
+    if (id === 'github') startGithub();
+    return { status: connections.status(id) };
+  });
 
   return {
     app,

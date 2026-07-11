@@ -41,7 +41,7 @@ describe('HealthChecker (Prompt 2.4)', () => {
   it('emits server=operational and leaves anthropic unknown without a key (honest No data)', () => {
     const { db, sqlite } = openDb(':memory:');
     const bus = new Bus(db);
-    const hc = new HealthChecker(bus, ''); // no anthropic key
+    const hc = new HealthChecker(bus, () => ''); // no anthropic key
     hc.start();
     hc.stop();
     const health = bus.snapshot().state.health;

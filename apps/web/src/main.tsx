@@ -8,6 +8,7 @@ import '@fontsource/inter/600.css';
 import { CommandPage } from './pages/CommandPage';
 import { OpsPage } from './pages/OpsPage';
 import { KitPage } from './pages/KitPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { startBus } from './bus/connect';
 import './index.css';
 
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<Navigate to="/command" replace />} />
         <Route path="/command" element={<CommandPage />} />
         <Route path="/ops" element={<OpsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         {/* kit demo — every component in every state (gate p1 criterion) */}
         <Route path="/kit" element={<KitPage />} />
       </Routes>

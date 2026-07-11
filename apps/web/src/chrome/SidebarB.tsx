@@ -1,14 +1,15 @@
+import { Link, useLocation } from 'react-router-dom';
 import { Button, Card, Icon, IconTile, cx, type IconName } from '../kit';
 
 /**
  * View B sidebar — 200px, denser nav (WORKSPACE / AI TOOLS / MONITORING / SETTINGS),
  * Pro Plan card pinned at the bottom (honest static placeholder per DATA_MAP).
  */
-type NavEntry = { icon: IconName; label: string; active?: boolean };
+type NavEntry = { icon: IconName; label: string; active?: boolean; to?: string };
 type NavGroup = { eyebrow?: string; items: NavEntry[] };
 
 const GROUPS: NavGroup[] = [
-  { items: [{ icon: 'overview', label: 'Overview', active: true }] },
+  { items: [{ icon: 'overview', label: 'Overview', to: '/ops' }] },
   {
     eyebrow: 'Workspace',
     items: [
@@ -18,7 +19,7 @@ const GROUPS: NavGroup[] = [
       { icon: 'cloud', label: 'Websites' },
       { icon: 'integrations', label: 'Services' },
       { icon: 'database', label: 'Databases' },
-      { icon: 'lock', label: 'Secrets' },
+      { icon: 'lock', label: 'Secrets', to: '/settings' },
     ],
   },
   {
@@ -44,30 +45,32 @@ const GROUPS: NavGroup[] = [
     eyebrow: 'Settings',
     items: [
       { icon: 'team', label: 'Team' },
-      { icon: 'integrations', label: 'Integrations' },
-      { icon: 'settings', label: 'Settings' },
+      { icon: 'integrations', label: 'Integrations', to: '/settings' },
+      { icon: 'settings', label: 'Settings', to: '/settings' },
     ],
   },
 ];
 
-function NavItem({ icon, label, active }: NavEntry) {
-  return (
-    <button
-      type="button"
-      className={cx(
-        'flex w-full items-center gap-2.5 rounded-tile px-3 py-[7px] text-body transition-colors duration-150 ease-soft',
-        active
-          ? 'bg-primary/15 font-medium text-text1'
-          : 'text-text2 hover:bg-elevated hover:text-text1',
-      )}
-    >
+function NavItem({ icon, label, active, to }: NavEntry) {
+  const cls = cx(
+    'flex w-full items-center gap-2.5 rounded-tile px-3 py-[7px] text-body transition-colors duration-150 ease-soft',
+    active ? 'bg-primary/15 font-medium text-text1' : 'text-text2 hover:bg-elevated hover:text-text1',
+  );
+  const inner = (
+    <>
       <Icon name={icon} size={15} className={active ? 'text-primary' : 'text-text3'} />
       <span className="truncate">{label}</span>
-    </button>
+    </>
+  );
+  return to ? (
+    <Link to={to} className={cls}>{inner}</Link>
+  ) : (
+    <button type="button" className={cls}>{inner}</button>
   );
 }
 
 export function SidebarB() {
+  const location = useLocation();
   // Static copy — honest placeholder card per DATA_MAP ("not wired yet" > fake feature).
   const proPlan = { title: 'Pro Plan', body: 'Unlimited access', cta: 'Upgrade' };
   return (
@@ -81,7 +84,11 @@ export function SidebarB() {
               </p>
             ) : null}
             {group.items.map((item) => (
-              <NavItem key={item.label} {...item} />
+              <NavItem
+                key={item.label}
+                {...item}
+                active={item.to ? location.pathname === item.to : item.active}
+              />
             ))}
           </div>
         ))}

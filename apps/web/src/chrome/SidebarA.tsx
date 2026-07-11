@@ -1,3 +1,4 @@
+import { Link, useLocation } from 'react-router-dom';
 import { CountBadge, Icon, type IconName, cx } from '../kit';
 import { useBus } from '../store/bus';
 import { sidebarCounts } from '../lib/selectors';
@@ -7,11 +8,11 @@ import { sidebarCounts } from '../lib/selectors';
  * violet-tinted active pill, user card at the bottom. Counts are DERIVED from the
  * bus store (scanner categories after 2.2; demo seed until then).
  */
-type NavEntry = { icon: IconName; label: string; count?: number; active?: boolean };
+type NavEntry = { icon: IconName; label: string; count?: number; active?: boolean; to?: string };
 type NavGroup = { eyebrow?: string; items: NavEntry[] };
 
 const buildGroups = (counts: { repositories: number; games: number; agents: number }): NavGroup[] => [
-  { items: [{ icon: 'overview', label: 'Overview', active: true }] },
+  { items: [{ icon: 'overview', label: 'Overview', to: '/command' }] },
   {
     eyebrow: 'Workspace',
     items: [
@@ -19,8 +20,8 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
       { icon: 'games', label: 'Games', count: counts.games },
       { icon: 'agents', label: 'Agents', count: counts.agents },
       { icon: 'templates', label: 'Templates' },
-      { icon: 'keys', label: 'Secrets & Keys' },
-      { icon: 'integrations', label: 'Integrations' },
+      { icon: 'keys', label: 'Secrets & Keys', to: '/settings' },
+      { icon: 'integrations', label: 'Integrations', to: '/settings' },
     ],
   },
   {
@@ -44,28 +45,29 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
   {
     eyebrow: 'Settings',
     items: [
-      { icon: 'settings', label: 'Workspace Settings' },
+      { icon: 'settings', label: 'Workspace Settings', to: '/settings' },
       { icon: 'team', label: 'Team' },
       { icon: 'billing', label: 'Billing' },
     ],
   },
 ];
 
-function NavItem({ icon, label, count, active }: NavEntry) {
-  return (
-    <button
-      type="button"
-      className={cx(
-        'flex w-full items-center gap-2.5 rounded-tile px-3 py-2 text-body transition-colors duration-150 ease-soft',
-        active
-          ? 'bg-primary/15 font-medium text-text1'
-          : 'text-text2 hover:bg-elevated hover:text-text1',
-      )}
-    >
+function NavItem({ icon, label, count, active, to }: NavEntry) {
+  const cls = cx(
+    'flex w-full items-center gap-2.5 rounded-tile px-3 py-2 text-body transition-colors duration-150 ease-soft',
+    active ? 'bg-primary/15 font-medium text-text1' : 'text-text2 hover:bg-elevated hover:text-text1',
+  );
+  const inner = (
+    <>
       <Icon name={icon} size={16} className={active ? 'text-primary' : 'text-text3'} />
       <span className="truncate">{label}</span>
       {count != null ? <CountBadge>{count}</CountBadge> : null}
-    </button>
+    </>
+  );
+  return to ? (
+    <Link to={to} className={cls}>{inner}</Link>
+  ) : (
+    <button type="button" className={cls}>{inner}</button>
   );
 }
 
@@ -73,7 +75,11 @@ export function SidebarA() {
   // Select the stable state reference; derive OUTSIDE the selector (a derived object
   // inside the selector would change identity every call → infinite re-render).
   const state = useBus((s) => s.state);
-  const groups = buildGroups(sidebarCounts(state));
+  const location = useLocation();
+  const groups = buildGroups(sidebarCounts(state)).map((g) => ({
+    ...g,
+    items: g.items.map((it) => ({ ...it, active: it.to ? location.pathname === it.to : it.active })),
+  }));
   return (
     <aside className="flex w-[224px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
       <nav className="flex flex-1 flex-col gap-0.5">

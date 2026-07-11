@@ -12,6 +12,13 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] **Proven end-to-end (simulated agent):** dispatched 3 agents → live "Using Grep…" progress (turn-based %), Active Agents 3, Build Queue populated, dispatch activity, run rows logged. Real `claude -p` runs identically (same code path behind the Spawner).
 - [ ] **Gate `p3-agents`** — pipeline proven in simulation; the literal "real `claude -p` task to completion" confirmation is Isac's to run on a machine with the claude CLI + a repo. Then `/gate p3-agents`.
 
+## Settings · Connections (Isac request — keys/links for everything)
+- [x] **Connector catalog** (`@ado/shared/connectors`): 12 services grouped — Source Control (GitHub), **AI Providers & Subscriptions** (Claude, GPT, Gemini, Ollama-local), Data (Supabase), Deploy (Vercel/Netlify/App Store), Notifications (Slack/Discord), Design (Figma) — each with a direct "Get key ↗" deep-link + honest `wired` flag
+- [x] **Secure secrets store** (`connections/store.ts`): gitignored `data/connections.json`, mode 600; stored value overrides `.env` fallback; **secrets never returned to the client** (masked `••••last4` + connected flag only). 5 store tests
+- [x] **Token-gated API**: `GET/POST/DELETE /api/connections` (token required on GET too — status isn't world-readable); saving GitHub **connects live** (restarts sync, no server restart); anthropic key picked up on next health tick
+- [x] **Settings page** (`/settings`): grouped connector cards — status pill, masked key on file, password field, Connect/Update/Disconnect, per-service "Get key ↗", Active vs "Saved · wiring soon" badges, security note. Sidebars (Secrets/Integrations/Settings) + View B gear all route here; route-aware active state
+- [x] Proven: connected 5 services via the API, page renders masked states, zero console errors
+
 ## Prior phases
 
 ---

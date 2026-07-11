@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../kit';
 import { ConnectionBadge } from './ConnectionBadge';
 
@@ -73,7 +74,13 @@ export function TopBarB() {
         </div>
         <BarIcon icon="bell" label="Notifications" alert />
         <BarIcon icon="chat" label="Messages" />
-        <BarIcon icon="settings" label="Settings" />
+        <Link
+          to="/settings"
+          aria-label="Settings"
+          className="flex h-9 w-9 items-center justify-center rounded-tile text-text2 transition-colors duration-150 ease-soft hover:bg-elevated hover:text-text1"
+        >
+          <Icon name="settings" size={16} />
+        </Link>
         <span className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary">
           IM
         </span>

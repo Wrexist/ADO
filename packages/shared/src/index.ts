@@ -2,3 +2,4 @@
 export * from './tokens';
 export * from './events';
 export * from './state';
+export * from './connectors';

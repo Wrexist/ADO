@@ -32,6 +32,7 @@ const DEFAULTS = { maxConcurrent: 3, turnCap: 20, timeoutMs: 15 * 60_000 };
 
 export class Runner {
   private active = 0;
+  private seq = 0; // guarantees unique run ids even for same-millisecond dispatches
   private queue: Array<{ id: string; input: DispatchInput }> = [];
   private handles = new Map<string, SpawnHandle>();
   private opts: Required<Omit<RunnerOpts, 'cwdFor'>> & Pick<RunnerOpts, 'cwdFor'>;
@@ -64,7 +65,7 @@ export class Runner {
     const cwd = this.opts.cwdFor(input.repoId);
     if (!cwd) throw new Error(`repo '${input.repoId}' is not in the scanner allow-list`);
 
-    const runId = `run-${input.repoId}-${Date.now()}`;
+    const runId = `run-${input.repoId}-${Date.now()}-${++this.seq}`;
     const now = new Date().toISOString();
     this.db
       .insert(runs)
