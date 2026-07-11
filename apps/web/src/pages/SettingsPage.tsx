@@ -13,18 +13,25 @@ import { StaleBanner } from '../chrome/StaleBanner';
 import { fetchConnections, removeConnection, saveConnection } from '../lib/connections';
 
 const ICON: Record<string, IconName> = {
-  github: 'github',
-  anthropic: 'sparkle',
-  openai: 'sparkle',
-  google: 'sparkle',
-  ollama: 'database',
-  supabase: 'database',
-  vercel: 'rocket',
-  netlify: 'cloud',
-  appstore: 'rocket',
-  slack: 'chat',
-  discord: 'chat',
-  figma: 'wand',
+  // source
+  github: 'github', gitlab: 'code', bitbucket: 'code',
+  // ai
+  anthropic: 'sparkle', openai: 'sparkle', google: 'sparkle', mistral: 'sparkle',
+  xai: 'sparkle', groq: 'sparkle', openrouter: 'sparkle', huggingface: 'sparkle', ollama: 'database',
+  // data
+  supabase: 'database', firebase: 'database', neon: 'database', planetscale: 'database',
+  mongodb: 'database', upstash: 'database',
+  // deploy
+  vercel: 'rocket', netlify: 'cloud', cloudflare: 'cloud', aws: 'cloud', fly: 'rocket',
+  railway: 'pipeline', render: 'cloud',
+  // mobile
+  appstore: 'rocket', googleplay: 'rocket', expo: 'rocket',
+  // gamedev
+  steam: 'games', unity: 'games',
+  // comms
+  slack: 'chat', discord: 'chat', telegram: 'chat', linear: 'list', notion: 'templates',
+  // design / observability / payments
+  figma: 'wand', sentry: 'health', posthog: 'chart', stripe: 'billing',
 };
 
 function ConnectorCard({
@@ -140,6 +147,7 @@ export function SettingsPage() {
   const [statuses, setStatuses] = useState<Record<string, ConnectionStatus>>({});
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     fetchConnections()
@@ -183,7 +191,21 @@ export function SettingsPage() {
             <Icon name="lock" size={13} />
             Keys are stored in a gitignored file on your machine (mode 600) and never sent back to the browser.
           </span>
-          <span className="text-label text-text3">{connectedCount} connected</span>
+          <span className="text-label text-text3">
+            {connectedCount} of {CONNECTORS.length} connected
+          </span>
+        </div>
+
+        <div className="relative mt-4 max-w-md">
+          <Icon name="search" size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text3" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter services (github, claude, stripe, steam…)"
+            aria-label="Filter services"
+            className="h-9 w-full rounded-tile border bg-card pl-9 pr-3 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
+          />
         </div>
 
         {error ? (
@@ -194,7 +216,10 @@ export function SettingsPage() {
 
         <div className="mt-8 flex flex-col gap-10">
           {CONNECTOR_GROUPS.map((group) => {
-            const items = byGroup.get(group.id) ?? [];
+            const q = query.trim().toLowerCase();
+            const items = (byGroup.get(group.id) ?? []).filter(
+              (c) => !q || c.name.toLowerCase().includes(q) || c.id.includes(q) || c.blurb.toLowerCase().includes(q),
+            );
             if (items.length === 0) return null;
             return (
               <section key={group.id}>

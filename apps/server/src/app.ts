@@ -137,13 +137,22 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // Secrets store: stored keys override .env; secrets never leave the server.
   const ENV_FALLBACK: Record<string, string> = {
     github: 'GITHUB_TOKEN',
+    gitlab: 'GITLAB_TOKEN',
     anthropic: 'ANTHROPIC_API_KEY',
     openai: 'OPENAI_API_KEY',
     google: 'GOOGLE_API_KEY',
+    mistral: 'MISTRAL_API_KEY',
+    xai: 'XAI_API_KEY',
+    groq: 'GROQ_API_KEY',
+    openrouter: 'OPENROUTER_API_KEY',
+    huggingface: 'HUGGINGFACE_TOKEN',
     supabase: 'SUPABASE_ACCESS_TOKEN',
     vercel: 'VERCEL_TOKEN',
     netlify: 'NETLIFY_TOKEN',
+    cloudflare: 'CLOUDFLARE_API_TOKEN',
     figma: 'FIGMA_TOKEN',
+    sentry: 'SENTRY_AUTH_TOKEN',
+    stripe: 'STRIPE_SECRET_KEY',
   };
   const connectionsPath =
     env.dbPath === ':memory:'

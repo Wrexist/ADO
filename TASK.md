@@ -24,7 +24,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] **Secure secrets store** (`connections/store.ts`): gitignored `data/connections.json`, mode 600; stored value overrides `.env` fallback; **secrets never returned to the client** (masked `••••last4` + connected flag only). 5 store tests
 - [x] **Token-gated API**: `GET/POST/DELETE /api/connections` (token required on GET too — status isn't world-readable); saving GitHub **connects live** (restarts sync, no server restart); anthropic key picked up on next health tick
 - [x] **Settings page** (`/settings`): grouped connector cards — status pill, masked key on file, password field, Connect/Update/Disconnect, per-service "Get key ↗", Active vs "Saved · wiring soon" badges, security note. Sidebars (Secrets/Integrations/Settings) + View B gear all route here; route-aware active state
-- [x] Proven: connected 5 services via the API, page renders masked states, zero console errors
+- [x] Proven: connected services via the API, page renders masked states, zero console errors
+- [x] **Expanded to 36 connectors across 10 groups** (Isac: "connect to all necessary softwares… AI subscriptions and so on"): Source (GitHub/GitLab/Bitbucket) · **AI (Claude, GPT, Gemini, Mistral, Grok, Groq, OpenRouter, Hugging Face, Ollama)** · Data (Supabase/Firebase/Neon/PlanetScale/MongoDB/Upstash) · Deploy (Vercel/Netlify/Cloudflare/AWS/Fly/Railway/Render) · Mobile (App Store/Google Play/Expo) · Game Dev (Steam/Unity) · Notifications & Project (Slack/Discord/Telegram/Linear/Notion) · Design (Figma) · Monitoring (Sentry/PostHog) · Payments (Stripe). Each: direct "Get key ↗", masked hint, Connect/Update/Disconnect, honest Active vs "Saved · wiring soon". Added a **filter box** + env-fallback auto-detect for common providers
 
 ## Prior phases
 
