@@ -16,6 +16,8 @@ import { OctokitClient } from './integrations/github/client';
 import type { GitHubClient } from './integrations/github/types';
 import { Sysmon } from './system/sysmon';
 import { HealthChecker } from './system/health';
+import { Runner } from './runner';
+import { ClaudeSpawner, type Spawner } from './runner/spawner';
 
 export interface AccServer {
   app: FastifyInstance;
@@ -24,14 +26,17 @@ export interface AccServer {
   github: GitHubSync | null;
   sysmon: Sysmon | null;
   health: HealthChecker | null;
+  runner: Runner;
   close: () => Promise<void>;
 }
 
-/** Injectable deps (tests + local demos supply a fake GitHub backend). */
+/** Injectable deps (tests + local demos supply fakes). */
 export interface AccDeps {
   githubClient?: GitHubClient;
   /** Tests set false to skip the real sysmon/health background loops. */
   startSystem?: boolean;
+  /** Inject a fake process spawner (tests + simulated dispatch demo). */
+  spawner?: Spawner;
 }
 
 export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
@@ -136,6 +141,30 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     github.start();
   }
 
+  // Runner: dispatch headless agents. cwd allow-list comes from the scanner (only
+  // scanned repos are dispatchable); demo maps ids straight through for the sim agent.
+  const runner = new Runner(
+    bus,
+    db,
+    deps.spawner ?? new ClaudeSpawner(),
+    {
+      cwdFor: (id) => (scanner ? scanner.cwdFor(id) : bus.snapshot().state.repos[id] ? `/repos/${id}` : null),
+    },
+    (msg) => app.log.info(msg),
+  );
+  const orphans = runner.reconcileOrphans();
+  if (orphans > 0) app.log.warn(`runner: reconciled ${orphans} orphaned run(s) on boot`);
+
+  app.post('/api/dispatch', async (req, reply) => {
+    const body = (req.body ?? {}) as { repoId?: string; task?: string; model?: string };
+    if (!body.repoId || !body.task) return reply.code(400).send({ error: 'repoId and task are required' });
+    try {
+      return runner.dispatch({ repoId: body.repoId, task: body.task, model: body.model });
+    } catch (err) {
+      return reply.code(403).send({ error: (err as Error).message });
+    }
+  });
+
   // System layer: real CPU/mem/net sampling + health checks (real mode only; demo
   // seeds deterministic samples/health for the frozen baseline world).
   let sysmon: Sysmon | null = null;
@@ -154,11 +183,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     github,
     sysmon,
     health,
+    runner,
     close: async () => {
       scanner?.stop();
       github?.stop();
       sysmon?.stop();
       health?.stop();
+      runner.stop();
       await app.close();
       sqlite.close();
     },

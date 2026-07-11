@@ -2,7 +2,17 @@
 
 Living tracker. Updated every session. Current phase drives what's actionable; `/gate` refuses Phase N+1 while N is open.
 
-**Current phase: 2.5 — Daily-driver gate** 🟡 (p0/p1/p2 passed; p2.5 is the enforced off-ramp — needs real usage before Phase 3)
+**Current phase: 3 — Agents & builds** 🟡 (p0/p1/p2 passed; p2.5 real-usage gate noted; Phase 3 runner built & proven in simulation — Isac chose to build through)
+
+---
+
+## In progress (Phase 3 — Agents & builds)
+- [x] **Prompt 3.1 — runner** — dispatch endpoint (`POST /api/dispatch`, token-gated); spawns `claude -p --output-format stream-json` behind an injectable `Spawner` (minimal env allow-list — no secrets; turn cap; reduced priority); **versioned stream-json adapter** (unknown/garbled → opaque, never crashes/guesses — council B5); dispatch **semaphore** (max 3, backs Build Queue — excess `queued`, council B4) + wall-clock timeout; **cwd allow-list** from scanner (only scanned repos dispatchable — S12); registry = `runs` table, **orphans reconciled to failed on boot**
+- [x] **Prompt 3.2 — wiring + run logger** — runner emits `agent.upserted`/`build.updated`/`activity.appended` live; Running Agents strip + Build Queue + Activity Feed all light up from the bus (no new UI needed — views already render from slices); repo gets an agent avatar via `repo.enriched`; **run logger** = the `runs` table (repo, task, model, tokens, duration, turns, verify verdict, human action, exit) — the durable asset for the parked analyzer. 48/48 tests.
+- [x] **Proven end-to-end (simulated agent):** dispatched 3 agents → live "Using Grep…" progress (turn-based %), Active Agents 3, Build Queue populated, dispatch activity, run rows logged. Real `claude -p` runs identically (same code path behind the Spawner).
+- [ ] **Gate `p3-agents`** — pipeline proven in simulation; the literal "real `claude -p` task to completion" confirmation is Isac's to run on a machine with the claude CLI + a repo. Then `/gate p3-agents`.
+
+## Prior phases
 
 ---
 

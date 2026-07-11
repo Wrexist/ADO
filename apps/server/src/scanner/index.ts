@@ -50,11 +50,19 @@ export class Scanner {
   private timers = new Map<string, NodeJS.Timeout>();
   private repoDirs = new Set<string>();
 
+  /** repoId (slug) → absolute dir, for the runner's cwd allow-list. */
+  private idToDir = new Map<string, string>();
+
   constructor(
     private bus: Bus,
     private projectDirs: string[],
     private log: (msg: string) => void = () => {},
   ) {}
+
+  /** The cwd allow-list lookup the runner uses. Only scanned repos are dispatchable. */
+  cwdFor(repoId: string): string | null {
+    return this.idToDir.get(repoId) ?? null;
+  }
 
   /** Full scan of every configured root, then install watches. */
   async start(): Promise<void> {
@@ -75,6 +83,7 @@ export class Scanner {
       const git = await readGit(dir);
       const ops = parseOps(dir);
       const id = slug(basename(dir));
+      this.idToDir.set(id, dir);
       this.bus.publish({
         id: `scan:${id}`,
         type: 'repo.upserted',

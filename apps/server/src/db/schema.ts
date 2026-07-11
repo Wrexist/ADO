@@ -49,3 +49,31 @@ export const jobs = sqliteTable('jobs', {
   name: text('name').primaryKey(),
   lastRunTs: text('last_run_ts'),
 });
+
+/**
+ * Run log (SELF_LEARNING §1) — the durable asset the parked analyzer will mine.
+ * Every dashboard-dispatched run records the full outcome. Also serves as the runner
+ * registry: a `running` row on boot = an orphan (its process died with the server) and
+ * is reconciled to `failed`.
+ */
+export const runs = sqliteTable(
+  'runs',
+  {
+    id: text('id').primaryKey(),
+    repoId: text('repo_id').notNull(),
+    task: text('task').notNull(),
+    model: text('model').notNull(),
+    status: text('status').notNull(), // queued | running | done | failed
+    startedTs: text('started_ts').notNull(),
+    endedTs: text('ended_ts'),
+    durationMs: integer('duration_ms'),
+    tokensIn: integer('tokens_in'),
+    tokensOut: integer('tokens_out'),
+    turns: integer('turns'),
+    verifyVerdict: text('verify_verdict'), // pass | fail | null (unknown)
+    humanAction: text('human_action'), // accepted | corrected | redone | null
+    exitCode: integer('exit_code'),
+    note: text('note'), // e.g. "orphaned on boot", "opaque stream"
+  },
+  (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status)],
+);
