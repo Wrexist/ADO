@@ -2,7 +2,14 @@
 
 Living tracker. Updated every session. Current phase drives what's actionable; `/gate` refuses Phase N+1 while N is open.
 
-**Current phase: 3 — Agents & builds** 🟡 (p0/p1/p2 passed; p2.5 real-usage gate noted; Phase 3 runner built & proven in simulation — Isac chose to build through)
+**Current phase: 6 — Hardening** 🔴 (p0/p1/p2/p3(sim)/p4 passed; p2.5 real-usage gate + p3 real-claude confirmation pending Isac; p5 parked. Phase 4 command center done)
+
+---
+
+## Done (Phase 4 — Command center)
+- [x] **Prompt 4.1 — NL command box → intent → action** — `@ado/shared/intents` (5 intents + kind); server `HeuristicParser` (works with no key; Claude-backed parser is a drop-in behind the `IntentParser` seam when the Anthropic key is connected); `respond()` executes read intents now (status_query/summarize_activity/run_gate — deterministic answers from bus state), returns a **preview for mutating intents** (create_task writes TASK.md, dispatch_task spawns an agent) that only run on explicit **Confirm**; `POST /api/command` + `/api/command/execute` (token-gated). Wired into View A AI Command Center + View B AI Assistant (`CommandBox`).
+- [x] **Prompt 4.2 — token accounting** — `TokenRollup` sums the run logger's real tokens over a 7-day window → `tokens.rollup` event; AI Tokens card shows `≈` (or honest "tokens unavailable" until runs complete). Terminal-session parsing (versioned adapter) is a later add.
+- [x] **Gate `p4-command` → PASSED 2026-07-11** — 5 intents end-to-end with confirm-before-mutate; per-run tokens recorded + shown with ≈. Proven live: "status" → real counts; "add task to sentinel: …" → confirm preview. 51/51 tests.
 
 ---
 

@@ -22,6 +22,10 @@ import { Sysmon } from './system/sysmon';
 import { HealthChecker } from './system/health';
 import { Runner } from './runner';
 import { ClaudeSpawner, type Spawner } from './runner/spawner';
+import { HeuristicParser } from './command/parser';
+import { respond, execute } from './command/execute';
+import { TokenRollup } from './command/tokens';
+import { Intent } from '@ado/shared';
 
 export interface AccServer {
   app: FastifyInstance;
@@ -196,6 +200,28 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     }
   });
 
+  // Command center (Phase 4): parse NL → intent → read now / preview-to-confirm for
+  // mutations. cwdFor resolves via scanner (real repos) or demo repos in the bus.
+  const parser = new HeuristicParser();
+  const cwdFor = (id: string): string | null =>
+    scanner ? scanner.cwdFor(id) : bus.snapshot().state.repos[id] ? `/repos/${id}` : null;
+  const cmdDeps = { bus, runner, cwdFor };
+
+  app.post('/api/command', async (req, reply) => {
+    const text = ((req.body ?? {}) as { text?: string }).text?.trim();
+    if (!text) return reply.code(400).send({ error: 'text is required' });
+    const intent = parser.parse(text, Object.keys(bus.snapshot().state.repos));
+    return respond(intent, cmdDeps);
+  });
+
+  app.post('/api/command/execute', async (req, reply) => {
+    const parsed = Intent.safeParse((req.body ?? {}) as unknown);
+    if (!parsed.success) return reply.code(400).send({ error: 'a valid intent is required' });
+    return execute(parsed.data, cmdDeps);
+  });
+
+  const tokens = new TokenRollup(bus, db, (msg) => app.log.info(msg));
+
   // System layer: real CPU/mem/net sampling + health checks (real mode only; demo
   // seeds deterministic samples/health for the frozen baseline world).
   let sysmon: Sysmon | null = null;
@@ -205,6 +231,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     sysmon.start();
     health = new HealthChecker(bus, () => connections.resolve('anthropic') ?? '', (msg) => app.log.info(msg));
     health.start();
+    tokens.start(); // AI Tokens Used card, summed from the run log
   }
 
   // Connections (Settings page). Every route requires the token — GET included, since
@@ -253,6 +280,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       github?.stop();
       sysmon?.stop();
       health?.stop();
+      tokens.stop();
       runner.stop();
       await app.close();
       sqlite.close();

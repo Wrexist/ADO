@@ -2,7 +2,6 @@ import {
   Button,
   Card,
   FeedRow,
-  Icon,
   IconTile,
   StatusDot,
   type IconName,
@@ -11,6 +10,7 @@ import {
 import { useBus } from '../../store/bus';
 import { activityRecent, systemStatusRows } from '../../lib/selectors';
 import { timeAgo } from '../../lib/time';
+import { CommandBox } from './CommandBox';
 
 const STATE_LOOK = {
   operational: { tone: 'success', label: 'Operational' },
@@ -27,23 +27,12 @@ export function RightRail() {
 
   return (
     <aside className="flex w-[360px] shrink-0 flex-col gap-4 p-6 pl-0">
-      {/* AI Command Center — input wired to intents in Phase 4 */}
+      {/* AI Command Center — natural language → intent → action (Phase 4) */}
       <Card className="p-5">
         <h2 className="text-section font-semibold text-text1">AI Command Center</h2>
         <p className="mt-0.5 text-body text-text2">Ask anything. AI will handle it.</p>
-        <div className="relative mt-4">
-          <input
-            type="text"
-            placeholder="What do you want to build or fix?"
-            className="h-10 w-full rounded-tile border-none bg-elevated pl-3 pr-12 text-body text-text1 placeholder:text-text3 focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
-          <button
-            type="button"
-            aria-label="Send command"
-            className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85"
-          >
-            <Icon name="send" size={13} />
-          </button>
+        <div className="mt-4">
+          <CommandBox placeholder="What do you want to build or fix?" />
         </div>
       </Card>
 

@@ -97,7 +97,7 @@ gates:
       - 5 intents end-to-end (status_query, dispatch_task, create_task, run_gate, summarize_activity)
       - token usage per run recorded and shown with approximation marker; unknown session-log format degrades to a fixed-footprint "tokens unavailable", never a guess
     attempts: 5
-    status: open
+    status: passed   # 2026-07-11 — command box: NL→intent (heuristic parser; Claude-backed is the connect-key upgrade behind the same interface); 5 intents end-to-end with confirm-before-mutate; tokens summed from the run log, shown ≈ / "unavailable". 51/51 tests
   - name: p6-hardening
     criteria:
       - /verify green end to end; empty-DB, no-network, and 50-repo cases all render honest states
