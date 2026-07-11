@@ -18,6 +18,7 @@ import {
   Deployment,
   HealthService,
   Repo,
+  RepoPatch,
   ServiceState,
 } from './state';
 
@@ -41,6 +42,12 @@ export const RepoUpsertedEvent = z.object({
   ...base,
   type: z.literal('repo.upserted'),
   payload: z.object({ repo: Repo }),
+});
+
+export const RepoEnrichedEvent = z.object({
+  ...base,
+  type: z.literal('repo.enriched'),
+  payload: z.object({ repoId: z.string(), patch: RepoPatch }),
 });
 
 export const RepoRemovedEvent = z.object({
@@ -114,6 +121,7 @@ export const AppOpenedEvent = z.object({
 /** The discriminated union all consumers switch on. */
 export const AccEvent = z.discriminatedUnion('type', [
   RepoUpsertedEvent,
+  RepoEnrichedEvent,
   RepoRemovedEvent,
   BuildUpdatedEvent,
   DeployRecordedEvent,

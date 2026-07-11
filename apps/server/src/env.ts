@@ -13,6 +13,22 @@ export interface Env {
   accToken: string;
   dbPath: string;
   demo: boolean;
+  /** Dirs to scan for repos (council S6 amendment: a list, not one dir). */
+  projectDirs: string[];
+}
+
+/** Expand a leading ~ to the home dir; trim whitespace. */
+function expandHome(p: string): string {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? '';
+  const t = p.trim();
+  if (t === '~') return home;
+  if (t.startsWith('~/')) return `${home}/${t.slice(2)}`;
+  return t;
+}
+
+function parseProjectDirs(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw.split(',').map(expandHome).filter(Boolean);
 }
 
 export function loadEnv(overrides: Partial<Env> = {}): Env {
@@ -36,5 +52,6 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
     accToken,
     dbPath: overrides.dbPath ?? process.env.DB_PATH ?? join(root, 'data/acc.sqlite'),
     demo: overrides.demo ?? process.argv.includes('--demo'),
+    projectDirs: overrides.projectDirs ?? parseProjectDirs(process.env.PROJECT_DIRS),
   };
 }

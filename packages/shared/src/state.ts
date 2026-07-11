@@ -63,9 +63,20 @@ export const Repo = z.object({
   openTasks: z.number().int().nonnegative().optional(),
   /** Absent = no CI runs known — render the honest "no CI" state, never a fake bar. */
   ci: RepoCI.optional(),
-  agents: z.array(z.string()), // agent ids that touched the repo (avatar stack)
+  /** Optional so a scanner upsert (which doesn't know agents) never clobbers runner-set ones. */
+  agents: z.array(z.string()).optional(),
 });
 export type Repo = z.infer<typeof Repo>;
+
+/** Enrichment patch — GitHub (2.3) and the runner (P3) merge fields into a scanned repo. */
+export const RepoPatch = z.object({
+  language: Language.optional(),
+  stars: z.number().int().nonnegative().optional(),
+  prs: z.number().int().nonnegative().optional(),
+  ci: RepoCI.optional(),
+  agents: z.array(z.string()).optional(),
+});
+export type RepoPatch = z.infer<typeof RepoPatch>;
 
 export const Build = z.object({
   id: z.string(),
@@ -175,8 +186,18 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
   const p = evt.payload as never;
   switch (evt.type) {
     case 'repo.upserted': {
+      // Merge, not replace: scanner owns base fields, GitHub/runner own enrichment.
+      // Omitted keys (e.g. scanner has no `agents`) preserve whatever a prior source set.
       const { repo } = p as { repo: Repo };
-      return { ...state, repos: { ...state.repos, [repo.id]: repo } };
+      const prev = state.repos[repo.id];
+      const merged: Repo = { ...prev, ...repo, agents: repo.agents ?? prev?.agents };
+      return { ...state, repos: { ...state.repos, [repo.id]: merged } };
+    }
+    case 'repo.enriched': {
+      const { repoId, patch } = p as { repoId: string; patch: RepoPatch };
+      const prev = state.repos[repoId];
+      if (!prev) return state; // enrichment for an unknown repo is dropped honestly
+      return { ...state, repos: { ...state.repos, [repoId]: { ...prev, ...patch } } };
     }
     case 'repo.removed': {
       const { repoId } = p as { repoId: string };

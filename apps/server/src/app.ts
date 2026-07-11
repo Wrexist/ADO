@@ -10,10 +10,12 @@ import type { Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized } from './security';
 import { seedDemo } from './demo';
+import { Scanner } from './scanner';
 
 export interface AccServer {
   app: FastifyInstance;
   bus: Bus;
+  scanner: Scanner | null;
   close: () => Promise<void>;
 }
 
@@ -100,10 +102,19 @@ export async function buildServer(env: Env): Promise<AccServer> {
     app.log.info('demo seed applied (deterministic fixture events)');
   }
 
+  // Real data source: scan configured project dirs (skipped in demo/no-dirs runs).
+  let scanner: Scanner | null = null;
+  if (!env.demo && env.projectDirs.length > 0) {
+    scanner = new Scanner(bus, env.projectDirs, (msg) => app.log.info(msg));
+    void scanner.start().catch((err) => app.log.error(err));
+  }
+
   return {
     app,
     bus,
+    scanner,
     close: async () => {
+      scanner?.stop();
       await app.close();
       sqlite.close();
     },

@@ -63,7 +63,7 @@ export function RepoCard({ repo }: { repo: Repo }) {
         <p className="text-label text-text3">No CI runs yet</p>
       )}
 
-      <AvatarStack ids={repo.agents} />
+      {repo.agents && repo.agents.length > 0 ? <AvatarStack ids={repo.agents} /> : null}
     </HoverCard>
   );
 }

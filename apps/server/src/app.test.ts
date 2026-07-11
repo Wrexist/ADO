@@ -10,6 +10,7 @@ const ENV = {
   accToken: 'test-token',
   dbPath: ':memory:',
   demo: false,
+  projectDirs: [],
 };
 
 const HOST_OK = { host: '127.0.0.1:8787' };
