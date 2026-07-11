@@ -20,7 +20,7 @@ describe('server security + bus (gate p2 criteria)', () => {
   let srv: AccServer;
 
   beforeAll(async () => {
-    srv = await buildServer(ENV);
+    srv = await buildServer(ENV, { startSystem: false });
   });
   afterAll(async () => {
     await srv.close();

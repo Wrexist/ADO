@@ -106,16 +106,18 @@ export function seedDemo(bus: Bus): void {
     pub(`health:${svc}`, 'health.checked', MOCK_NOW, { service: svc, state: 'operational' });
   }
 
-  // sysmon samples — zip the three fixture series into joint samples, 10s apart
+  // sysmon samples — zip the three fixture series into joint samples, 10s apart.
+  // Samples live in the dedicated table, not the event log (pushSample, not publish).
   const [cpu, mem, net] = MOCK_VIEW_B.monitor;
   const n = Math.min(cpu.points.length, mem.points.length, net.points.length);
   const t0 = new Date(MOCK_NOW).getTime() - (n - 1) * 10_000;
   for (let i = 0; i < n; i++) {
-    pub(`sample:${i}`, 'system.sample', new Date(t0 + i * 10_000).toISOString(), {
-      cpuPct: cpu.points[i],
-      memPct: mem.points[i],
-      netPct: net.points[i],
-    });
+    bus.pushSample(
+      cpu.points[i],
+      mem.points[i],
+      net.points[i],
+      new Date(t0 + i * 10_000).toISOString(),
+    );
   }
 
   // tokens — demo rollup (real parsing lands in Phase 4 behind the adapter)

@@ -6,12 +6,25 @@
  * snapshot served to new SSE clients is always consistent with history, and
  * Last-Event-ID replay comes straight from the same table (council S5).
  */
-import { asc, gt } from 'drizzle-orm';
-import { parseEvent, type AccEvent, emptyState, reduce, type BusState } from '@ado/shared';
+import { asc, gt, lt } from 'drizzle-orm';
+import { parseEvent, type AccEvent, emptyState, reduce, type BusState, type Sample } from '@ado/shared';
 import type { Db } from './db';
-import { events } from './db/schema';
+import { events, samples } from './db/schema';
 
-export type BusSubscriber = (seq: number, evt: AccEvent) => void;
+/**
+ * Outbound SSE frames. Durable events carry a monotonic seq (the Last-Event-ID
+ * checkpoint); transient sysmon samples ride their own channel with NO id, so they
+ * never bloat the event log or move the replay cursor — they live in the `samples`
+ * table and are re-seeded via the snapshot on every connect.
+ */
+export type OutFrame =
+  | { kind: 'evt'; seq: number; evt: AccEvent }
+  | { kind: 'sample'; sample: Sample };
+
+export type BusSubscriber = (frame: OutFrame) => void;
+
+const SAMPLE_WINDOW_MS = 2 * 60 * 60 * 1000; // keep ~2h of samples on disk
+const SAMPLE_LOAD = 360; // 1h of 10s samples into the in-memory snapshot
 
 export class Bus {
   private state: BusState = emptyState();
@@ -38,6 +51,21 @@ export class Bus {
         log(`skipping unparseable event seq=${row.seq} type=${row.type}`);
       }
     }
+    this.loadSamples();
+  }
+
+  /** Seed the in-memory samples ring from the dedicated table (samples aren't in the log). */
+  private loadSamples(): void {
+    const rows = this.db
+      .select()
+      .from(samples)
+      .orderBy(asc(samples.ts))
+      .all()
+      .slice(-SAMPLE_LOAD);
+    this.state = {
+      ...this.state,
+      samples: rows.map((r) => ({ ts: r.ts, cpuPct: r.cpuPct, memPct: r.memPct, netPct: r.netPct })),
+    };
   }
 
   /** Validate, persist, fold, broadcast. Duplicate ids are ignored (idempotent seeds). */
@@ -60,8 +88,24 @@ export class Bus {
     const seq = Number(res.lastInsertRowid);
     this.seq = seq;
     this.state = reduce(this.state, evt);
-    for (const fn of this.subscribers) fn(seq, evt);
+    for (const fn of this.subscribers) fn({ kind: 'evt', seq, evt });
     return { seq, evt };
+  }
+
+  /**
+   * Record a sysmon sample: persist to the samples table (not the event log), fold into
+   * the in-memory ring, and broadcast on the transient channel. `ts` is provided so
+   * the demo seed can produce deterministic sample times.
+   */
+  pushSample(cpuPct: number, memPct: number, netPct: number, ts = new Date().toISOString()): Sample {
+    this.db.insert(samples).values({ ts, cpuPct, memPct, netPct }).run();
+    const cutoff = new Date(Date.parse(ts) - SAMPLE_WINDOW_MS).toISOString();
+    this.db.delete(samples).where(lt(samples.ts, cutoff)).run();
+
+    const sample: Sample = { ts, cpuPct, memPct, netPct };
+    this.state = reduce(this.state, { type: 'system.sample', ts, payload: { cpuPct, memPct, netPct } });
+    for (const fn of this.subscribers) fn({ kind: 'sample', sample });
+    return sample;
   }
 
   /** Persisted events after `sinceSeq` — the Last-Event-ID replay path. */

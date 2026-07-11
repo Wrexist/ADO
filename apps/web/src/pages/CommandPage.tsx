@@ -1,5 +1,6 @@
 import { SidebarA } from '../chrome/SidebarA';
 import { TopBarA } from '../chrome/TopBarA';
+import { StaleBanner } from '../chrome/StaleBanner';
 import { MainColumn } from '../views/command/MainColumn';
 import { RightRail } from '../views/command/RightRail';
 
@@ -12,6 +13,7 @@ export function CommandPage() {
   return (
     <div className="min-h-screen min-w-[1280px] bg-app text-text1">
       <TopBarA />
+      <StaleBanner />
       <div className="flex items-stretch">
         <SidebarA />
         <MainColumn />

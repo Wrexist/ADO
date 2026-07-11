@@ -14,7 +14,7 @@ export function startBus(): void {
   if (started) return;
   started = true;
 
-  const { applySnapshot, applyEvent, setConnection } = useBus.getState();
+  const { applySnapshot, applyEvent, applySample, setConnection } = useBus.getState();
 
   if (!ACC_TOKEN) {
     // No token configured (no .env yet) — honest offline, no fake data.
@@ -36,6 +36,12 @@ export function startBus(): void {
   es.addEventListener('evt', (e) => {
     const msg = e as MessageEvent<string>;
     applyEvent(Number(msg.lastEventId), parseEvent(JSON.parse(msg.data)));
+  });
+
+  // Transient sysmon samples — folded into state, no seq checkpoint.
+  es.addEventListener('sample', (e) => {
+    const msg = e as MessageEvent<string>;
+    applySample(JSON.parse(msg.data) as Parameters<typeof applySample>[0]);
   });
 
   // App-open logging — feeds the p2.5 daily-driver gate. Fire-and-forget.

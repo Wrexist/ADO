@@ -1,5 +1,6 @@
 import { SidebarB } from '../chrome/SidebarB';
 import { TopBarB } from '../chrome/TopBarB';
+import { StaleBanner } from '../chrome/StaleBanner';
 import { Button, Icon, RadialRing, Sparkline, StatCard } from '../kit';
 import { useBus } from '../store/bus';
 import {
@@ -43,6 +44,7 @@ export function OpsPage() {
   return (
     <div className="min-h-screen min-w-[1280px] bg-app text-text1">
       <TopBarB />
+      <StaleBanner />
       <div className="flex items-stretch">
         <SidebarB />
         <main className="min-w-0 flex-1 p-6">

@@ -8,6 +8,7 @@ import {
   reduce,
   type AccEvent,
   type BusState,
+  type Sample,
   type SnapshotFrame,
 } from '@ado/shared';
 
@@ -19,6 +20,7 @@ interface BusStore {
   connection: Connection;
   applySnapshot: (frame: SnapshotFrame) => void;
   applyEvent: (seq: number, evt: AccEvent) => void;
+  applySample: (sample: Sample) => void;
   setConnection: (c: Connection) => void;
 }
 
@@ -28,5 +30,8 @@ export const useBus = create<BusStore>((set) => ({
   connection: 'connecting',
   applySnapshot: (frame) => set({ state: frame.state, seq: frame.seq }),
   applyEvent: (seq, evt) => set((s) => ({ state: reduce(s.state, evt), seq })),
+  // Samples fold through the SAME reducer but never touch `seq` (transient channel).
+  applySample: (sample) =>
+    set((s) => ({ state: reduce(s.state, { type: 'system.sample', ts: sample.ts, payload: sample }) })),
   setConnection: (connection) => set({ connection }),
 }));

@@ -14,18 +14,24 @@ import { Scanner } from './scanner';
 import { GitHubSync } from './integrations/github/sync';
 import { OctokitClient } from './integrations/github/client';
 import type { GitHubClient } from './integrations/github/types';
+import { Sysmon } from './system/sysmon';
+import { HealthChecker } from './system/health';
 
 export interface AccServer {
   app: FastifyInstance;
   bus: Bus;
   scanner: Scanner | null;
   github: GitHubSync | null;
+  sysmon: Sysmon | null;
+  health: HealthChecker | null;
   close: () => Promise<void>;
 }
 
 /** Injectable deps (tests + local demos supply a fake GitHub backend). */
 export interface AccDeps {
   githubClient?: GitHubClient;
+  /** Tests set false to skip the real sysmon/health background loops. */
+  startSystem?: boolean;
 }
 
 export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
@@ -68,22 +74,26 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     });
     reply.raw.write('retry: 3000\n\n');
 
-    const send = (seq: number, event: string, data: unknown) =>
-      reply.raw.write(`id: ${seq}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    // id line omitted for transient sample frames so they don't move the replay cursor
+    const send = (id: number | null, event: string, data: unknown) =>
+      reply.raw.write(`${id != null ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
     const lastIdHeader = req.headers['last-event-id'];
     const lastId = typeof lastIdHeader === 'string' ? Number.parseInt(lastIdHeader, 10) : NaN;
     const snap = bus.snapshot();
 
     if (Number.isFinite(lastId) && lastId <= snap.seq) {
-      // resume path: replay only the gap
+      // resume path: replay only the durable gap (snapshot already carries live samples)
       for (const { seq, evt } of bus.eventsSince(lastId)) send(seq, 'evt', evt);
     } else {
       // fresh path: authoritative snapshot
       send(snap.seq, 'snapshot', snap);
     }
 
-    const unsubscribe = bus.subscribe((seq, evt) => send(seq, 'evt', evt));
+    const unsubscribe = bus.subscribe((frame) => {
+      if (frame.kind === 'evt') send(frame.seq, 'evt', frame.evt);
+      else send(null, 'sample', frame.sample);
+    });
     const ping = setInterval(() => reply.raw.write(': ping\n\n'), 15_000);
     req.raw.on('close', () => {
       clearInterval(ping);
@@ -126,14 +136,29 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     github.start();
   }
 
+  // System layer: real CPU/mem/net sampling + health checks (real mode only; demo
+  // seeds deterministic samples/health for the frozen baseline world).
+  let sysmon: Sysmon | null = null;
+  let health: HealthChecker | null = null;
+  if (!env.demo && deps.startSystem !== false) {
+    sysmon = new Sysmon(bus, (msg) => app.log.warn(msg));
+    sysmon.start();
+    health = new HealthChecker(bus, process.env.ANTHROPIC_API_KEY ?? '', (msg) => app.log.info(msg));
+    health.start();
+  }
+
   return {
     app,
     bus,
     scanner,
     github,
+    sysmon,
+    health,
     close: async () => {
       scanner?.stop();
       github?.stop();
+      sysmon?.stop();
+      health?.stop();
       await app.close();
       sqlite.close();
     },

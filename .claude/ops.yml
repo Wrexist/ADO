@@ -66,7 +66,7 @@ gates:
       - SQLite runs WAL with drizzle migrations; GitHub polling uses conditional requests (ETags)
       - app-open events logged (feeds the p2.5 daily-driver check)
     attempts: 5
-    status: open
+    status: passed   # 2026-07-11 — scanner+GitHub+sysmon+health all live; both views real; Host allow-list+X-ACC-Token+CORS tested; WAL+migrations+ETags; SSE snapshot+replay; kill-server → honest stale banner; System Health = documented formula. 32/32 tests
   - name: p2.5-daily-driver          # NEW (B6): enforce the usefulness verdict in the manifest, not prose
     criteria:
       - dashboard opened on >=5 of the trailing 7 distinct days (counted from logged app-open events)
