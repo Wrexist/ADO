@@ -11,15 +11,24 @@ import { Bus } from './bus';
 import { registerSecurity, sseAuthorized } from './security';
 import { seedDemo } from './demo';
 import { Scanner } from './scanner';
+import { GitHubSync } from './integrations/github/sync';
+import { OctokitClient } from './integrations/github/client';
+import type { GitHubClient } from './integrations/github/types';
 
 export interface AccServer {
   app: FastifyInstance;
   bus: Bus;
   scanner: Scanner | null;
+  github: GitHubSync | null;
   close: () => Promise<void>;
 }
 
-export async function buildServer(env: Env): Promise<AccServer> {
+/** Injectable deps (tests + local demos supply a fake GitHub backend). */
+export interface AccDeps {
+  githubClient?: GitHubClient;
+}
+
+export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
   const { db, sqlite } = openDb(env.dbPath);
   const app = Fastify({ logger: env.dbPath !== ':memory:' });
 
@@ -109,12 +118,22 @@ export async function buildServer(env: Env): Promise<AccServer> {
     void scanner.start().catch((err) => app.log.error(err));
   }
 
+  // GitHub enrichment: on when a token is configured (or a client is injected).
+  let github: GitHubSync | null = null;
+  if (!env.demo && (env.githubToken || deps.githubClient)) {
+    const client = deps.githubClient ?? new OctokitClient(env.githubToken);
+    github = new GitHubSync(bus, client, (msg) => app.log.info(msg));
+    github.start();
+  }
+
   return {
     app,
     bus,
     scanner,
+    github,
     close: async () => {
       scanner?.stop();
+      github?.stop();
       await app.close();
       sqlite.close();
     },

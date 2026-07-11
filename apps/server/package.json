@@ -12,6 +12,7 @@
   "dependencies": {
     "@ado/shared": "*",
     "@fastify/cors": "^11.3.0",
+    "@octokit/rest": "^22.0.1",
     "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.10.0"

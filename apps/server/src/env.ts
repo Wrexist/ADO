@@ -15,6 +15,8 @@ export interface Env {
   demo: boolean;
   /** Dirs to scan for repos (council S6 amendment: a list, not one dir). */
   projectDirs: string[];
+  /** GitHub PAT (repo + actions:read). Empty → GitHub sync stays off (honest). */
+  githubToken: string;
 }
 
 /** Expand a leading ~ to the home dir; trim whitespace. */
@@ -53,5 +55,6 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
     dbPath: overrides.dbPath ?? process.env.DB_PATH ?? join(root, 'data/acc.sqlite'),
     demo: overrides.demo ?? process.argv.includes('--demo'),
     projectDirs: overrides.projectDirs ?? parseProjectDirs(process.env.PROJECT_DIRS),
+    githubToken: overrides.githubToken ?? process.env.GITHUB_TOKEN ?? '',
   };
 }
