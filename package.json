@@ -1,0 +1,34 @@
+{
+  "name": "ai-development-os",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local-first mission control for the Wrexist portfolio — the AI Development OS wedge (AI Control Center).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c magenta,cyan \"npm run dev -w @ado/server\" \"npm run dev -w @ado/web\"",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "build": "npm run build --workspaces --if-present",
+    "verify": "bash scripts/verify.sh",
+    "smoke": "bash scripts/smoke.sh",
+    "autostart": "bash scripts/install-autostart.sh"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.39.5",
+    "playwright": "^1.61.1",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.63.0",
+    "vitest": "^2.1.8"
+  }
+}

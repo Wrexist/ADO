@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.vite/
+*.tsbuildinfo
+
+# runtime data & secrets
+.env
+.env.local
+.env.*.local
+/data/
+apps/*/data/
+connections.json
+prompts.json
+automations.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+backups/
+
+# logs & coverage
+*.log
+coverage/
+
+# smoke / screenshot output
+smoke-shots/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# claude harness logs
+.claude/logs/
