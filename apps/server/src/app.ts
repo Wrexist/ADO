@@ -34,6 +34,7 @@ import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
 import { AutomationStore } from './automations/store';
 import { AutomationEngine } from './automations/engine';
 import { ReviewRunner } from './review/runner';
+import { Notifier } from './notify/notifier';
 import { Intent } from '@ado/shared';
 
 export interface AccServer {
@@ -292,16 +293,33 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     (msg) => app.log.info(msg),
   );
 
-  // Event triggers: fire on REAL CI/scan build events only — never on the runner's own builds
-  // (source 'runner'), so an automation can't retrigger itself. Off in demo/tests.
-  let unsubAutomations: (() => void) | null = null;
+  // Outbound notifications to connected Slack/Discord webhooks (real CI failures + deploys).
+  const notifier = new Notifier(
+    () => ({ slack: connections.resolve('slack'), discord: connections.resolve('discord') }),
+    undefined,
+    (msg) => app.log.info(msg),
+  );
+
+  // One bus subscription drives automation event-triggers AND notifications. Build events only
+  // fire on REAL CI/scan builds (source !== 'runner'), so an automation can't retrigger itself.
+  // Off in demo/tests.
+  let unsubBus: (() => void) | null = null;
   if (!env.demo && deps.startSystem !== false) {
-    unsubAutomations = bus.subscribe((frame) => {
-      if (frame.kind !== 'evt' || frame.evt.type !== 'build.updated') return;
-      if (frame.evt.source.kind === 'runner') return;
-      const { build } = frame.evt.payload;
-      const name = build.state === 'failed' ? 'build.failed' : build.state === 'success' ? 'build.success' : null;
-      if (name) automationEngine.onBuildEvent(build.repo, name);
+    unsubBus = bus.subscribe((frame) => {
+      if (frame.kind !== 'evt') return;
+      const e = frame.evt;
+      if (e.type === 'build.updated' && e.source.kind !== 'runner') {
+        const { build } = e.payload;
+        if (build.state === 'failed') {
+          automationEngine.onBuildEvent(build.repo, 'build.failed');
+          notifier.buildFailed(bus.snapshot().state.repos[build.repo]?.name ?? build.repo, build.jobLabel);
+        } else if (build.state === 'success') {
+          automationEngine.onBuildEvent(build.repo, 'build.success');
+        }
+      } else if (e.type === 'deploy.recorded') {
+        const { deployment } = e.payload;
+        notifier.deployRecorded(deployment.name, deployment.env, deployment.ok);
+      }
     });
   }
 
@@ -537,7 +555,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     health,
     runner,
     close: async () => {
-      unsubAutomations?.();
+      unsubBus?.();
       scanner?.stop();
       github?.stop();
       sysmon?.stop();
