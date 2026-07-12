@@ -9,3 +9,7 @@ One line per learning. The nightly analyzer (parked, p5) consumes this file; kee
 - 2026-07-12: Sub-minute samplers (sysmon 10s, health 60s) should stay on naked intervals — a missed 10s sample is meaningless, so persisting last-run for them is pure overhead; the scheduler is for catch-up-worthy daily/hourly work.
 - 2026-07-12: WAL-safe backup = `VACUUM INTO` (not a file copy) + reopen-and-assert row count before rotation; a silent short-write must fail loudly rather than leave a corrupt "backup".
 - 2026-07-12: Vitest path filters are resolved from the repo root (where the config lives), not the `-w` workspace cwd — filter with `apps/server/src/...` from root, not `src/...`.
+- 2026-07-12: The dashboard already holds at 53 repos with no layout break because both views cap their lists (View A grid at 6, View B table at 5, each + "View all") — capping list widgets defensively pays off at scale for free.
+- 2026-07-12: Pixel-diff visual baselines should wait until after the pixel-polish sign-off (p3.5) or they just get re-baselined by the polish; a render + zero-console-error smoke gate gives regression coverage in the meantime without that churn.
+- 2026-07-12: launchd starts with a minimal PATH, so a LaunchAgent must invoke the app via a login shell (`/bin/sh -lc`) to pick up node/nvm — running `node` directly from a plist fails after reboot.
+- 2026-07-12: The server has no JS build (runs via tsx), so autostart (pm2/launchd) invokes `npm run start -w @ado/server` rather than a compiled entrypoint.

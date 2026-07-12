@@ -35,11 +35,16 @@ ai-development-os/            (monorepo, npm workspaces)
 ├── apps/web        Vite + React 18 + TS + Tailwind + Zustand
 │                   SSE client · two routes (/command, /ops)
 ├── apps/server     Fastify + TS · SQLite (drizzle) · SSE stream
-│   ├── integrations/   github · claude-usage · sysmon
+│   ├── integrations/   github · sysmon · health
 │   ├── scanner/        walks PROJECT_DIRS: git status, ops.yml, TASK.md, gates
 │   ├── runner/         spawns `claude -p --output-format stream-json` (headless agents)
-│   └── learn/          run logger · nightly analyzer · proposal inbox
-└── packages/shared     typed event contracts (zod) · design tokens
+│   ├── command/        NL → intent → read-now / confirm-to-mutate · token rollup
+│   ├── scheduler/      catch-up jobs (last-run persisted, overdue fires on boot)
+│   ├── backup/         WAL-safe nightly backup (VACUUM INTO + row-count assert + rotation)
+│   ├── connections/    secure per-service key store (gitignored, mode 600)
+│   ├── prompts/        custom prompt-library entries (built-ins ship in shared)
+│   └── learn/          run logger · nightly analyzer · proposal inbox (parked)
+└── packages/shared     typed event contracts (zod) · design tokens · prompt library · connectors
 ```
 
 Data flow: integrations + scanner + runner emit **typed events** → SQLite (history) + SSE (live UI). The web app renders only what arrived through the bus. **Every number on screen traces to a source event — a dashboard that invents numbers is worse than no dashboard.**
@@ -48,7 +53,9 @@ Data flow: integrations + scanner + runner emit **typed events** → SQLite (his
 
 ## Status
 
-**Phase 0 — Foundation (in progress).** The monorepo scaffold, tokens, and planning are landing on branch `claude/project-planning-goals-l1r23w`. Next: run the plan council (Prompt 0.2) and build the mock-data module, then open Phase 1.
+**Phase 6 — Hardening (in progress).** The dashboard is functional end-to-end on branch `claude/project-planning-goals-l1r23w`: live repo scanning, GitHub enrichment, system monitoring, a natural-language command center, headless agent dispatch, a Settings/Connections page for 36 services, and a model-optimized **Prompt Library**. Gates `p0`/`p1`/`p2`/`p3`(simulated)/`p4` are passed; `p2.5` (one week of real daily use) and the real-`claude -p` confirmation of `p3` are Isac's to close on a machine with credentials.
+
+Recently landed: the Prompt Library (`/prompts`) with per-model tuning + trained game/mobile/Steam/app agents, a catch-up job scheduler, and WAL-safe nightly DB backups.
 
 Current state is always in [`TASK.md`](./TASK.md); phase gates are in [`.claude/ops.yml`](./.claude/ops.yml).
 
@@ -56,27 +63,49 @@ Current state is always in [`TASK.md`](./TASK.md); phase gates are in [`.claude/
 
 ## Quickstart
 
-> Full setup lands with Phase 0. Today the scaffold builds and typechecks; live data arrives in Phase 2.
-
 ```bash
 # 1. Install (npm workspaces)
 npm install
 
 # 2. Configure secrets (never commit .env)
 cp .env.example .env
-#   GITHUB_TOKEN  — PAT with repo + actions:read
-#   ANTHROPIC_API_KEY — intent parser + analyzer only
-#   ACC_TOKEN     — openssl rand -hex 24
-#   PROJECT_DIRS  — comma-separated dirs containing your repos
+#   ACC_TOKEN         — openssl rand -hex 24  (REQUIRED; the server refuses to boot without it)
+#   VITE_ACC_TOKEN    — set to the SAME value as ACC_TOKEN
+#   GITHUB_TOKEN      — PAT with repo + actions:read   (optional; GitHub sync stays off until set)
+#   ANTHROPIC_API_KEY — intent parser + analyzer only  (optional)
+#   PROJECT_DIRS      — comma-separated dirs containing your repos to scan
 
-# 3. Verify the toolchain is green
-bash scripts/verify.sh
+# 3. Verify the toolchain is green (typecheck · lint · test · build)
+npm run verify
 
-# 4. Run web + server
+# 4. Run web + server (http://localhost:5173)
 npm run dev
 ```
 
-The server binds `127.0.0.1` only. Secrets live in `.env` (gitignored), never in code.
+**Just want to see it?** `npm run start -w @ado/server -- --demo` seeds a deterministic
+fixture world, then `npm run dev -w @ado/web` — every widget renders with sample data and
+no credentials. Prefer connecting your own keys? Open **Settings → Connections** in the app.
+
+The server binds `127.0.0.1` only. Secrets live in `.env` (gitignored), never in code; keys
+you add in Settings are stored in a gitignored `data/` file (mode 600) and never sent to the browser.
+
+### Keep it running (autostart)
+
+```bash
+npm run autostart      # macOS → launchd LaunchAgent; Linux → pm2 (auto-detected)
+```
+
+Starts the server (and, via pm2, a web preview) on login. See [`deploy/`](./deploy/) for the
+raw configs. On Linux, run the one-time `pm2 startup` command it prints to persist across reboots.
+
+### Visual smoke
+
+```bash
+npm run smoke          # boots the --demo world, screenshots /command · /ops · /prompts, fails on any console error
+```
+
+A stable render + zero-console-error gate (screenshots land in `smoke-shots/`). Requires
+`ACC_TOKEN` + `VITE_ACC_TOKEN` in `.env`.
 
 ---
 

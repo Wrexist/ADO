@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS LaunchAgent: autostart the AI Control Center server on login.
+  This is a TEMPLATE — `scripts/install-autostart.sh` replaces __REPO__ with the absolute
+  repo path and installs it to ~/Library/LaunchAgents. Do not load this file in place.
+
+  A login shell (sh -lc) is used on purpose so the user's PATH / nvm / node are available;
+  launchd itself starts with a minimal PATH. Secrets are read from the repo-root .env by the
+  server at boot — none live in this file.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.wrexist.acc.server</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-lc</string>
+    <string>cd "__REPO__" &amp;&amp; exec npm run start -w @ado/server</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>__REPO__/data/acc-server.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO__/data/acc-server.err.log</string>
+</dict>
+</plist>

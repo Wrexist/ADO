@@ -105,7 +105,7 @@ gates:
       - server autostarts on login (launchd/pm2); nightly db backup uses VACUUM INTO (WAL-safe) + asserts a row count before 7-copy rotation
       - README quickstart takes a fresh clone to running dashboard
     attempts: 4
-    status: open   # 2026-07-12 — WAL-safe nightly backup (VACUUM INTO + row-count assert + 7-copy rotation) DONE via the new catch-up scheduler (last-run persisted, overdue fires on boot); verify green 64/64. Still open: Playwright visual baselines, launchd/pm2 autostart, README quickstart, 50-repo scale check
+    status: open   # 2026-07-12 — DONE: WAL-safe nightly backup (VACUUM INTO + row-count assert + 7-copy rotation) via new catch-up scheduler; 53-repo scale + empty/degraded render check (honest states, no layout break, 0 console errors); committed `npm run smoke` (render+console gate on --demo); launchd/pm2 autostart (`npm run autostart`); README quickstart refreshed. verify green 67/67. STILL OPEN: Playwright pixel-diff baselines (deferred to after p3.5 polish so they aren't re-baselined; smoke covers regressions meanwhile); p2.5 one-week daily use + p3 real claude -p run are Isac's to close
 
   # Parked post-v1 (D2): the run logger (p3) preserves the asset; build the analyzer only
   # once the log actually fills. If built, bar executable-content classes from auto-apply (S6).
