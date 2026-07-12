@@ -9,6 +9,17 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · self-review: fixed a spawn-hang bug
+- Reviewed the process-spawning code shipped this session (it runs shell/agents on the user's
+  machine). Found a real bug: the setup-installer + review runner merged stdout+stderr and ended
+  the stream only when BOTH emitted `end` — a missing binary (ENOENT) fires `error` with no
+  `end`, so the reader hung forever and the run stuck at "running". Real risk for the review
+  runner (`claude ultrareview` when the CLI isn't on PATH).
+- Fix: extracted `apps/server/src/lib/spawnMerged.ts` — merges + ALWAYS ends the stream on
+  child `close`/`error` — and used it in both install.ts and review/runner.ts (DRY). Added a
+  regression test (missing binary must terminate, not hang; real command streams output + exit).
+  verify green (+2 tests). No UI change.
+
 ## 2026-07-12 · Claude · whole-app consistency polish
 - Swept every page for shell/width/copy/state consistency. The app was already disciplined
   (PageShell on all sub-pages, tokens-only — zero raw hex, uniform h1/subtitle headers,

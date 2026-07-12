@@ -10,11 +10,9 @@
  * run an arbitrary command.
  */
 import { randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
-import { PassThrough } from 'node:stream';
-import { createInterface } from 'node:readline';
 import type { InstallRun, Requirement } from '@ado/shared';
 import type { Capabilities } from './probe';
+import { spawnMerged, type MergedProc } from '../lib/spawnMerged';
 
 const OUTPUT_CAP = 500; // keep the last N lines — an install log can't grow unbounded in memory
 const TIMEOUT_MS = 10 * 60 * 1000; // 10 min — a cask download or a browser sign-in can be slow
@@ -42,39 +40,10 @@ export function installCommandFor(
   }
 }
 
-function minimalEnv(): NodeJS.ProcessEnv {
-  // No dashboard secrets. DISPLAY/BROWSER are added (not secrets) so `claude auth login` can
-  // open a browser on a Linux desktop; macOS uses `open` via PATH.
-  const { PATH, HOME, USER, LANG, TERM, TMPDIR, DISPLAY, BROWSER } = process.env;
-  return { PATH, HOME, USER, LANG, TERM, TMPDIR, DISPLAY, BROWSER };
-}
-
 /** A spawn seam so tests can drive the installer without running real npm. */
-export interface InstallProc {
-  lines: AsyncIterable<string>;
-  done: Promise<number>;
-  kill: () => void;
-}
-export type InstallSpawn = (cmd: string, args: string[]) => InstallProc;
+export type InstallSpawn = (cmd: string, args: string[]) => MergedProc;
 
-const realSpawn: InstallSpawn = (cmd, args) => {
-  const child = spawn(cmd, args, { env: minimalEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
-  // Merge stdout + stderr into one line stream — installers (npm) print progress to stderr,
-  // so a stdout-only log would look empty even on a healthy install.
-  const merged = new PassThrough();
-  let open = 2;
-  const half = () => {
-    if (--open === 0) merged.end();
-  };
-  child.stdout.on('end', half).pipe(merged, { end: false });
-  child.stderr.on('end', half).pipe(merged, { end: false });
-  const rl = createInterface({ input: merged, crlfDelay: Infinity });
-  const done = new Promise<number>((resolve) => {
-    child.on('close', (code) => resolve(code ?? -1));
-    child.on('error', () => resolve(-1)); // e.g. npm/code not on PATH
-  });
-  return { lines: rl, done, kill: () => child.kill('SIGTERM') };
-};
+const realSpawn: InstallSpawn = (cmd, args) => spawnMerged(cmd, args);
 
 export class Installer {
   private runs = new Map<string, InstallRun>();
@@ -111,7 +80,7 @@ export class Installer {
       if (run.output.length > OUTPUT_CAP) run.output.splice(0, run.output.length - OUTPUT_CAP);
     };
     append(`$ ${run.command}`);
-    let proc: InstallProc;
+    let proc: MergedProc;
     try {
       proc = this.spawnImpl(spec.cmd, spec.args);
     } catch (err) {

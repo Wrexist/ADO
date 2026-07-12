@@ -5,42 +5,15 @@
  * `claude` CLI use its own login) in the repo's allow-listed cwd, with a hard timeout.
  */
 import { randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
-import { PassThrough } from 'node:stream';
-import { createInterface } from 'node:readline';
 import type { ReviewRun } from '@ado/shared';
+import { spawnMerged, type MergedProc } from '../lib/spawnMerged';
 
 const OUTPUT_CAP = 800;
 const TIMEOUT_MS = 15 * 60 * 1000; // a cloud multi-agent review can take several minutes
 
-function minimalEnv(): NodeJS.ProcessEnv {
-  const { PATH, HOME, USER, LANG, TERM, TMPDIR } = process.env;
-  return { PATH, HOME, USER, LANG, TERM, TMPDIR };
-}
+export type ReviewSpawn = (cwd: string) => MergedProc;
 
-export interface ReviewProc {
-  lines: AsyncIterable<string>;
-  done: Promise<number>;
-  kill: () => void;
-}
-export type ReviewSpawn = (cwd: string) => ReviewProc;
-
-const realSpawn: ReviewSpawn = (cwd) => {
-  const child = spawn('claude', ['ultrareview'], { cwd, env: minimalEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
-  const merged = new PassThrough();
-  let open = 2;
-  const half = () => {
-    if (--open === 0) merged.end();
-  };
-  child.stdout.on('end', half).pipe(merged, { end: false });
-  child.stderr.on('end', half).pipe(merged, { end: false });
-  const rl = createInterface({ input: merged, crlfDelay: Infinity });
-  const done = new Promise<number>((resolve) => {
-    child.on('close', (code) => resolve(code ?? -1));
-    child.on('error', () => resolve(-1)); // claude not installed
-  });
-  return { lines: rl, done, kill: () => child.kill('SIGTERM') };
-};
+const realSpawn: ReviewSpawn = (cwd) => spawnMerged('claude', ['ultrareview'], cwd);
 
 export class ReviewRunner {
   private runs = new Map<string, ReviewRun>();
@@ -76,7 +49,7 @@ export class ReviewRunner {
       if (run.output.length > OUTPUT_CAP) run.output.splice(0, run.output.length - OUTPUT_CAP);
     };
     append(`$ ${run.command}  (in ${cwd})`);
-    let proc: ReviewProc;
+    let proc: MergedProc;
     try {
       proc = this.spawnImpl(cwd);
     } catch (err) {
