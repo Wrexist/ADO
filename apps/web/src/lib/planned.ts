@@ -22,7 +22,6 @@ export const PLANNED: Record<string, PlannedFeature> = {
   team: { title: 'Team', blurb: 'Members, roles, and access.', icon: 'team' },
   billing: { title: 'Billing', blurb: 'Plan, usage, and invoices.', icon: 'billing' },
   automation: { title: 'Automation', blurb: 'Rules and triggers across your workspace.', icon: 'workflow' },
-  workflows: { title: 'Workflows', blurb: 'Multi-step agent workflows.', icon: 'pipeline' },
   models: { title: 'Models', blurb: 'Configure and route between AI models.', icon: 'sparkle' },
   alerts: { title: 'Alerts', blurb: 'Thresholds and notifications.', icon: 'bell' },
   performance: { title: 'Performance', blurb: 'Detailed system and app metrics.', icon: 'health' },

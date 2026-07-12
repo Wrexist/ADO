@@ -33,8 +33,9 @@ The long-horizon aim is a full **AI Development OS** where humans and AI collabo
 ```
 ai-development-os/            (monorepo, npm workspaces)
 ├── apps/web        Vite + React 18 + TS + Tailwind + Zustand
-│                   SSE client · routes: /command · /ops · /prompts · /settings ·
-│                   /repositories · /agents · /deployments · /activity · ⌘K palette
+│                   SSE client · routes: /command · /ops · /prompts · /workflows ·
+│                   /setup · /settings · /repositories · /agents · /deployments ·
+│                   /activity · ⌘K palette
 ├── apps/server     Fastify + TS · SQLite (drizzle) · SSE stream
 │   ├── integrations/   github · sysmon · health
 │   ├── scanner/        walks PROJECT_DIRS: git status, ops.yml, TASK.md, gates
@@ -89,6 +90,13 @@ no credentials. Prefer connecting your own keys? Open **Settings → Connections
 
 The server binds `127.0.0.1` only. Secrets live in `.env` (gitignored), never in code; keys
 you add in Settings are stored in a gitignored `data/` file (mode 600) and never sent to the browser.
+
+**Not sure what's missing?** Open **Setup** in the app (`/setup`, linked from Settings). It probes
+this machine for everything the dashboard needs — Node, git, the **Claude Code CLI** (which the
+agent runner shells out to, using its *own* login — that's how you "connect your subscription"),
+the VS Code extension, `PROJECT_DIRS`, tokens — shows real installed/missing status, and one-click
+installs the command-line pieces (guided links for GUI apps and sign-ins). The recipes on the
+**Workflows** page (`/workflows`) are read live from `.claude/workflows/` and run in Claude Code.
 
 ### Keep it running (autostart)
 

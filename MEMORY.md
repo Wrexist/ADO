@@ -9,6 +9,33 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · Setup page + Workflows visual
+- **Setup page (`/setup`, linked from Settings + both sidebars):** a typed requirements
+  catalog (`@ado/shared/requirements` — runtime · CLI · extensions · apps · accounts · config)
+  the local server PROBES for real (`node/git/claude --version`, VS Code ext list, connection
+  store, env) → honest installed/missing/manual/version per item, never fabricated. One-click
+  **Install** for the auto-installable ones (npm globals, VS Code extension when `code` is on
+  PATH) via a token-gated, **allow-listed** endpoint (client sends an `id`; the command is
+  derived server-side from the catalog, never client input) with streamed progress; guided
+  copy-command + install-link for GUI apps and account sign-ins. This surfaces the real
+  "connect your subscription" truth: the runner uses the **`claude` CLI's own login**, not a
+  pasted API key.
+- **Workflows page (`/workflows`, replaces the `/planned/workflows` stub):** the server reads
+  the real `.claude/workflows/*.js` `meta` blocks (balanced-brace extraction of just the
+  literal) → `GET /api/workflows` → the page renders each recipe as a numbered phase pipeline.
+  Sourced from the files, so the visual can't drift.
+- Nav wired in both sidebars + ⌘K; `workflows` removed from the planned registry; Ops
+  "Run Workflow" → "View Workflows" → `/workflows` (honest — they run in Claude Code, not the app).
+- **Bug the gate caught:** `POST /api/setup/probe` with `content-type: application/json` but no
+  body → Fastify 400 (twice, via StrictMode double-effect). Fixed by sending `{}`. Smoke now
+  also screenshots `/workflows` + `/setup` at 1536px (zero console errors).
+- **Next / watch-outs:** the one-click Install path runs real `npm i -g` / `code --install-extension`
+  on the host — verified logic + endpoints in tests, but the live install itself isn't exercised
+  in CI (would mutate the runner's global env). Consider a per-requirement "why it's not
+  auto-installable" tooltip and detecting the `claude` login state if a reliable signal exists.
+
+---
+
 ## 2026-07-12 · Claude · workflows + CI
 - Added `.claude/workflows/` — six opt-in orchestration recipes (Claude Code Workflow scripts):
   `understand` (parallel cited map), `ship-feature` (map → judge-panel design → vetted plan),

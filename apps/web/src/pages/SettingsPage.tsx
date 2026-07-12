@@ -181,9 +181,14 @@ export function SettingsPage() {
               Vendor-independent: bring any AI provider, any host.
             </p>
           </div>
-          <Link to="/command" className="shrink-0 rounded-tile border bg-card px-3 py-2 text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1">
-            ← Back to dashboard
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link to="/setup" className="inline-flex items-center gap-1.5 rounded-tile bg-primary px-3 py-2 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
+              <Icon name="rocket" size={14} /> Setup &amp; requirements
+            </Link>
+            <Link to="/command" className="rounded-tile border bg-card px-3 py-2 text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1">
+              ← Back to dashboard
+            </Link>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">

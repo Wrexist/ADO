@@ -28,6 +28,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
     eyebrow: 'AI Tools',
     items: [
       { icon: 'chat', label: 'Prompt Library', to: '/prompts' },
+      { icon: 'workflow', label: 'Workflows', to: '/workflows' },
       { icon: 'code', label: 'Code Assistant', to: '/planned/code-assistant' },
       { icon: 'games', label: 'Game Builder', to: '/planned/game-builder' },
       { icon: 'wand', label: 'UI Generator', to: '/planned/ui-generator' },
@@ -46,6 +47,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
   {
     eyebrow: 'Settings',
     items: [
+      { icon: 'rocket', label: 'Setup', to: '/setup' },
       { icon: 'settings', label: 'Workspace Settings', to: '/settings' },
       { icon: 'team', label: 'Team', to: '/planned/team' },
       { icon: 'billing', label: 'Billing', to: '/planned/billing' },

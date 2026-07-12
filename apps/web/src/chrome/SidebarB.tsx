@@ -27,7 +27,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { icon: 'agents', label: 'AI Agents', to: '/agents' },
       { icon: 'workflow', label: 'Automation', to: '/planned/automation' },
-      { icon: 'pipeline', label: 'Workflows', to: '/planned/workflows' },
+      { icon: 'pipeline', label: 'Workflows', to: '/workflows' },
       { icon: 'chat', label: 'Prompts', to: '/prompts' },
       { icon: 'sparkle', label: 'Models', to: '/planned/models' },
     ],
@@ -45,6 +45,7 @@ const GROUPS: NavGroup[] = [
     eyebrow: 'Settings',
     items: [
       { icon: 'team', label: 'Team', to: '/planned/team' },
+      { icon: 'rocket', label: 'Setup', to: '/setup' },
       { icon: 'integrations', label: 'Integrations', to: '/settings' },
       { icon: 'settings', label: 'Settings', to: '/settings' },
     ],

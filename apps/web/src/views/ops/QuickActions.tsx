@@ -10,7 +10,7 @@ const ACTIONS = [
   { id: 'create-repo', label: 'Create Repository', icon: 'repo', to: '/planned/new-project' },
   { id: 'new-agent', label: 'New AI Agent', icon: 'agent', to: '/planned/new-agent' },
   { id: 'deploy', label: 'Deploy Application', icon: 'cloud', to: '/deployments' },
-  { id: 'workflow', label: 'Run Workflow', icon: 'workflow', to: '/planned/workflows' },
+  { id: 'workflow', label: 'View Workflows', icon: 'workflow', to: '/workflows' },
   { id: 'analytics', label: 'View Analytics', icon: 'chart', to: '/planned/analytics' },
   { id: 'secrets', label: 'Manage Secrets', icon: 'lock', to: '/settings' },
 ];

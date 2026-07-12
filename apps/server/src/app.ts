@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
-import { CONNECTOR_BY_ID } from '@ado/shared';
+import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, type ProbeResult } from '@ado/shared';
 import { openDb } from './db';
 import type { Env } from './env';
 import { Bus } from './bus';
@@ -28,6 +28,9 @@ import { respond, execute } from './command/execute';
 import { TokenRollup } from './command/tokens';
 import { Scheduler } from './scheduler';
 import { backupDatabase } from './backup';
+import { probeAll, probeOne, codeCliPresent, type ProbeContext } from './setup/probe';
+import { Installer } from './setup/install';
+import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
 import { Intent } from '@ado/shared';
 
 export interface AccServer {
@@ -373,6 +376,72 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!prompts.remove(id)) return reply.code(404).send({ error: 'unknown prompt' });
     return { ok: true };
   });
+
+  // Setup page: probe the machine for required tools/keys/config and one-click install the
+  // auto-installable ones. Reads real state (never fabricates "installed"); the install
+  // command is derived server-side from the catalog by id — the client only sends an id.
+  const envHas = (name: string): boolean => {
+    if (name === 'PROJECT_DIRS') return env.projectDirs.length > 0;
+    if (name === 'ACC_TOKEN') return Boolean(env.accToken);
+    const v = process.env[name];
+    return typeof v === 'string' && v.trim().length > 0;
+  };
+  const probeCtx: ProbeContext = {
+    connectionConnected: (id) => connections.status(id).connected,
+    envHas,
+  };
+  let setupResults: ProbeResult[] = [];
+  const refreshSetup = async () => {
+    try {
+      setupResults = await probeAll(probeCtx);
+    } catch (err) {
+      app.log.warn(`setup probe failed: ${(err as Error).message}`);
+    }
+  };
+  // Probe on boot in real runs; tests (startSystem:false) skip it so no child processes spawn.
+  if (deps.startSystem !== false) void refreshSetup();
+  const installer = new Installer(codeCliPresent, (msg) => app.log.info(msg));
+  const refreshedRuns = new Set<string>();
+
+  app.get('/api/setup', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { results: setupResults };
+  });
+  app.post('/api/setup/probe', async () => {
+    await refreshSetup();
+    return { results: setupResults };
+  });
+  app.post('/api/setup/install', async (req, reply) => {
+    const id = ((req.body ?? {}) as { id?: string }).id;
+    const requirement = id ? REQUIREMENT_BY_ID[id] : undefined;
+    if (!requirement) return reply.code(404).send({ error: 'unknown requirement' });
+    const started = await installer.start(requirement);
+    if ('error' in started) return reply.code(400).send({ error: started.error });
+    return { run: started };
+  });
+  app.get('/api/setup/install/:runId', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const run = installer.get((req.params as { runId: string }).runId);
+    if (!run) return reply.code(404).send({ error: 'unknown run' });
+    // When a run finishes, re-probe just that requirement once so its card flips to installed.
+    if (run.status !== 'running' && !refreshedRuns.has(run.runId)) {
+      refreshedRuns.add(run.runId);
+      const requirement = REQUIREMENT_BY_ID[run.reqId];
+      if (requirement) {
+        void probeOne(requirement, probeCtx, new Date().toISOString())
+          .then((res) => {
+            setupResults = setupResults.map((r) => (r.id === res.id ? res : r));
+          })
+          .catch(() => {});
+      }
+    }
+    return { run };
+  });
+
+  // Workflows page: visualise the .claude/workflows/*.js recipes (read from the real files
+  // so the visual can't drift). Non-sensitive reference data — no token needed.
+  const workflowsDir = findWorkflowsDir();
+  app.get('/api/workflows', async () => ({ workflows: workflowsDir ? readWorkflows(workflowsDir) : [] }));
 
   return {
     app,

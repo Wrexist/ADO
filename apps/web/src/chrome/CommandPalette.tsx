@@ -59,6 +59,8 @@ export function CommandPalette() {
       { id: 'p:deploys', label: 'Deployments', sub: 'Page', icon: 'rocket', to: '/deployments' },
       { id: 'p:activity', label: 'Activity', sub: 'Page', icon: 'list', to: '/activity' },
       { id: 'p:prompts', label: 'Prompt Library', sub: 'Page', icon: 'chat', to: '/prompts' },
+      { id: 'p:workflows', label: 'Workflows', sub: 'Page', icon: 'workflow', to: '/workflows' },
+      { id: 'p:setup', label: 'Setup · Install requirements', sub: 'Page', icon: 'rocket', to: '/setup' },
       { id: 'p:settings', label: 'Settings · Connections', sub: 'Page', icon: 'settings', to: '/settings' },
     ];
     const repos: Item[] = Object.values(state.repos).map((r) => ({
