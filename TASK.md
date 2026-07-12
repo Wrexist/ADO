@@ -28,6 +28,14 @@ Ran a 3-way parallel audit (server / web / shared) and acted on the findings.
 - [x] **Stat-card trend deltas (feature)** — new event-sourced `stats.snapshot` (daily rollup via the catch-up scheduler) + reducer history + `statDelta` selector → "↑2 this week" on Repositories/Deployments in both views, and a real active-agent sparkline on View B. Honest: no history → no delta; real mode accrues live, `--demo` seeds a week. **Closes the p3.5 stat-card subline gap.**
 - verify green (typecheck ×3, 75 tests, build); zero console errors on /command, /ops, /prompts.
 
+### Deferred-list clearout (2026-07-12, same day)
+Did all four items previously deferred.
+- [x] **Real ESLint** in the green gate — replaced the placeholder `echo` with ESLint 9 (flat config) + typescript-eslint (unused-vars, explicit-`any` ban). `verify` now genuinely lints.
+- [x] **No more dead nav** — built bus-backed pages `/repositories` (category filter + search), `/agents` (running + roster + build queue), `/deployments`, `/activity`, plus a `/planned/:slug` honest placeholder (registry in `lib/planned`). `SectionHeader` gained `actionTo`; every sidebar item, "View all", Quick Action, and the New/Add/Upgrade buttons now route somewhere real or honest.
+- [x] **Global command palette (⌘K)** — real search over repos/agents/prompts/pages with keyboard nav; the top-bar search fields open it (were inert). Removed the now-unused useCmdK hook.
+- [x] **Type-safety + storage** — shared `Tone` zod enum + `isoTs` timestamp validation on all entities; dropped the unused `snapshots` table (migration 0002); `Bus.compact()` prunes superseded latest-only rows (health/tokens/stats) on boot so the log stays bounded.
+- verify green (typecheck ×3, lint, 76 tests, build); zero console errors across all views + the new pages.
+
 ---
 
 ## Done (Phase 4 — Command center)
