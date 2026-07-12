@@ -9,6 +9,29 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · zero-config onboarding (was: offline until hand-configured)
+Isac hit the wall: on a fresh machine the app is OFFLINE until you hand-create `.env`, generate
+a token, paste it into ACC_TOKEN + VITE_ACC_TOKEN, and start the server (Setup screenshot showed
+"Server offline / Failed to fetch / set VITE_ACC_TOKEN"). Killed that friction end-to-end.
+- **Auto-provision `.env` (`scripts/bootstrap-env.mjs`):** idempotent + non-destructive — generates
+  a strong ACC_TOKEN (crypto) and a MATCHING VITE_ACC_TOKEN only if missing; never changes an
+  existing token; preserves all other keys/comments; chmod 600; never prints the token. Wired into
+  EVERY start path so first run is zero-config: root `predev` (→ `npm run dev` just works), server
+  `prestart` (→ autostart pm2/launchd + smoke + any `npm run start`), `install.sh`, `install-autostart.sh`,
+  `smoke.sh`, and a `npm run setup` alias. Verified live: `npm run start` → prestart bootstrap →
+  server boots → `/health` 200 → dashboard shows **"Live"**.
+- **First-run onboarding card (`MainColumn` `FirstRunCard`):** when the server is online but zero
+  repos are scanned, instead of a bare 0/0/0 grid the dashboard shows a friendly welcome — folder
+  icon, "now add your projects", the real next step (`PROJECT_DIRS` in `.env`), and Open Setup /
+  Settings CTAs. Honest: renders ONLY at `repos.length === 0`, so it never masks real data and the
+  demo (which has repos) never shows it. Category tabs with no repos get a light EmptyState.
+- Kept convention 9 intact: the server still REQUIRES a token — bootstrap just always provides one
+  before start. env.ts keeps its (now clear) guard as the headless-misconfig safety net.
+- README quickstart rewritten to `npm install && npm run dev` (zero-config). verify green (126
+  tests) · smoke green (0 console errors) · captured a real empty-world `/command` showing the card.
+- **Watch-out:** adding a project is still "edit PROJECT_DIRS + restart" (read at boot) — a runtime
+  "add folder → rescan" endpoint would make it fully clickable; good next step for onboarding.
+
 ## 2026-07-12 · Claude · fixed 3 real-run bugs from the PR #1 Codex review
 PR #1 merged (merge commit); an automated Codex review flagged 3 P2 bugs, all verified real
 and all in real-`claude`-run paths the demo world masks. Per the merged-PR workflow, restarted

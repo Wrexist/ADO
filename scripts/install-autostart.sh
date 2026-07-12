@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 
-[ -f .env ] || { echo "✗ .env missing — copy .env.example and set ACC_TOKEN first."; exit 1; }
+node scripts/bootstrap-env.mjs # ensure .env + a local ACC_TOKEN exist before installing the service
 grep -qE '^ACC_TOKEN=.+' .env || { echo "✗ ACC_TOKEN not set in .env."; exit 1; }
 
 OS="$(uname -s)"

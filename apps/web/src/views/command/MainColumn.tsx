@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   AgentTile,
   Button,
+  EmptyState,
   Icon,
   PillTabs,
   SectionHeader,
@@ -183,18 +184,27 @@ export function MainColumn() {
           </div>
         </div>
 
-        <div className={cx('mt-4 grid gap-4', GRID_COLS[layout])}>
-          {visible.map((r) => (
-            <RepoCard key={r.id} repo={r} />
-          ))}
-        </div>
-
-        <Link
-          to="/repositories"
-          className="mt-4 block w-full rounded-card border bg-card py-2.5 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
-        >
-          View all repositories →
-        </Link>
+        {repos.length === 0 ? (
+          <FirstRunCard />
+        ) : visible.length === 0 ? (
+          <div className="mt-4 rounded-card border bg-card">
+            <EmptyState icon="repos" title={`No ${tab} yet`} hint="Nothing in this category — switch tabs to see your other projects." />
+          </div>
+        ) : (
+          <>
+            <div className={cx('mt-4 grid gap-4', GRID_COLS[layout])}>
+              {visible.map((r) => (
+                <RepoCard key={r.id} repo={r} />
+              ))}
+            </div>
+            <Link
+              to="/repositories"
+              className="mt-4 block w-full rounded-card border bg-card py-2.5 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
+            >
+              View all repositories →
+            </Link>
+          </>
+        )}
       </div>
 
       {/* running agents — live runner processes only */}
@@ -214,5 +224,45 @@ export function MainColumn() {
         </div>
       </div>
     </main>
+  );
+}
+
+/**
+ * First-run onboarding — shown only when there are genuinely zero repos (server online but
+ * no projects scanned yet). Honest: it never masks real data, and points at the ONE real
+ * step (PROJECT_DIRS). Copy is a single-shot draft for Isac to edit (convention 6).
+ */
+function FirstRunCard() {
+  return (
+    <div className="mt-4 flex flex-col items-center gap-4 rounded-card border bg-card px-6 py-12 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-tile bg-primary/15 text-primary">
+        <Icon name="repos" size={22} />
+      </span>
+      <div>
+        <p className="text-section font-semibold text-text1">You're all set — now add your projects</p>
+        <p className="mx-auto mt-1 max-w-[52ch] text-body text-text2">
+          AI Control Center scans the folders you list in{' '}
+          <code className="rounded bg-elevated px-1 py-0.5 text-label text-text1">PROJECT_DIRS</code> for git repos,
+          then tracks their builds, agents, and deployments right here.
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Link to="/setup">
+          <Button>
+            <Icon name="sparkle" size={14} />
+            Open Setup
+          </Button>
+        </Link>
+        <Link to="/settings">
+          <Button variant="ghost">Settings</Button>
+        </Link>
+      </div>
+      <p className="max-w-[52ch] text-label text-text3">
+        Add e.g.{' '}
+        <code className="rounded bg-elevated px-1 py-0.5 text-text2">PROJECT_DIRS=~/code,~/projects</code> to your{' '}
+        <code className="rounded bg-elevated px-1 py-0.5 text-text2">.env</code>, then restart — your repos appear
+        automatically.
+      </p>
+    </div>
   );
 }
