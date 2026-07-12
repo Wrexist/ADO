@@ -8,15 +8,15 @@ import { ViewSwitcher } from './ViewSwitcher';
  * View B top bar — "AI CONTROL / DASHBOARD" logo block left; search pill,
  * bell (red dot), chat, settings, avatar right. ⌘K focuses search here too.
  */
-function BarIcon({ icon, label }: { icon: IconName; label: string }) {
+function BarIcon({ icon, label, to }: { icon: IconName; label: string; to: string }) {
   return (
-    <button
-      type="button"
+    <Link
+      to={to}
       aria-label={label}
       className="relative flex h-9 w-9 items-center justify-center rounded-tile text-text2 transition-colors duration-150 ease-soft hover:bg-elevated hover:text-text1"
     >
       <Icon name={icon} size={16} />
-    </button>
+    </Link>
   );
 }
 
@@ -55,8 +55,8 @@ export function TopBarB() {
             ⌘K
           </kbd>
         </button>
-        <BarIcon icon="bell" label="Notifications" />
-        <BarIcon icon="chat" label="Messages" />
+        <BarIcon icon="bell" label="Notifications" to="/activity" />
+        <BarIcon icon="chat" label="Messages" to="/planned/messages" />
         <Link
           to="/settings"
           aria-label="Settings"
@@ -64,9 +64,13 @@ export function TopBarB() {
         >
           <Icon name="settings" size={16} />
         </Link>
-        <span className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary">
+        <Link
+          to="/settings"
+          aria-label="Account settings"
+          className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary transition-colors duration-150 ease-soft hover:bg-primary/30"
+        >
           IM
-        </span>
+        </Link>
       </div>
     </header>
   );

@@ -28,4 +28,6 @@ export const PLANNED: Record<string, PlannedFeature> = {
   performance: { title: 'Performance', blurb: 'Detailed system and app metrics.', icon: 'health' },
   'new-project': { title: 'New Project', blurb: 'Create a repository or project.', icon: 'plus' },
   'new-agent': { title: 'New AI Agent', blurb: 'Define and dispatch a new agent.', icon: 'agents' },
+  calendar: { title: 'Calendar', blurb: 'Scheduled jobs, releases, and reminders.', icon: 'calendar' },
+  messages: { title: 'Messages', blurb: 'Team and agent conversations.', icon: 'chat' },
 };

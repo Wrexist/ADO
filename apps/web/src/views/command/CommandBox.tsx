@@ -8,7 +8,16 @@ import { confirmIntent, runCommand } from '../../lib/command';
  * mutating intents show a preview with a Confirm button — nothing acts without it.
  * `variant` styles the send button for View A (violet round) vs View B (assistant).
  */
-export function CommandBox({ placeholder, seed }: { placeholder: string; seed?: { text: string; n: number } }) {
+export function CommandBox({
+  placeholder,
+  seed,
+  focusSignal,
+}: {
+  placeholder: string;
+  seed?: { text: string; n: number };
+  /** Bump this to focus the input without changing its text (e.g. "Open AI Assistant"). */
+  focusSignal?: number;
+}) {
   const [text, setText] = useState('');
   const [resp, setResp] = useState<CommandResponse | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -23,6 +32,12 @@ export function CommandBox({ placeholder, seed }: { placeholder: string; seed?: 
       inputRef.current?.focus();
     }
   }, [seed]);
+
+  // Focus-only signal (text untouched) — the first bump (0→1) is ignored so we don't
+  // steal focus on mount.
+  useEffect(() => {
+    if (focusSignal) inputRef.current?.focus();
+  }, [focusSignal]);
 
   const submit = async () => {
     if (!text.trim() || busy) return;

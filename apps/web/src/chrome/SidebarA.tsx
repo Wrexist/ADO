@@ -99,8 +99,8 @@ export function SidebarA() {
       </nav>
 
       {/* user card */}
-      <button
-        type="button"
+      <Link
+        to="/settings"
         className="mt-6 flex w-full items-center gap-2.5 rounded-tile border bg-card px-3 py-2.5 text-left transition-colors duration-150 ease-soft hover:border-hover"
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary">
@@ -111,7 +111,7 @@ export function SidebarA() {
           <span className="block text-label text-text3">Admin</span>
         </span>
         <Icon name="chevronDown" size={14} className="text-text3" />
-      </button>
+      </Link>
     </aside>
   );
 }

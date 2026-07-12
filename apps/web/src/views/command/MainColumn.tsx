@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AgentTile,
@@ -12,7 +12,7 @@ import {
   type Tone,
 } from '../../kit';
 import { useBus } from '../../store/bus';
-import { reposList, repoTabs, runningAgents, statDelta, weekDelta } from '../../lib/selectors';
+import { repoTabs, runningAgents, statDelta, weekDelta } from '../../lib/selectors';
 import { approxTokens } from '../../lib/time';
 import { RepoCard } from './RepoCard';
 
@@ -29,15 +29,41 @@ const TAB_CATEGORY: Record<string, string | null> = {
   libraries: 'library',
 };
 
+const STATUS_ORDER: Record<string, number> = { active: 0, testing: 1, blocked: 2, archived: 3 };
+const SORTS = [
+  { id: 'recent', label: 'Recently Updated' },
+  { id: 'name', label: 'Name A–Z' },
+  { id: 'status', label: 'Status' },
+] as const;
+type SortId = (typeof SORTS)[number]['id'];
+type Layout = 'grid' | 'comfortable' | 'list';
+const GRID_COLS: Record<Layout, string> = { grid: 'grid-cols-3', comfortable: 'grid-cols-2', list: 'grid-cols-1' };
+const LAYOUTS: Array<{ icon: IconName; mode: Layout }> = [
+  { icon: 'grid', mode: 'grid' },
+  { icon: 'list', mode: 'list' },
+  { icon: 'overview', mode: 'comfortable' },
+];
+
 export function MainColumn() {
   const state = useBus((s) => s.state);
   const [tab, setTab] = useState('all');
+  const [layout, setLayout] = useState<Layout>('grid');
+  const [sort, setSort] = useState<SortId>('recent');
+  const [sortOpen, setSortOpen] = useState(false);
 
-  const repos = reposList(state);
   const tabs = repoTabs(state);
   const running = runningAgents(state);
   const agentsTotal = Object.keys(state.agents).length;
   const category = TAB_CATEGORY[tab] ?? null;
+
+  // Repositories sorted by the chosen key (all real fields; no fabricated ordering).
+  const repos = useMemo(() => {
+    const arr = Object.values(state.repos);
+    if (sort === 'name') arr.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sort === 'status') arr.sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
+    else arr.sort((a, b) => b.updatedTs.localeCompare(a.updatedTs));
+    return arr;
+  }, [state.repos, sort]);
   const visible = (category ? repos.filter((r) => r.category === category) : repos).slice(0, 6);
 
   return (
@@ -52,14 +78,16 @@ export function MainColumn() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <div className="flex items-center gap-1 rounded-tile border bg-card p-1">
-            {(['grid', 'list', 'overview'] as IconName[]).map((icon, i) => (
+            {LAYOUTS.map(({ icon, mode }) => (
               <button
-                key={icon}
+                key={mode}
                 type="button"
-                aria-label={`Layout ${icon}`}
+                aria-label={`${mode} layout`}
+                aria-pressed={layout === mode}
+                onClick={() => setLayout(mode)}
                 className={cx(
                   'flex h-7 w-7 items-center justify-center rounded-lg transition-colors duration-150 ease-soft',
-                  i === 0 ? 'bg-primary/20 text-primary' : 'text-text3 hover:text-text1',
+                  layout === mode ? 'bg-primary/20 text-primary' : 'text-text3 hover:text-text1',
                 )}
               >
                 <Icon name={icon} size={14} />
@@ -114,17 +142,48 @@ export function MainColumn() {
           <h2 className="shrink-0 text-section font-semibold text-text1">All Repositories</h2>
           <PillTabs tabs={tabs} activeId={tab} onChange={setTab} />
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            <Button variant="ghost" size="sm">
-              Sort: Recently Updated
-              <Icon name="chevronDown" size={13} />
-            </Button>
-            <Button variant="ghost" size="sm" aria-label="Grid view" className="px-2.5">
-              <Icon name="grid" size={14} />
+            <div className="relative">
+              <Button variant="ghost" size="sm" onClick={() => setSortOpen((o) => !o)}>
+                Sort: {SORTS.find((s) => s.id === sort)?.label}
+                <Icon name="chevronDown" size={13} />
+              </Button>
+              {sortOpen ? (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
+                  <div className="absolute right-0 z-20 mt-1 w-44 rounded-tile border bg-panel p-1">
+                    {SORTS.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setSort(s.id);
+                          setSortOpen(false);
+                        }}
+                        className={cx(
+                          'block w-full rounded px-2.5 py-1.5 text-left text-body transition-colors duration-150 ease-soft',
+                          sort === s.id ? 'bg-elevated text-text1' : 'text-text2 hover:bg-elevated/60',
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Toggle grid/list"
+              className="px-2.5"
+              onClick={() => setLayout((l) => (l === 'list' ? 'grid' : 'list'))}
+            >
+              <Icon name={layout === 'list' ? 'list' : 'grid'} size={14} />
             </Button>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className={cx('mt-4 grid gap-4', GRID_COLS[layout])}>
           {visible.map((r) => (
             <RepoCard key={r.id} repo={r} />
           ))}

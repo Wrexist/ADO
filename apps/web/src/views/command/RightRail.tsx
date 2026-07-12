@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Button,
@@ -25,6 +26,7 @@ export function RightRail() {
   const state = useBus((s) => s.state);
   const activity = activityRecent(state, 6);
   const status = systemStatusRows(state);
+  const [focusCmd, setFocusCmd] = useState(0);
 
   return (
     <aside className="flex w-[360px] shrink-0 flex-col gap-4 p-6 pl-0">
@@ -33,7 +35,7 @@ export function RightRail() {
         <h2 className="text-section font-semibold text-text1">AI Command Center</h2>
         <p className="mt-0.5 text-body text-text2">Ask anything. AI will handle it.</p>
         <div className="mt-4">
-          <CommandBox placeholder="What do you want to build or fix?" />
+          <CommandBox placeholder="What do you want to build or fix?" focusSignal={focusCmd} />
         </div>
       </Card>
 
@@ -88,7 +90,9 @@ export function RightRail() {
             <p className="text-label text-text2">AI Assistant is ready to help you</p>
           </div>
         </div>
-        <Button className="mt-4 w-full">Open AI Assistant</Button>
+        <Button className="mt-4 w-full" onClick={() => setFocusCmd((n) => n + 1)}>
+          Open AI Assistant
+        </Button>
       </Card>
     </aside>
   );

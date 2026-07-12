@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { Repo } from '@ado/shared';
 import {
   AvatarStack,
@@ -14,6 +15,7 @@ import { timeAgo } from '../../lib/time';
 export function RepoCard({ repo }: { repo: Repo }) {
   const cat = CATEGORY_ICON[repo.category];
   const status = REPO_STATUS_LOOK[repo.status];
+  const navigate = useNavigate();
 
   return (
     <HoverCard className="flex flex-col gap-3 p-4">
@@ -28,7 +30,8 @@ export function RepoCard({ repo }: { repo: Repo }) {
           <StatusDot tone={status.tone} label={status.label} />
           <button
             type="button"
-            aria-label={`${repo.name} options`}
+            aria-label={`View ${repo.name} in Repositories`}
+            onClick={() => navigate(`/repositories?cat=${repo.category}`)}
             className="rounded p-1 text-text3 transition-colors duration-150 ease-soft hover:text-text1"
           >
             <Icon name="dots" size={14} />

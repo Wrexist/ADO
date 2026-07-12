@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../kit';
 import { usePalette } from '../lib/palette';
 import { ConnectionBadge } from './ConnectionBadge';
@@ -7,15 +8,15 @@ import { ViewSwitcher } from './ViewSwitcher';
  * View A top bar — logo + title block, centered ⌘K search, actions, avatar.
  * ⌘K / Ctrl+K focuses the search input (quality floor).
  */
-function TopBarButton({ icon, label }: { icon: IconName; label: string }) {
+function TopBarButton({ icon, label, to }: { icon: IconName; label: string; to: string }) {
   return (
-    <button
-      type="button"
+    <Link
+      to={to}
       aria-label={label}
       className="relative flex h-9 w-9 items-center justify-center rounded-tile border bg-card text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
     >
       <Icon name={icon} size={16} />
-    </button>
+    </Link>
   );
 }
 
@@ -56,14 +57,16 @@ export function TopBarA() {
       <div className="flex shrink-0 items-center gap-2">
         <ViewSwitcher />
         <ConnectionBadge />
-        <TopBarButton icon="plus" label="Create" />
-        <TopBarButton icon="calendar" label="Calendar" />
-        <TopBarButton icon="bell" label="Notifications" />
-        <div className="ml-1">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary">
-            IM
-          </span>
-        </div>
+        <TopBarButton icon="plus" label="Create" to="/planned/new-project" />
+        <TopBarButton icon="calendar" label="Calendar" to="/planned/calendar" />
+        <TopBarButton icon="bell" label="Notifications" to="/activity" />
+        <Link
+          to="/settings"
+          aria-label="Account settings"
+          className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary transition-colors duration-150 ease-soft hover:bg-primary/30"
+        >
+          IM
+        </Link>
       </div>
     </header>
   );
