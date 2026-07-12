@@ -9,6 +9,37 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · three real features: deploy status · notifications · LLM parser
+Built + shipped the three the user asked for, pushed together.
+- **Per-repo deploy status (Feature 1):** `latestDeployment(state, repoId)` selector →
+  RepoCard meta row shows the most recent real deploy (env label, tinted by `deploy.ok`,
+  timestamp title). Repo cards are now the click target → `/repositories/:id` (role=button,
+  Enter/Space); the "Automate" corner button stays (stopPropagation). Absent deploy = no chip
+  (honest — never a placeholder). BuildQueue resolves `build.repo` id→name.
+- **Outbound notifications (Feature 2):** `Notifier` pings connected Slack/Discord incoming
+  webhooks on real CI failures + deployments (Slack `{text}` / Discord `{content}`), 60s
+  per-event dedup against flapping CI, 5s fetch timeout, failures logged never thrown.
+  Connecting a webhook in Settings IS the opt-in. Webhook URL is a server-resolved secret,
+  never sent to the client; message text is composed from typed event fields, not echoed
+  external input. Wired into one consolidated bus subscription (build.updated non-runner →
+  automation engine + notifier; deploy.recorded → notifier), gated off in demo/hermetic tests.
+- **LLM-backed command parser (Feature 3):** `ClaudeParser` — when an Anthropic key is
+  connected, the command box classifies NL via the Messages API with a FORCED tool call
+  (structured output) validated by the shared `Intent` schema; **falls back to the heuristic
+  parser** with no key / on any API error/timeout / on invalid output, so the box never breaks
+  and `parsedBy` stays honest. Thin fetch adapter pinned to `anthropic-version: 2023-06-01`
+  with an injectable FetchFn seam (convention 12: versioned adapter + honest degraded state) —
+  no new server dependency. Command text is data, not instructions: it rides in the user turn,
+  the system prompt frames it as text to classify only, and hallucinated repo ids (outside the
+  known set) are dropped (convention 11). Model `claude-haiku-4-5` (configurable) — a 5-way
+  classification is the canonical cheap/fast case (convention 5). 6 tests (no-key fallback,
+  successful classify, hallucinated-id drop, API-error/invalid-output/network fallbacks).
+- verify green (typecheck ×3 · lint · 125 tests · build).
+- **Next / watch-outs:** the live Messages API call isn't exercised in CI (needs a real key) —
+  logic + fallbacks are fully tested via the injected fetch. Notifier live POST likewise tested
+  via injected PostFn. If Isac wants opus-tier parsing for fuzzier commands, the model is a
+  constructor arg — flip `DEFAULT_MODEL` or pass it at construction.
+
 ## 2026-07-12 · Claude · self-review: fixed a spawn-hang bug
 - Reviewed the process-spawning code shipped this session (it runs shell/agents on the user's
   machine). Found a real bug: the setup-installer + review runner merged stdout+stderr and ended
