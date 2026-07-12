@@ -28,6 +28,9 @@ Run `/verify` before reporting any task done. Run `/gate` for phase status; phas
 ## Reference docs in repo
 `MASTER_PLAN.md` · `DESIGN_SPEC.md` · `DATA_MAP.md` · `SELF_LEARNING.md` · `PROMPTS.md` · `design/reference/view-a.png`, `view-b.png`
 
+## Claude Code harness (`.claude/`)
+`settings.json` (permission allow/deny + hooks) · `hooks/` pre/post/stop reflexes (guard secret/data edits + dangerous shell, fail-open; log tool calls; nudge the finish ritual) · `agents/verifier.md` (independent verifier — runs the gate + audits honesty conventions) · `skills/` 9 tracks (agent-llm, debug, security, frontend, testing, refactor, docs, data, git-ops) · root `.mcp.json` · `MEMORY.md` (cross-session shift log) · `run.sh` (headless loop + verify) · `install.sh` (bootstrap). Run `bash install.sh` after a fresh clone.
+
 ## V2 security & resilience conventions
 9. Every mutating server endpoint validates `X-ACC-Token` (from .env); CORS locked to the web origin; SSE read-only. localhost is not a trust boundary
 10. Spawned agents receive a minimal env allow-list — never the dashboard's GitHub/Anthropic secrets wholesale

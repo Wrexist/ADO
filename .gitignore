@@ -10,7 +10,7 @@ dist/
 .env
 .env.local
 .env.*.local
-data/
+/data/
 connections.json
 *.sqlite
 *.sqlite-shm
@@ -30,3 +30,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# claude harness logs
+.claude/logs/

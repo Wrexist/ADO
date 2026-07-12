@@ -110,6 +110,22 @@ A stable render + zero-console-error gate (screenshots land in `smoke-shots/`). 
 
 ---
 
+## Claude Code harness (`.claude/`)
+
+The repo ships a Claude Code operating harness so any session (human or agent) starts with the same reflexes, skills, and guardrails:
+
+- **`.claude/settings.json`** — permission allow/deny + hook wiring.
+- **`.claude/hooks/`** — reflexes: `pre-tool-use.sh` (blocks secret/data edits, `rm -rf` on root/globs, bare `--force`, `curl | sh`, `sudo` — fail-open so it never wedges a session), `post-tool-use.sh` (logs each tool call to `.claude/logs/`), `stop.sh` (nudges the verify + docs ritual when the tree is dirty).
+- **`.claude/agents/verifier.md`** — an independent verifier subagent that runs the gate, drives the flow, and audits against the honesty conventions before a change is called done.
+- **`.claude/skills/`** — 9 project-tuned tracks: agent-llm · debug · security · frontend · testing · refactor · docs · data · git-ops.
+- **`.mcp.json`** — project MCP servers (GitHub, lazy-loaded via `${GITHUB_TOKEN}`).
+- **`MEMORY.md`** — cross-session shift log (alongside `TASK.md` + `LEARNINGS.md`).
+- **`run.sh`** — one headless `claude -p` pass + verify · **`install.sh`** — bootstrap the harness in a checkout.
+
+Bootstrap: `bash install.sh` (chmod hooks, validate config, create `.env`, `npm install`).
+
+---
+
 ## Working agreement (the short version)
 
 - **Gate-driven & sequential** — `/gate` refuses to start Phase N+1 while N is open.
