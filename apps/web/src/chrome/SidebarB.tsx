@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Button, Card, Icon, IconTile, cx, type IconName } from '../kit';
+import { Icon, cx, type IconName } from '../kit';
 import { isNavActive } from '../lib/selectors';
 
 /**
@@ -36,16 +36,15 @@ const GROUPS: NavGroup[] = [
   {
     eyebrow: 'Monitoring',
     items: [
-      { icon: 'chart', label: 'Analytics', to: '/planned/analytics' },
-      { icon: 'list', label: 'Logs', to: '/activity' },
+      { icon: 'chart', label: 'Analytics', to: '/analytics' },
+      { icon: 'health', label: 'Performance', to: '/performance' },
+      { icon: 'list', label: 'Activity', to: '/activity' },
       { icon: 'bell', label: 'Alerts', to: '/planned/alerts' },
-      { icon: 'health', label: 'Performance', to: '/planned/performance' },
     ],
   },
   {
     eyebrow: 'Settings',
     items: [
-      { icon: 'team', label: 'Team', to: '/planned/team' },
       { icon: 'rocket', label: 'Setup', to: '/setup' },
       { icon: 'integrations', label: 'Integrations', to: '/settings' },
       { icon: 'settings', label: 'Settings', to: '/settings' },
@@ -92,8 +91,6 @@ function SoonDisclosure({ items }: { items: NavEntry[] }) {
 
 export function SidebarB() {
   const location = useLocation();
-  // Static copy — honest placeholder card per DATA_MAP ("not wired yet" > fake feature).
-  const proPlan = { title: 'Pro Plan', body: 'Unlimited access', cta: 'Upgrade' };
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => !isPlanned(it.to)) }));
   const planned = GROUPS.flatMap((g) => g.items).filter((it) => isPlanned(it.to));
   return (
@@ -117,22 +114,6 @@ export function SidebarB() {
         ))}
         {planned.length > 0 ? <SoonDisclosure items={planned} /> : null}
       </nav>
-
-      {/* Pro Plan — static v1 placeholder ("not wired yet" > fake feature) */}
-      <Card className="mt-4 border-primary/25 bg-primary/10 p-3.5">
-        <div className="flex items-center gap-2.5">
-          <IconTile icon="sparkle" tone="violet" size="sm" />
-          <div className="leading-tight">
-            <p className="text-body font-semibold text-text1">{proPlan.title}</p>
-            <p className="text-label text-text2">{proPlan.body}</p>
-          </div>
-        </div>
-        <Link to="/planned/billing" className="mt-3 block">
-          <Button size="sm" className="w-full">
-            {proPlan.cta}
-          </Button>
-        </Link>
-      </Card>
     </aside>
   );
 }

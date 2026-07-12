@@ -61,8 +61,10 @@ export const runs = sqliteTable(
     tokensIn: integer('tokens_in'),
     tokensOut: integer('tokens_out'),
     turns: integer('turns'),
-    verifyVerdict: text('verify_verdict'), // pass | fail | null (unknown)
-    humanAction: text('human_action'), // accepted | corrected | redone | null
+    // Reserved for the (parked) self-learning analyzer — NOT written yet. Kept nullable so the
+    // column exists when the analyzer ships; today every run leaves both null (honest unknown).
+    verifyVerdict: text('verify_verdict'), // pass | fail | null — reserved, unwritten
+    humanAction: text('human_action'), // accepted | corrected | redone | null — reserved, unwritten
     exitCode: integer('exit_code'),
     note: text('note'), // e.g. "orphaned on boot", "opaque stream"
   },

@@ -11,7 +11,7 @@ const ACTIONS = [
   { id: 'new-agent', label: 'New AI Agent', icon: 'agent', to: '/planned/new-agent' },
   { id: 'deploy', label: 'View Deployments', icon: 'cloud', to: '/deployments' },
   { id: 'workflow', label: 'View Workflows', icon: 'workflow', to: '/workflows' },
-  { id: 'analytics', label: 'View Analytics', icon: 'chart', to: '/planned/analytics' },
+  { id: 'analytics', label: 'View Analytics', icon: 'chart', to: '/analytics' },
   { id: 'secrets', label: 'Manage Secrets', icon: 'lock', to: '/settings' },
 ];
 

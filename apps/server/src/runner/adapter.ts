@@ -15,8 +15,6 @@ export type AgentUpdate =
   | { kind: 'done'; ok: boolean; tokensIn: number | null; tokensOut: number | null; turns: number | null }
   | { kind: 'opaque' };
 
-export const ADAPTER_VERSION = 'stream-json/v1';
-
 interface Line {
   type?: unknown;
   subtype?: unknown;

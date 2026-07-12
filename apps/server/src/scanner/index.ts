@@ -64,6 +64,12 @@ export class Scanner {
     return this.idToDir.get(repoId) ?? null;
   }
 
+  /** The repo ids this scanner currently tracks — for the rescan diff that prunes repos
+   *  whose folder is gone (→ repo.removed), so a deleted project doesn't linger. */
+  repoIds(): string[] {
+    return [...this.idToDir.keys()];
+  }
+
   /** Full scan of every configured root, then install watches. A root can be EITHER a single
    *  git repo OR a folder that holds repos one level down — so "add my project" works whether
    *  the user points at the repo or its parent. */

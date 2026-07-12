@@ -240,14 +240,29 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
   let scanner: Scanner | null = null;
   const rebuildScanner = async (): Promise<void> => {
+    const before = scanner?.repoIds() ?? [];
     scanner?.stop();
     scanner = null;
-    if (env.demo) return;
+    if (env.demo) return; // demo repos come from the seed, never the scanner — don't prune them
     const dirs = allProjectDirs();
-    if (dirs.length === 0) return;
-    scanner = new Scanner(bus, dirs, (msg) => app.log.info(msg));
-    await scanner.start();
-    snapshotStats(); // accurate snapshot once the scan populated repos
+    if (dirs.length > 0) {
+      scanner = new Scanner(bus, dirs, (msg) => app.log.info(msg));
+      await scanner.start();
+    }
+    const after = scanner?.repoIds() ?? [];
+    // Prune repos the scanner used to see but no longer does (folder removed / repo deleted) —
+    // a project that's gone shouldn't linger on the dashboard. GitHub-only repos are never in
+    // the scanner's id set, so they're untouched.
+    for (const repoId of before.filter((id) => !after.includes(id))) {
+      bus.publish({
+        id: `repo-removed:${repoId}:${Date.now()}`,
+        type: 'repo.removed',
+        ts: new Date().toISOString(),
+        source: { kind: 'scanner', ref: repoId },
+        payload: { repoId },
+      });
+    }
+    snapshotStats(); // accurate snapshot once the scan populated/pruned repos
   };
   // Boot scan only in real runs; tests (startSystem:false) stay hermetic (no fs walk/watch).
   if (deps.startSystem !== false) void rebuildScanner().catch((err) => app.log.error(err));

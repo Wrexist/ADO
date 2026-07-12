@@ -1,4 +1,5 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -73,5 +74,27 @@ describe('POST /api/projects (add a folder to scan, token-gated)', () => {
     expect(add.json().dirs).toContain(t);
     const list = await srv.app.inject({ method: 'GET', url: '/api/projects', headers: AUTH });
     expect(list.json().dirs).toContain(t);
+  });
+
+  it('scans a real repo on add, and prunes it (repo.removed) on remove — no ghost repos', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'acc-proj-git-'));
+    temps.push(root);
+    const repoDir = join(root, 'my-repo');
+    mkdirSync(repoDir, { recursive: true });
+    const g = (args: string[]) => execFileSync('git', args, { cwd: repoDir, stdio: 'ignore' });
+    g(['init', '-q', '-b', 'main']);
+    g(['config', 'user.email', 't@t']);
+    g(['config', 'user.name', 't']);
+    writeFileSync(join(repoDir, 'README.md'), '# My Repo\n');
+    g(['add', '-A']);
+    g(['commit', '-q', '-m', 'init']);
+
+    // add → the repo is scanned into bus state (no restart)
+    expect((await srv.app.inject({ method: 'POST', url: '/api/projects', headers: AUTH, payload: { dir: root } })).statusCode).toBe(200);
+    expect(srv.bus.snapshot().state.repos['my-repo']).toBeDefined();
+
+    // remove → rescan diff emits repo.removed, so the repo doesn't linger as a ghost
+    expect((await srv.app.inject({ method: 'DELETE', url: '/api/projects', headers: AUTH, payload: { dir: root } })).statusCode).toBe(200);
+    expect(srv.bus.snapshot().state.repos['my-repo']).toBeUndefined();
   });
 });

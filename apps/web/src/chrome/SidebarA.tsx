@@ -34,13 +34,14 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
       { icon: 'games', label: 'Game Builder', to: '/planned/game-builder' },
       { icon: 'wand', label: 'UI Generator', to: '/planned/ui-generator' },
       { icon: 'database', label: 'Database', to: '/planned/database' },
-      { icon: 'chart', label: 'Analytics', to: '/planned/analytics' },
+      { icon: 'chart', label: 'Analytics', to: '/analytics' },
     ],
   },
   {
     eyebrow: 'Deploy & Release',
     items: [
       { icon: 'rocket', label: 'Deployments', to: '/deployments' },
+      { icon: 'health', label: 'Performance', to: '/performance' },
       { icon: 'pipeline', label: 'CI/CD Pipelines', to: '/planned/cicd-pipelines' },
       { icon: 'releases', label: 'Releases', to: '/deployments' },
     ],
@@ -50,8 +51,6 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
     items: [
       { icon: 'rocket', label: 'Setup', to: '/setup' },
       { icon: 'settings', label: 'Workspace Settings', to: '/settings' },
-      { icon: 'team', label: 'Team', to: '/planned/team' },
-      { icon: 'billing', label: 'Billing', to: '/planned/billing' },
     ],
   },
 ];

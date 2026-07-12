@@ -38,7 +38,7 @@ describe('bus.pushSample (Prompt 2.4)', () => {
 });
 
 describe('HealthChecker (Prompt 2.4)', () => {
-  it('emits server=operational and leaves anthropic unknown without a key (honest No data)', () => {
+  it('emits server + runner operational; leaves anthropic unknown without a key (honest No data)', () => {
     const { db, sqlite } = openDb(':memory:');
     const bus = new Bus(db);
     const hc = new HealthChecker(bus, () => ''); // no anthropic key
@@ -46,8 +46,18 @@ describe('HealthChecker (Prompt 2.4)', () => {
     hc.stop();
     const health = bus.snapshot().state.health;
     expect(health.server?.state).toBe('operational');
-    expect(health.anthropic).toBeUndefined(); // never faked
-    expect(health.runner).toBeUndefined(); // not built until P3 → No data
+    expect(health.runner?.state).toBe('operational'); // in-process runner — reported, not left unknown
+    expect(health.anthropic).toBeUndefined(); // never faked without a key
+    sqlite.close();
+  });
+
+  it('reports the runner state the callback returns (so it can degrade)', () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    const hc = new HealthChecker(bus, () => '', () => {}, () => 'degraded');
+    hc.start();
+    hc.stop();
+    expect(bus.snapshot().state.health.runner?.state).toBe('degraded');
     sqlite.close();
   });
 });

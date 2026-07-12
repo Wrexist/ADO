@@ -58,7 +58,6 @@ export function TopBarA() {
         <ViewSwitcher />
         <ConnectionBadge />
         <TopBarButton icon="plus" label="Add project" to="/repositories?add=1" />
-        <TopBarButton icon="calendar" label="Calendar" to="/planned/calendar" />
         <TopBarButton icon="bell" label="Notifications" to="/activity" />
         <Link
           to="/settings"

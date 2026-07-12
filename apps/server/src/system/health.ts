@@ -1,11 +1,13 @@
 /**
  * Health checks (Prompt 2.4), every 60s. Only emit for services we can HONESTLY
- * check: `server` (self — operational if this loop runs) and `anthropic` (only when a
- * key is configured, via a real request). `github` is emitted by the GitHub sync;
- * `runner` stays unknown until Phase 3 → the UI shows "No data", never a fake status.
+ * check: `server` (self — operational if this loop runs), `runner` (the in-process agent
+ * runner — alive/ready whenever the server ticks, so operational; a callback lets it report
+ * degraded), and `anthropic` (only when a key is configured, via a real request). `github`
+ * is emitted by the GitHub sync. Every real service is now reported, so System Health isn't
+ * silently capped by an always-unknown row.
  */
 import type { Bus } from '../bus';
-import type { ServiceState } from '@ado/shared';
+import type { HealthService, ServiceState } from '@ado/shared';
 
 const INTERVAL_MS = 60_000;
 
@@ -17,9 +19,11 @@ export class HealthChecker {
     /** Resolved per-check so a key saved in Settings takes effect on the next tick. */
     private getAnthropicKey: () => string,
     private log: (msg: string) => void = () => {},
+    /** The runner's self-reported state (in-process → operational when alive). */
+    private getRunnerState: () => ServiceState = () => 'operational',
   ) {}
 
-  private emit(service: 'server' | 'anthropic', state: ServiceState): void {
+  private emit(service: HealthService, state: ServiceState): void {
     this.bus.publish({
       id: `health:${service}:${Date.now()}`,
       type: 'health.checked',
@@ -45,6 +49,7 @@ export class HealthChecker {
 
   private tick(): void {
     this.emit('server', 'operational');
+    this.emit('runner', this.getRunnerState());
     void this.checkAnthropic();
   }
 

@@ -9,6 +9,37 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · placeholder/unfinished sweep — graduate, remove, or fix honestly
+Audited the whole repo (web myself + a server/shared Explore agent) for placeholders + unfinished
+code, then triaged each: build it from real data, remove it (vestigial), or make it honest.
+- **Graduated 2 placeholders to REAL pages (real data, honest empty states):**
+  - `/performance` (`PerformancePage`) — CPU/mem/net full series from `state.samples`, System Health
+    (with ⓘ formula), build throughput (tracked/pass-rate/failed). "This machine" qualifier. Wires the
+    dead SystemMonitor "View full metrics" + Sidebar Performance.
+  - `/analytics` (`AnalyticsPage`) — repos by category, build outcomes, deployments by env, token
+    trend — all rolled up from stored events; trends/empties honest. Wires Sidebar + Quick Actions.
+- **Removed vestigial SaaS cruft** (wrong for a local single-user tool): the Pro Plan/Upgrade card
+  (SidebarB) + Billing/Team/Messages/Calendar nav items; pruned them (+ graduated performance/analytics,
+  + dead new-project) from the `PLANNED` registry (16 → 9). Relabelled SidebarB "Logs" → "Activity".
+- **Server honesty fixes (from the agent audit):**
+  - **Runner health now emitted** (`health.ts` tick emits `runner` operational via an injectable
+    state cb) — before, `runner` was never reported, so System Health was silently capped ≤95% and the
+    status row was permanently "No data". +2 tests.
+  - **`repo.removed` now emitted on rescan** (`app.ts` rebuildScanner diffs prior vs fresh scanner ids;
+    `Scanner.repoIds()`) — completes last turn's DELETE /api/projects: removing a folder now prunes its
+    repos instead of leaving ghosts. GitHub-only repos untouched (never in the scanner id set). +1 test
+    (add real git repo → appears; remove → gone).
+  - **Compact `agent.upserted`** (highest-volume latest-only type, keyed by runId) in `bus.compact()` so
+    a dispatch's progress ticks don't accrete/replay forever.
+  - Removed dead `ADAPTER_VERSION` export; corrected the run-log schema comment (verifyVerdict/humanAction
+    are reserved-for-parked-analyzer, not written).
+- **Copy honesty:** Ops AssistantPanel chips now carry a real repo (old "Fix bugs" chips dead-ended on
+  "which repo?") + honest subcopy; DeploymentsPage subtitle dropped "and the runner" (runner emits builds,
+  not deploys).
+- verify green (133 tests) · smoke green (0 console errors); captured the 2 new pages.
+- **Left honest (not removed, no data yet):** Templates, Code Assistant, Game Builder, UI Generator,
+  Database, CI/CD, Models, Alerts, New-agent — genuine future features, grouped in the "Soon" disclosure.
+
 ## 2026-07-12 · Claude · clarity follow-ups (nav Soon · Settings split · health info · slug→name · ⌘K acts)
 Cleared the five deferred clarity items from the easier-to-use pass.
 - **Nav "Soon" disclosure:** both sidebars now filter `/planned/*` items out of their groups into
