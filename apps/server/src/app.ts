@@ -33,6 +33,7 @@ import { Installer } from './setup/install';
 import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
 import { AutomationStore } from './automations/store';
 import { AutomationEngine } from './automations/engine';
+import { ReviewRunner } from './review/runner';
 import { Intent } from '@ado/shared';
 
 export interface AccServer {
@@ -263,6 +264,9 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   );
   const orphans = runner.reconcileOrphans();
   if (orphans > 0) app.log.warn(`runner: reconciled ${orphans} orphaned run(s) on boot`);
+
+  // Deep review: opt-in `claude ultrareview` (cloud multi-agent) per project, streamed.
+  const reviewRunner = new ReviewRunner(cwdFor, (msg) => app.log.info(msg));
 
   // Per-repo automations: saved prompts/recipes that run on command, on a schedule, or on a
   // real CI event. Running = a real dispatched agent (same runner as /api/dispatch).
@@ -507,6 +511,21 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       const msg = (err as Error).message;
       return reply.code(msg === 'unknown automation' ? 404 : 400).send({ error: msg });
     }
+  });
+
+  // Deep review (opt-in multi-agent). Start streams `claude ultrareview` in the repo's cwd;
+  // poll for progress. Token-gated; only scanned repos are reviewable.
+  app.post('/api/projects/:id/review', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const started = reviewRunner.start((req.params as { id: string }).id);
+    if ('error' in started) return reply.code(400).send({ error: started.error });
+    return { run: started.run };
+  });
+  app.get('/api/review/:runId', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const run = reviewRunner.get((req.params as { runId: string }).runId);
+    if (!run) return reply.code(404).send({ error: 'unknown review run' });
+    return { run };
   });
 
   return {

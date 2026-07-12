@@ -9,6 +9,21 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · richer demo + deep-review (ultrareview)
+- **Enriched demo fixtures** so the project page is fully populated: demo builds now carry the
+  repo id (was the display name → didn't match `build.repo===id`), and demo `repo.agents` map
+  the fixture's role ids (builder/reviewer/…) to real seeded agent ids so the Agents panel
+  resolves full AgentTiles. Fixed a latent real-use bug this exposed: `BuildQueue` showed
+  `build.repo` raw (an id in production) — now resolves id→name (`state.repos[id]?.name`).
+- **Deep review (opt-in multi-agent):** `ReviewRunner` spawns `claude ultrareview` (cloud
+  multi-agent branch review — the one real headless multi-agent CLI) in the repo's cwd, streamed
+  via `POST /api/projects/:id/review` + `GET /api/review/:runId` (token-gated, cwd allow-listed,
+  minimal env, 15-min cap). Output shown raw/honestly (no parsed findings we can't guarantee).
+  Project page gets a "Run deep review" card with a subscription-cost note. Manual only — never
+  an automation trigger. 4 tests (gating/poll; no real spawn). Can't verify the live run here
+  (spends tokens + needs the CLI) — logic + endpoints tested, execution is on the user's machine.
+- verify + smoke green; project page now shows builds + agents + the review card (screenshot).
+
 ## 2026-07-12 · Claude · repoId on activity/deploy → per-project feeds
 - Closed the data gap: added optional `repoId` to the `ActivityItem` + `Deployment` zod
   contracts (optional = old persisted events still replay). Set it in the emitters (runner

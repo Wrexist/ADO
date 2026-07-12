@@ -19,7 +19,7 @@ export function BuildQueue() {
           <div key={b.id} className="flex items-center gap-3 py-3">
             <IconTile icon="workflow" tone={b.state === 'running' ? 'violet' : 'muted'} size="sm" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-body font-medium text-text1">{b.repo}</p>
+              <p className="truncate text-body font-medium text-text1">{state.repos[b.repo]?.name ?? b.repo}</p>
               <p className="truncate text-label text-text3">{b.jobLabel}</p>
             </div>
             <Chip tone="violet" size="sm">{b.branch}</Chip>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { Automation, BuildState, Repo } from '@ado/shared';
+import type { Automation, BuildState, Repo, ReviewRun } from '@ado/shared';
 import { AgentTile, Button, Card, Chip, FeedRow, GradientProgress, Icon, IconTile, StatusDot, cx, type Tone } from '../kit';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
@@ -9,6 +9,7 @@ import { LANG_LABEL, ENV_LABEL, ENV_TONE, asIcon } from '../views/ops/maps';
 import { timeAgo } from '../lib/time';
 import { dispatchPrompt } from '../lib/prompts';
 import { fetchAutomations, runAutomation } from '../lib/automations';
+import { pollReview, startReview } from '../lib/review';
 
 const BUILD_TONE: Record<BuildState, Tone> = { running: 'info', queued: 'muted', success: 'success', failed: 'danger' };
 const triggerLabel = (a: Automation): string =>
@@ -61,6 +62,72 @@ function DispatchBox({ repo }: { repo: Repo }) {
         </span>
         <Button size="sm" onClick={() => void run()} disabled={busy || !task.trim()}>{busy ? 'Dispatching…' : 'Dispatch'}</Button>
       </div>
+    </Card>
+  );
+}
+
+function ReviewCard({ repo }: { repo: Repo }) {
+  const [run, setRun] = useState<ReviewRun | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const start = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      setRun(await startReview(repo.id));
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  };
+
+  // Poll while the review runs (it's cloud multi-agent — can take minutes).
+  useEffect(() => {
+    if (!run || run.status !== 'running') return;
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        const next = await pollReview(run.runId);
+        if (!alive) return;
+        setRun(next);
+        if (next.status !== 'running') setBusy(false);
+      } catch (e) {
+        if (alive) {
+          setErr((e as Error).message);
+          setBusy(false);
+        }
+      }
+    }, 1500);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [run]);
+
+  return (
+    <Card className="flex flex-col gap-3 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-section font-semibold text-text1">Deep review</h2>
+        <Button size="sm" variant="outline" onClick={() => void start()} disabled={busy}>{busy ? 'Reviewing…' : 'Run deep review'}</Button>
+      </div>
+      <p className="text-label text-text3">
+        Runs <span className="font-mono">claude ultrareview</span> — a cloud, multi-agent review of this repo’s current branch. Uses your Claude subscription.
+      </p>
+      {run ? (
+        <div className="rounded-tile border bg-app/60 p-3">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="font-mono text-label text-text3">{run.command}</span>
+            <span className={cx('text-label font-medium', run.status === 'done' ? 'text-success' : run.status === 'failed' ? 'text-danger' : 'text-text3')}>
+              {run.status === 'running' ? 'running…' : run.status === 'done' ? 'done ✓' : `failed (exit ${run.code})`}
+            </span>
+          </div>
+          {run.output.length ? (
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-label text-text2">{run.output.slice(-60).join('\n')}</pre>
+          ) : null}
+        </div>
+      ) : null}
+      {err ? <p className="text-label text-danger">{err}</p> : null}
     </Card>
   );
 }
@@ -150,6 +217,7 @@ export function ProjectPage() {
         {/* left: dispatch + builds */}
         <div className="col-span-2 flex flex-col gap-4">
           <DispatchBox repo={repo} />
+          <ReviewCard repo={repo} />
           <Card className="p-5">
             <h2 className="text-section font-semibold text-text1">Recent builds</h2>
             {builds.length > 0 ? (

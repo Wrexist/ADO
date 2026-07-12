@@ -3,7 +3,7 @@
 Personal mission-control dashboard for the Wrexist portfolio. Local-first monorepo.
 
 ## Stack & layout
-- `apps/web`: Vite + React 18 + TypeScript + Tailwind + Zustand. Routes: `/command` (View A), `/ops` (View B), `/prompts`, `/workflows` (visualises the `.claude/workflows` recipes, read live from disk), `/automations` (bind a prompt/recipe to a repo → run on command · schedule · CI event), `/setup` (probes the machine for required tools/keys and one-click installs the auto-installable ones), `/settings`, `/repositories`, `/repositories/:id` (per-project command page: CI/builds · agents · automations · dispatch an agent), `/agents`, `/deployments`, `/activity`, `/planned/:slug` (honest placeholders). ⌘K opens a global command palette
+- `apps/web`: Vite + React 18 + TypeScript + Tailwind + Zustand. Routes: `/command` (View A), `/ops` (View B), `/prompts`, `/workflows` (visualises the `.claude/workflows` recipes, read live from disk), `/automations` (bind a prompt/recipe to a repo → run on command · schedule · CI event), `/setup` (probes the machine for required tools/keys and one-click installs the auto-installable ones), `/settings`, `/repositories`, `/repositories/:id` (per-project command page: CI/builds · agents · activity · deployments · automations · dispatch an agent · deep review), `/agents`, `/deployments`, `/activity`, `/planned/:slug` (honest placeholders). ⌘K opens a global command palette
 - `apps/server`: Fastify + TypeScript, SQLite via drizzle, SSE at `/events`, agent runner
 - `packages/shared`: typed event contracts (zod), design tokens
 - Node 20+, npm workspaces. Server binds 127.0.0.1 only. Secrets in `.env` (gitignored), never in code

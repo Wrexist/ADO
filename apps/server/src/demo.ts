@@ -15,8 +15,11 @@ export function seedDemo(bus: Bus): void {
 
   // repos — View A cards enriched with View B table fields where ids match
   const byId = new Map(MOCK_VIEW_B.projects.map((p) => [p.id, p]));
-  // Map a repo's display name → id so demo activity/deployments carry repoId (per-project feeds).
+  // Map a repo's display name → id so demo activity/deployments/builds carry the repo id.
   const nameToId = new Map(MOCK_VIEW_A.repos.map((r) => [r.name, r.id]));
+  // Map the fixture's role-style agent ids to real seeded agent ids so the per-project
+  // "Agents" panel resolves to full records (the runner sets real ids in production).
+  const AGENT_MAP: Record<string, string> = { builder: 'game-builder', reviewer: 'code-review', tester: 'test-agent', deployer: 'docs-agent' };
   for (const r of MOCK_VIEW_A.repos) {
     const b = byId.get(r.id);
     pub(`repo:${r.id}`, 'repo.upserted', r.updatedTs, {
@@ -32,7 +35,7 @@ export function seedDemo(bus: Bus): void {
         stars: b?.stars,
         prs: b?.prs,
         ci: { label: r.progress.label, pct: r.progress.pct, state: r.progress.state },
-        agents: r.agents,
+        agents: (r.agents ?? []).map((a) => AGENT_MAP[a] ?? a),
       },
     });
   }
@@ -42,7 +45,7 @@ export function seedDemo(bus: Bus): void {
     pub(`build:${q.id}`, 'build.updated', MOCK_NOW, {
       build: {
         id: q.id,
-        repo: q.repo,
+        repo: nameToId.get(q.repo) ?? q.repo,
         jobLabel: q.jobLabel,
         branch: q.branch,
         state: q.state,
