@@ -9,6 +9,29 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · clarity follow-ups (nav Soon · Settings split · health info · slug→name · ⌘K acts)
+Cleared the five deferred clarity items from the easier-to-use pass.
+- **Nav "Soon" disclosure:** both sidebars now filter `/planned/*` items out of their groups into
+  one dimmed, collapsed `<details>` "Soon (N)" (A: 9, B: 6) so the working surface stands out. Items
+  still open their honest placeholder — just out of the way. `isPlanned(to)` = `startsWith('/planned/')`.
+- **Settings Active vs More:** split into "Active integrations" (wired — real work now) and a collapsed
+  "More integrations (N) — save a key now, activates in a later release" `<details>` (auto-opens while
+  searching). Fixed the misleading chip (was "Saved · wiring soon" on untouched cards → now "Preview");
+  button "Connect"→"Save key" for non-wired. Corrected the catalog: **slack + discord are `wired:true`**
+  (the notifier consumes them) so "Active" is truthful (now GitHub · Claude · Slack · Discord).
+- **System Health + status names:** added a reusable `info?` prop to `StatCard` → a visible ⓘ next to
+  the label carrying `HEALTH_FORMULA_DOC` (was a hover-only title on the whole card); dropped the
+  permanent empty "collecting data" sparkline. Renamed the System Status service labels to plain names
+  (Local Server · Anthropic API · GitHub · Agent Runner) in `selectors.ts` (one source; fixes both
+  dashboards) — "Deployments/All Systems/Build Servers" mislabelled what's actually pinged.
+- **slug→name honesty:** AgentsPage build rows + PromptsPage "Run in repo" dropdown now resolve
+  `state.repos[id].name` instead of printing the raw id slug.
+- **⌘K acts, not just navigates:** the palette gained an Actions section (Add a project · New automation ·
+  Connect GitHub · Dispatch an agent to <repo>) that opens the real surface where the action happens
+  (add-project panel, automation form, dispatch box) — nothing mutates without the normal confirm.
+- verify green (131 tests) · smoke green (0 console errors); confirmed the Soon disclosure, Settings
+  split, and System Health ⓘ render on /command · /ops · /settings.
+
 ## 2026-07-12 · Claude · add-a-project from the UI + first-run clarity (whole-app easier-to-use pass)
 Surveyed the complete app for install/use/understand friction (3 parallel readers). Unanimous #1:
 you couldn't add a project without editing PROJECT_DIRS in .env and RESTARTING — and that one gap

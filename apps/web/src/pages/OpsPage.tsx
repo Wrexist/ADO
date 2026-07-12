@@ -110,23 +110,23 @@ export function OpsPage() {
               icon="cloud"
               iconTone="info"
             />
-            <div title={HEALTH_FORMULA_DOC}>
-              <StatCard
-                label="System Health"
-                value={health != null ? `${health}%` : '—'}
-                sub={
-                  health == null
-                    ? 'no data yet'
-                    : health >= 95
-                      ? 'Excellent'
-                      : health >= 80
-                        ? 'Good'
-                        : 'Degraded'
-                }
-                tinted={health != null && health >= 95 ? 'success' : undefined}
-                visual={<Sparkline points={[]} tone="success" width={80} height={30} />}
-              />
-            </div>
+            <StatCard
+              label="System Health"
+              info={HEALTH_FORMULA_DOC}
+              value={health != null ? `${health}%` : '—'}
+              sub={
+                health == null
+                  ? 'no data yet'
+                  : health >= 95
+                    ? 'Excellent'
+                    : health >= 80
+                      ? 'Good'
+                      : 'Degraded'
+              }
+              tinted={health != null && health >= 95 ? 'success' : undefined}
+              icon="health"
+              iconTone="success"
+            />
           </div>
 
           {/* 5 / 4 / 3 column grid */}

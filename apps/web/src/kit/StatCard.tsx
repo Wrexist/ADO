@@ -21,6 +21,7 @@ export function StatCard({
   iconTone = 'violet',
   visual,
   tinted,
+  info,
   className,
 }: {
   label: string;
@@ -33,6 +34,8 @@ export function StatCard({
   visual?: ReactNode;
   /** Tinted card surface (System Health "Excellent" card). */
   tinted?: Tone;
+  /** Optional explanation — renders a visible ⓘ next to the label with this as its tooltip. */
+  info?: string;
   className?: string;
 }) {
   return (
@@ -44,7 +47,19 @@ export function StatCard({
       )}
     >
       <div className="min-w-0">
-        <p className="text-body text-text2">{label}</p>
+        <p className="flex items-center gap-1 text-body text-text2">
+          {label}
+          {info ? (
+            <button
+              type="button"
+              title={info}
+              aria-label={`How ${label} is calculated`}
+              className="cursor-help text-label leading-none text-text3 transition-colors duration-150 ease-soft hover:text-text1"
+            >
+              ⓘ
+            </button>
+          ) : null}
+        </p>
         <p className="mt-1.5 text-stat font-semibold tabular-nums text-text1">{value}</p>
         {delta ? (
           <p className={cx('mt-1.5 flex items-center gap-1 whitespace-nowrap text-body', toneText[delta.tone])}>

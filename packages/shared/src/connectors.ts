@@ -1,7 +1,7 @@
 /**
  * Connector catalog — the single source of truth for every service the dashboard can
  * link to. Comprehensive by design: connect a key once here and the relevant integration
- * uses it (GitHub + Claude are wired today; the rest store the key and light up per phase).
+ * uses it (GitHub, Claude, Slack + Discord are wired today; the rest store the key and light up per phase).
  *
  * PRESENTATION metadata only — names, blurbs, and the direct "get a key" deep links.
  * Secrets never live here or anywhere in the repo; they're stored server-side in a
@@ -99,8 +99,8 @@ export const CONNECTORS: Connector[] = [
   C({ id: 'unity', name: 'Unity Cloud', group: 'gamedev', blurb: 'Unity DevOps: cloud build & delivery.', kind: 'api-key', keyLabel: 'API Key', placeholder: '…', getKeyUrl: 'https://cloud.unity.com/', wired: false }),
 
   // ── Notifications & project ───────────────────────────────────────────────
-  C({ id: 'slack', name: 'Slack', group: 'comms', blurb: 'Build, deploy, and gate notifications.', kind: 'webhook', keyLabel: 'Incoming Webhook URL', placeholder: 'https://hooks.slack.com/services/…', getKeyUrl: 'https://api.slack.com/messaging/webhooks', wired: false }),
-  C({ id: 'discord', name: 'Discord', group: 'comms', blurb: 'Notifications to a channel.', kind: 'webhook', keyLabel: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/…', getKeyUrl: 'https://support.discord.com/hc/en-us/articles/228383668', wired: false }),
+  C({ id: 'slack', name: 'Slack', group: 'comms', blurb: 'Build-failure and deploy notifications to a channel.', kind: 'webhook', keyLabel: 'Incoming Webhook URL', placeholder: 'https://hooks.slack.com/services/…', getKeyUrl: 'https://api.slack.com/messaging/webhooks', docsHint: 'Connects live the moment you save — pings on real CI failures + deploys.', wired: true }),
+  C({ id: 'discord', name: 'Discord', group: 'comms', blurb: 'Build-failure and deploy notifications to a channel.', kind: 'webhook', keyLabel: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/…', getKeyUrl: 'https://support.discord.com/hc/en-us/articles/228383668', docsHint: 'Connects live the moment you save — pings on real CI failures + deploys.', wired: true }),
   C({ id: 'telegram', name: 'Telegram', group: 'comms', blurb: 'Bot notifications to your phone.', kind: 'token', keyLabel: 'Bot Token', placeholder: '123456:ABC…', getKeyUrl: 'https://t.me/botfather', wired: false }),
   C({ id: 'linear', name: 'Linear', group: 'comms', blurb: 'Issues and project tracking.', kind: 'api-key', keyLabel: 'API Key', placeholder: 'lin_api_…', getKeyUrl: 'https://linear.app/settings/api', wired: false }),
   C({ id: 'notion', name: 'Notion', group: 'comms', blurb: 'Docs and knowledge base.', kind: 'token', keyLabel: 'Integration Token', placeholder: 'secret_…', getKeyUrl: 'https://www.notion.so/my-integrations', wired: false }),

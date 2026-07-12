@@ -70,11 +70,13 @@ export function activityRecent(s: BusState, n: number) {
   return s.activity.slice(0, n);
 }
 
+// Plain service names — each row is a real reachability check, so name the actual thing
+// (not an aggregate like "All Systems" or a misleading "Deployments").
 const SERVICES: Array<{ service: HealthService; label: string }> = [
-  { service: 'server', label: 'All Systems' },
-  { service: 'anthropic', label: 'AI Services' },
-  { service: 'github', label: 'Build Servers' },
-  { service: 'runner', label: 'Deployments' },
+  { service: 'server', label: 'Local Server' },
+  { service: 'anthropic', label: 'Anthropic API' },
+  { service: 'github', label: 'GitHub' },
+  { service: 'runner', label: 'Agent Runner' },
 ];
 
 export function systemStatusRows(s: BusState) {

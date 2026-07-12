@@ -71,14 +71,35 @@ function NavItem({ icon, label, active, to }: NavEntry) {
   );
 }
 
+const isPlanned = (to?: string): boolean => Boolean(to?.startsWith('/planned/'));
+
+/** Collapsed, dimmed disclosure for not-yet-built destinations (keeps the live nav clean). */
+function SoonDisclosure({ items }: { items: NavEntry[] }) {
+  return (
+    <details className="group mt-1.5">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 pb-1 pt-4 text-label font-medium uppercase tracking-wider text-text3 hover:text-text2 [&::-webkit-details-marker]:hidden">
+        <Icon name="chevronDown" size={12} className="-rotate-90 transition-transform duration-150 ease-soft group-open:rotate-0" />
+        Soon ({items.length})
+      </summary>
+      <div className="flex flex-col gap-0.5 opacity-55">
+        {items.map((item) => (
+          <NavItem key={item.label} {...item} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function SidebarB() {
   const location = useLocation();
   // Static copy — honest placeholder card per DATA_MAP ("not wired yet" > fake feature).
   const proPlan = { title: 'Pro Plan', body: 'Unlimited access', cta: 'Upgrade' };
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => !isPlanned(it.to)) }));
+  const planned = GROUPS.flatMap((g) => g.items).filter((it) => isPlanned(it.to));
   return (
     <aside className="flex w-[200px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
       <nav className="flex flex-1 flex-col gap-0.5">
-        {GROUPS.map((group, gi) => (
+        {groups.map((group, gi) => (
           <div key={group.eyebrow ?? gi} className="flex flex-col gap-0.5">
             {group.eyebrow ? (
               <p className="px-3 pb-1 pt-4 text-label font-medium uppercase tracking-wider text-text3">
@@ -94,6 +115,7 @@ export function SidebarB() {
             ))}
           </div>
         ))}
+        {planned.length > 0 ? <SoonDisclosure items={planned} /> : null}
       </nav>
 
       {/* Pro Plan — static v1 placeholder ("not wired yet" > fake feature) */}

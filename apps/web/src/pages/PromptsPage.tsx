@@ -169,21 +169,21 @@ function PromptCard({
   p,
   model,
   agent,
-  repoIds,
+  repos,
   onEdit,
   onDelete,
 }: {
   p: PromptTemplate;
   model: TargetModel;
   agent: SpecializedAgent | null;
-  repoIds: string[];
+  repos: Array<{ id: string; name: string }>;
   onEdit: (p: PromptTemplate) => void;
   onDelete: (p: PromptTemplate) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
-  const [repo, setRepo] = useState(repoIds[0] ?? '');
+  const [repo, setRepo] = useState(repos[0]?.id ?? '');
   const [runMsg, setRunMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const cat = PROMPT_CATEGORIES.find((c) => c.id === p.category);
@@ -253,7 +253,7 @@ function PromptCard({
           {open ? 'Hide' : 'Preview'}
         </Button>
         {p.dispatchable ? (
-          <Button size="sm" variant="ghost" onClick={() => setRunOpen((o) => !o)} disabled={repoIds.length === 0}>
+          <Button size="sm" variant="ghost" onClick={() => setRunOpen((o) => !o)} disabled={repos.length === 0}>
             <Icon name="send" size={13} />
             Run in repo
           </Button>
@@ -280,8 +280,8 @@ function PromptCard({
             onChange={(e) => setRepo(e.target.value)}
             className="h-8 min-w-0 flex-1 rounded-tile border-none bg-card px-2 text-body text-text1 focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
-            {repoIds.map((r) => (
-              <option key={r} value={r}>{r}</option>
+            {repos.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
             ))}
           </select>
           <Button size="sm" onClick={() => void run()} disabled={busy || !repo}>Dispatch</Button>
@@ -298,7 +298,7 @@ function PromptCard({
 // ── Page ─────────────────────────────────────────────────────────────────────
 export function PromptsPage() {
   const repos = useBus((s) => s.state.repos);
-  const repoIds = useMemo(() => Object.keys(repos), [repos]);
+  const repoList = useMemo(() => Object.values(repos).map((r) => ({ id: r.id, name: r.name })), [repos]);
 
   const [custom, setCustom] = useState<PromptTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -484,7 +484,7 @@ export function PromptsPage() {
               p={p}
               model={model}
               agent={agent}
-              repoIds={repoIds}
+              repos={repoList}
               onEdit={(pr) =>
                 setEditing({
                   id: pr.id,
