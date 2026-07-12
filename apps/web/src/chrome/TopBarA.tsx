@@ -1,6 +1,5 @@
-import { useRef } from 'react';
-import { Icon, type IconName, cx } from '../kit';
-import { useCmdK } from '../lib/useCmdK';
+import { Icon, type IconName } from '../kit';
+import { usePalette } from '../lib/palette';
 import { ConnectionBadge } from './ConnectionBadge';
 import { ViewSwitcher } from './ViewSwitcher';
 
@@ -21,8 +20,7 @@ function TopBarButton({ icon, label }: { icon: IconName; label: string }) {
 }
 
 export function TopBarA() {
-  const searchRef = useRef<HTMLInputElement>(null);
-  useCmdK(searchRef);
+  const openPalette = usePalette((s) => s.setOpen);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-6 border-b bg-app px-5">
@@ -39,27 +37,19 @@ export function TopBarA() {
         </div>
       </div>
 
-      {/* centered search */}
+      {/* centered search — opens the command palette (⌘K) */}
       <div className="mx-auto w-full max-w-[560px]">
-        <div className="relative">
-          <Icon
-            name="search"
-            size={15}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text3"
-          />
-          <input
-            ref={searchRef}
-            type="search"
-            placeholder="Search repositories, projects, agents…"
-            className={cx(
-              'h-9 w-full rounded-full border bg-panel pl-10 pr-16 text-body text-text1',
-              'placeholder:text-text3 focus:border-primary/50 focus:outline-none',
-            )}
-          />
+        <button
+          type="button"
+          onClick={() => openPalette(true)}
+          className="relative flex h-9 w-full items-center rounded-full border bg-panel pl-10 pr-16 text-left text-body text-text3 transition-colors duration-150 ease-soft hover:border-hover"
+        >
+          <Icon name="search" size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text3" />
+          Search repositories, projects, agents…
           <kbd className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-0.5 rounded border bg-elevated px-1.5 py-0.5 text-[10px] text-text3">
             ⌘ K
           </kbd>
-        </div>
+        </button>
       </div>
 
       {/* actions + avatar */}

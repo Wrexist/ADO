@@ -15,6 +15,7 @@ import { AgentsPage } from './pages/AgentsPage';
 import { DeploymentsPage } from './pages/DeploymentsPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { CommandPalette } from './chrome/CommandPalette';
 import { startBus } from './bus/connect';
 import './index.css';
 
@@ -24,6 +25,7 @@ startBus();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <CommandPalette />
       <Routes>
         <Route path="/" element={<Navigate to="/command" replace />} />
         <Route path="/command" element={<CommandPage />} />

@@ -1,7 +1,6 @@
-import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../kit';
-import { useCmdK } from '../lib/useCmdK';
+import { usePalette } from '../lib/palette';
 import { ConnectionBadge } from './ConnectionBadge';
 import { ViewSwitcher } from './ViewSwitcher';
 
@@ -22,8 +21,7 @@ function BarIcon({ icon, label }: { icon: IconName; label: string }) {
 }
 
 export function TopBarB() {
-  const searchRef = useRef<HTMLInputElement>(null);
-  useCmdK(searchRef);
+  const openPalette = usePalette((s) => s.setOpen);
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-6 border-b bg-app px-5">
@@ -46,22 +44,17 @@ export function TopBarB() {
       <div className="flex shrink-0 items-center gap-2">
         <ViewSwitcher />
         <ConnectionBadge />
-        <div className="relative">
-          <Icon
-            name="search"
-            size={14}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text3"
-          />
-          <input
-            ref={searchRef}
-            type="search"
-            placeholder="Search anything…"
-            className="h-9 w-[240px] rounded-full border bg-panel pl-9 pr-12 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
-          />
+        <button
+          type="button"
+          onClick={() => openPalette(true)}
+          className="relative flex h-9 w-[240px] items-center rounded-full border bg-panel pl-9 pr-12 text-left text-body text-text3 transition-colors duration-150 ease-soft hover:border-hover"
+        >
+          <Icon name="search" size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text3" />
+          Search anything…
           <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border bg-elevated px-1.5 py-0.5 text-[10px] text-text3">
             ⌘K
           </kbd>
-        </div>
+        </button>
         <BarIcon icon="bell" label="Notifications" />
         <BarIcon icon="chat" label="Messages" />
         <Link
