@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button, Card, Icon, IconTile, cx, type IconName } from '../kit';
+import { isNavActive } from '../lib/selectors';
 
 /**
  * View B sidebar — 200px, denser nav (WORKSPACE / AI TOOLS / MONITORING / SETTINGS),
@@ -88,7 +89,7 @@ export function SidebarB() {
               <NavItem
                 key={item.label}
                 {...item}
-                active={item.to ? location.pathname === item.to : item.active}
+                active={isNavActive(item.to, location.pathname) || item.active}
               />
             ))}
           </div>

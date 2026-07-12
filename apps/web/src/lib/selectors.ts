@@ -149,3 +149,12 @@ export function projectStatus(repo: Repo): { kind: ProjectStatusKind; label: str
       return { kind: 'passing', label: 'Passing' };
   }
 }
+
+/**
+ * Sidebar highlight: exact match, or a parent nav item on a sub-route (so /repositories/:id
+ * lights up "Repositories"). Query-string nav items (?cat=…) are matched exactly elsewhere.
+ */
+export function isNavActive(to: string | undefined, pathname: string): boolean {
+  if (!to || to.includes('?')) return false;
+  return pathname === to || (to !== '/' && pathname.startsWith(to + '/'));
+}

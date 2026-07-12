@@ -9,6 +9,20 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · whole-app consistency polish
+- Swept every page for shell/width/copy/state consistency. The app was already disciplined
+  (PageShell on all sub-pages, tokens-only — zero raw hex, uniform h1/subtitle headers,
+  consistent icon-tile empty states), so the pass was mostly verification. The one real
+  outlier: **SettingsPage** used custom chrome at `max-w-[1040px]` with "← Back to dashboard".
+  Converted it to `PageShell` → now shares the exact shell (TopBar + StaleBanner + 1100px +
+  "← Dashboard") with every other sub-page; its Setup link moved to the shell `actions` slot.
+- Hardened nav highlighting: `isNavActive(to, pathname)` (in selectors) matches a parent route
+  on a sub-path (so a future sidebar on `/repositories/:id` lights up "Repositories"); wired
+  into both sidebars. Exact-match behaviour preserved for the current /command · /ops sidebars.
+- Smoke now also captures `/settings` (was uncovered). verify + smoke green, 0 console errors.
+- PromptsPage left as-is: already visually identical to a PageShell page (1100px, standard
+  header, "← Dashboard") — converting was pure internal churn with regression risk, no visible gain.
+
 ## 2026-07-12 · Claude · richer demo + deep-review (ultrareview)
 - **Enriched demo fixtures** so the project page is fully populated: demo builds now carry the
   repo id (was the display name → didn't match `build.repo===id`), and demo `repo.agents` map

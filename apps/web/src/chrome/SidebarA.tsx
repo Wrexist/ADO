@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { CountBadge, Icon, type IconName, cx } from '../kit';
 import { useBus } from '../store/bus';
-import { sidebarCounts } from '../lib/selectors';
+import { sidebarCounts, isNavActive } from '../lib/selectors';
 
 /**
  * View A sidebar — 224px, grouped nav with 11px uppercase eyebrows, count badges,
@@ -80,9 +80,10 @@ export function SidebarA() {
   // inside the selector would change identity every call → infinite re-render).
   const state = useBus((s) => s.state);
   const location = useLocation();
+  const path = location.pathname;
   const groups = buildGroups(sidebarCounts(state)).map((g) => ({
     ...g,
-    items: g.items.map((it) => ({ ...it, active: it.to ? location.pathname === it.to : it.active })),
+    items: g.items.map((it) => ({ ...it, active: isNavActive(it.to, path) || it.active })),
   }));
   return (
     <aside className="flex w-[224px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">

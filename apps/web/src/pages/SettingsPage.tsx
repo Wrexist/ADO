@@ -8,8 +8,7 @@ import {
   type ConnectorGroup,
 } from '@ado/shared';
 import { Button, Card, Chip, Icon, StatusDot, cx, type IconName } from '../kit';
-import { TopBarA } from '../chrome/TopBarA';
-import { StaleBanner } from '../chrome/StaleBanner';
+import { PageShell } from '../chrome/PageShell';
 import { fetchConnections, removeConnection, saveConnection } from '../lib/connections';
 
 const ICON: Record<string, IconName> = {
@@ -169,29 +168,16 @@ export function SettingsPage() {
   const connectedCount = Object.values(statuses).filter((s) => s.connected).length;
 
   return (
-    <div className="min-h-screen min-w-[1280px] bg-app text-text1">
-      <TopBarA />
-      <StaleBanner />
-      <main className="mx-auto max-w-[1040px] px-8 py-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-title font-semibold text-text1">Settings · Connections</h1>
-            <p className="mt-1 max-w-[68ch] text-body text-text2">
-              Connect your keys once — each service links straight to where you create the key.
-              Vendor-independent: bring any AI provider, any host.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Link to="/setup" className="inline-flex items-center gap-1.5 rounded-tile bg-primary px-3 py-2 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
-              <Icon name="rocket" size={14} /> Setup &amp; requirements
-            </Link>
-            <Link to="/command" className="rounded-tile border bg-card px-3 py-2 text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1">
-              ← Back to dashboard
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+    <PageShell
+      title="Settings · Connections"
+      subtitle="Connect your keys once — each service links straight to where you create the key. Vendor-independent: bring any AI provider, any host."
+      actions={
+        <Link to="/setup" className="inline-flex items-center gap-1.5 rounded-tile bg-primary px-3 py-2 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
+          <Icon name="rocket" size={14} /> Setup &amp; requirements
+        </Link>
+      }
+    >
+      <div className="mt-4 flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-success/25 bg-success/10 px-3 py-1.5 text-label text-success">
             <Icon name="lock" size={13} />
             Keys are stored in a gitignored file on your machine (mode 600) and never sent back to the browser.
@@ -248,7 +234,6 @@ export function SettingsPage() {
         </div>
 
         {!loaded ? <p className="mt-6 text-body text-text3">Loading connections…</p> : null}
-      </main>
-    </div>
+    </PageShell>
   );
 }
