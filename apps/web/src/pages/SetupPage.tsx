@@ -111,6 +111,9 @@ function RequirementCard({ req, result, onDone }: { req: Requirement; result?: P
   }, [run, onDone]);
 
   const canAutoInstall = status === 'missing' && (result?.installable ?? false);
+  const isSignIn = req.install.via === 'claude-login';
+  const verb = isSignIn ? 'Sign in' : 'Install';
+  const verbing = isSignIn ? 'Signing in…' : 'Installing…';
   const icon = ID_ICON[req.id] ?? CAT_ICON[req.category];
 
   return (
@@ -141,7 +144,7 @@ function RequirementCard({ req, result, onDone }: { req: Requirement; result?: P
           </span>
         ) : canAutoInstall ? (
           <Button size="sm" onClick={() => void install()} disabled={busy}>
-            {busy ? 'Installing…' : 'Install'}
+            {busy ? verbing : verb}
           </Button>
         ) : req.deepLink ? (
           <a href={req.deepLink} className="inline-flex h-8 items-center rounded-tile bg-primary px-3 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
@@ -235,7 +238,7 @@ export function SetupPage() {
   return (
     <PageShell
       title="Setup"
-      subtitle="Everything the dashboard needs to run for real — detected live on this machine. One-click install for the command-line tools and extensions; guided steps for desktop apps and account sign-ins (no dashboard can silently install those)."
+      subtitle="Everything the dashboard needs to run for real — detected live on this machine. Click Install (via Homebrew, npm, or the VS Code CLI) or Sign in and the local server does it for you; where the package manager isn't present it falls back to a one-line command + link."
       actions={
         <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={checking}>
           {checking ? 'Checking…' : 'Re-check'}

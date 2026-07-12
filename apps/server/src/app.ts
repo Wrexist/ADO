@@ -28,7 +28,7 @@ import { respond, execute } from './command/execute';
 import { TokenRollup } from './command/tokens';
 import { Scheduler } from './scheduler';
 import { backupDatabase } from './backup';
-import { probeAll, probeOne, codeCliPresent, type ProbeContext } from './setup/probe';
+import { probeAll, detectCapabilities, type ProbeContext } from './setup/probe';
 import { Installer } from './setup/install';
 import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
 import { Intent } from '@ado/shared';
@@ -400,7 +400,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   };
   // Probe on boot in real runs; tests (startSystem:false) skip it so no child processes spawn.
   if (deps.startSystem !== false) void refreshSetup();
-  const installer = new Installer(codeCliPresent, (msg) => app.log.info(msg));
+  const installer = new Installer(detectCapabilities, (msg) => app.log.info(msg));
   const refreshedRuns = new Set<string>();
 
   app.get('/api/setup', async (req, reply) => {
@@ -423,17 +423,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!requireToken(req, reply)) return undefined;
     const run = installer.get((req.params as { runId: string }).runId);
     if (!run) return reply.code(404).send({ error: 'unknown run' });
-    // When a run finishes, re-probe just that requirement once so its card flips to installed.
+    // When a run finishes, re-probe once so the finished item's card flips to installed.
     if (run.status !== 'running' && !refreshedRuns.has(run.runId)) {
       refreshedRuns.add(run.runId);
-      const requirement = REQUIREMENT_BY_ID[run.reqId];
-      if (requirement) {
-        void probeOne(requirement, probeCtx, new Date().toISOString())
-          .then((res) => {
-            setupResults = setupResults.map((r) => (r.id === res.id ? res : r));
-          })
-          .catch(() => {});
-      }
+      void refreshSetup();
     }
     return { run };
   });

@@ -73,56 +73,96 @@ function parseVersion(text: string, re?: string): string | null {
   return m ? (m[1] ?? m[0]) : null;
 }
 
-/** Can the server auto-install this requirement given the runtime (e.g. is `code` present)? */
-function installableFor(req: Requirement, codeCliPresent: boolean): boolean {
-  if (req.install.via === 'npm-global') return true;
-  if (req.install.via === 'vscode-ext') return codeCliPresent;
-  return false;
+/** Tools that gate one-click install — detected once per probe run. */
+export interface Capabilities {
+  code: boolean; // VS Code `code` CLI (extension installs)
+  brew: boolean; // Homebrew (formula + cask installs)
+  claude: boolean; // Claude Code CLI (sign-in)
 }
 
-/** Probe one requirement. Pure w.r.t. ctx; spawns for command/vscode-ext detectors. */
-export async function probeOne(req: Requirement, ctx: ProbeContext, checkedTs: string): Promise<ProbeResult> {
+const ranOk = (r: ExecResult) => !r.failed && r.code === 0;
+
+export async function detectCapabilities(): Promise<Capabilities> {
+  const [code, brew, claude] = await Promise.all([
+    exec('code', ['--version'], 5000).then(ranOk),
+    exec('brew', ['--version'], 5000).then(ranOk),
+    exec('claude', ['--version'], 5000).then(ranOk),
+  ]);
+  return { code, brew, claude };
+}
+
+/** Can the server one-click this requirement given what's present on the machine? */
+function installableFor(req: Requirement, caps: Capabilities): boolean {
+  switch (req.install.via) {
+    case 'npm-global':
+      return true;
+    case 'vscode-ext':
+      return caps.code;
+    case 'brew':
+    case 'brew-cask':
+      return caps.brew;
+    case 'claude-login':
+      return caps.claude;
+    default:
+      return false;
+  }
+}
+
+/** Probe one requirement. Pure w.r.t. ctx; spawns for command/vscode-ext/claude-auth detectors. */
+export async function probeOne(
+  req: Requirement,
+  ctx: ProbeContext,
+  checkedTs: string,
+  caps: Capabilities,
+): Promise<ProbeResult> {
   const base = { id: req.id, checkedTs };
+  const installable = installableFor(req, caps);
   const d = req.detect;
 
   if (d.via === 'manual') {
-    return { ...base, status: 'manual', version: null, detail: null, installable: false };
+    return { ...base, status: 'manual', version: null, detail: null, installable };
   }
   if (d.via === 'env') {
     const ok = ctx.envHas(d.envVar);
-    return { ...base, status: ok ? 'installed' : 'missing', version: null, detail: ok ? null : `${d.envVar} is not set`, installable: false };
+    return { ...base, status: ok ? 'installed' : 'missing', version: null, detail: ok ? null : `${d.envVar} is not set`, installable };
   }
   if (d.via === 'connection') {
     const ok = ctx.connectionConnected(d.connectionId);
-    return { ...base, status: ok ? 'installed' : 'missing', version: null, detail: null, installable: installableFor(req, false) };
+    return { ...base, status: ok ? 'installed' : 'missing', version: null, detail: null, installable };
+  }
+  if (d.via === 'claude-auth') {
+    const r = await exec('claude', ['auth', 'status'], 8000);
+    if (r.failed) {
+      return { ...base, status: 'missing', version: null, detail: 'the `claude` CLI is not installed — install it first', installable };
+    }
+    let loggedIn = r.code === 0;
+    try {
+      const parsed = JSON.parse(r.out) as { loggedIn?: boolean };
+      if (typeof parsed.loggedIn === 'boolean') loggedIn = parsed.loggedIn;
+    } catch {
+      /* older CLI without JSON output — fall back to the exit code */
+    }
+    return { ...base, status: loggedIn ? 'installed' : 'missing', version: null, detail: loggedIn ? null : 'not signed in — click Sign in', installable };
   }
   if (d.via === 'vscode-ext') {
     const r = await exec('code', ['--list-extensions'], 6000);
     if (r.failed) {
-      return { ...base, status: 'missing', version: null, detail: 'the `code` CLI was not found — install VS Code first', installable: false };
+      return { ...base, status: 'missing', version: null, detail: 'the `code` CLI was not found — install VS Code first', installable };
     }
     const present = r.out.toLowerCase().includes(d.extensionId.toLowerCase());
-    return { ...base, status: present ? 'installed' : 'missing', version: null, detail: null, installable: installableFor(req, true) };
+    return { ...base, status: present ? 'installed' : 'missing', version: null, detail: null, installable };
   }
   // d.via === 'command'
   const r = await exec(d.command, d.args ?? ['--version'], 6000);
-  // For requirements whose auto-install is a vscode extension, "installable" needs the `code`
-  // CLI; the vscode item is detected above. Command items install via npm-global or manual.
-  const installable = installableFor(req, false);
   if (r.failed || (r.code !== null && r.code !== 0)) {
     return { ...base, status: 'missing', version: null, detail: `\`${d.command}\` not found on PATH`, installable };
   }
   return { ...base, status: 'installed', version: parseVersion(r.out, d.versionRe), detail: null, installable };
 }
 
-/** Probe every requirement in the catalog (in parallel). */
+/** Probe every requirement in the catalog (in parallel), detecting capabilities once. */
 export async function probeAll(ctx: ProbeContext): Promise<ProbeResult[]> {
   const checkedTs = new Date().toISOString();
-  return Promise.all(REQUIREMENTS.map((r) => probeOne(r, ctx, checkedTs)));
-}
-
-/** Is the VS Code `code` CLI available? (used to decide extension auto-install) */
-export async function codeCliPresent(): Promise<boolean> {
-  const r = await exec('code', ['--version'], 5000);
-  return !r.failed && r.code === 0;
+  const caps = await detectCapabilities();
+  return Promise.all(REQUIREMENTS.map((r) => probeOne(r, ctx, checkedTs, caps)));
 }

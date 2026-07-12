@@ -9,6 +9,24 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · Setup — real buttons over copy-commands
+- Per Isac: replace copy-commands with real Install/Connect buttons. Expanded the one-click
+  allow-list beyond npm/VS-Code-ext to **Homebrew** (`brew install` / `brew install --cask` →
+  git, gh, VS Code) and a real **Sign in** button for Claude (`claude auth login`).
+- `claude auth status` returns `{loggedIn}` → the Claude sign-in item now has REAL detection
+  (was "manual"); `claude auth login` opens the browser to complete OAuth on the user's machine.
+- Installability is gated on the tool being present (npm always · `code` for ext · `brew` for
+  formula/cask · `claude` for sign-in), detected once per probe via `detectCapabilities()`.
+  Where the package manager is absent it falls back to the one-line command + link — the honest
+  ceiling: a server can't non-interactively install a system pkg without a package manager (apt
+  needs sudo), so no fake button. Install timeout bumped to 10 min (casks/sign-in are slow);
+  install child env gains DISPLAY/BROWSER so sign-in can open a browser on Linux desktops.
+- 16 setup tests (brew/cask/sign-in command derivation + capability gating). verify + smoke green.
+- **Watch-out:** on a machine without Homebrew (e.g. this container, bare Linux) git/gh/VS Code
+  still show the guided command — that's honest, not a regression. Most macOS devs have brew.
+
+---
+
 ## 2026-07-12 · Claude · Setup page + Workflows visual
 - **Setup page (`/setup`, linked from Settings + both sidebars):** a typed requirements
   catalog (`@ado/shared/requirements` — runtime · CLI · extensions · apps · accounts · config)

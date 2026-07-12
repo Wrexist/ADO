@@ -14,26 +14,39 @@ import { spawn } from 'node:child_process';
 import { PassThrough } from 'node:stream';
 import { createInterface } from 'node:readline';
 import type { InstallRun, Requirement } from '@ado/shared';
+import type { Capabilities } from './probe';
 
 const OUTPUT_CAP = 500; // keep the last N lines — an install log can't grow unbounded in memory
-const TIMEOUT_MS = 5 * 60 * 1000; // 5 min — a global install shouldn't take longer
+const TIMEOUT_MS = 10 * 60 * 1000; // 10 min — a cask download or a browser sign-in can be slow
 
-/** The exact command for a requirement, or null if it isn't server-auto-installable. */
+/** The exact command for a requirement, or null if it isn't one-click on this machine. */
 export function installCommandFor(
   req: Requirement,
-  codeCliPresent: boolean,
+  caps: Capabilities,
 ): { cmd: string; args: string[] } | null {
-  if (req.install.via === 'npm-global') return { cmd: 'npm', args: ['install', '-g', req.install.package] };
-  if (req.install.via === 'vscode-ext') {
-    if (!codeCliPresent) return null; // guided via the deep link instead
-    return { cmd: 'code', args: ['--install-extension', req.install.extensionId] };
+  switch (req.install.via) {
+    case 'npm-global':
+      return { cmd: 'npm', args: ['install', '-g', req.install.package] };
+    case 'vscode-ext':
+      return caps.code ? { cmd: 'code', args: ['--install-extension', req.install.extensionId] } : null;
+    case 'brew':
+      return caps.brew ? { cmd: 'brew', args: ['install', req.install.formula] } : null;
+    case 'brew-cask':
+      return caps.brew ? { cmd: 'brew', args: ['install', '--cask', req.install.cask] } : null;
+    case 'claude-login':
+      // `claude auth login` opens the browser and waits for the OAuth callback — on the
+      // user's own machine (local-first) that's their browser. Times out if not completed.
+      return caps.claude ? { cmd: 'claude', args: ['auth', 'login'] } : null;
+    default:
+      return null;
   }
-  return null;
 }
 
 function minimalEnv(): NodeJS.ProcessEnv {
-  const { PATH, HOME, USER, LANG, TERM, TMPDIR } = process.env;
-  return { PATH, HOME, USER, LANG, TERM, TMPDIR };
+  // No dashboard secrets. DISPLAY/BROWSER are added (not secrets) so `claude auth login` can
+  // open a browser on a Linux desktop; macOS uses `open` via PATH.
+  const { PATH, HOME, USER, LANG, TERM, TMPDIR, DISPLAY, BROWSER } = process.env;
+  return { PATH, HOME, USER, LANG, TERM, TMPDIR, DISPLAY, BROWSER };
 }
 
 /** A spawn seam so tests can drive the installer without running real npm. */
@@ -67,15 +80,14 @@ export class Installer {
   private runs = new Map<string, InstallRun>();
 
   constructor(
-    private codeCliPresent: () => Promise<boolean>,
+    private capabilities: () => Promise<Capabilities>,
     private log: (msg: string) => void = () => {},
     private spawnImpl: InstallSpawn = realSpawn,
   ) {}
 
   /** Begin an install (returns immediately with a "running" run) or an error if not installable. */
   async start(req: Requirement): Promise<InstallRun | { error: string }> {
-    const codePresent = req.install.via === 'vscode-ext' ? await this.codeCliPresent() : true;
-    const spec = installCommandFor(req, codePresent);
+    const spec = installCommandFor(req, await this.capabilities());
     if (!spec) return { error: `${req.name} can’t be auto-installed here — use the guided steps instead` };
 
     const run: InstallRun = {

@@ -20,12 +20,20 @@ export type DetectSpec =
   | { via: 'vscode-ext'; extensionId: string }
   | { via: 'connection'; connectionId: string }
   | { via: 'env'; envVar: string }
+  | { via: 'claude-auth' } // runs `claude auth status` and reads { loggedIn }
   | { via: 'manual' }; // can't be auto-detected — always reported as "action needed"
 
-/** How the server (or the user) installs it. Only the first two are server-auto-installable. */
+/**
+ * How the server (or the user) installs/does it. Everything except `manual` is a real one-
+ * click the local server can run — gated on the needed tool being present (npm always; the
+ * `code` CLI for extensions; Homebrew for brew/brew-cask; the `claude` CLI for sign-in).
+ */
 export type InstallSpec =
   | { via: 'npm-global'; package: string }
-  | { via: 'vscode-ext'; extensionId: string } // needs the `code` CLI on PATH; else use deepLink
+  | { via: 'vscode-ext'; extensionId: string } // needs the `code` CLI; else use deepLink
+  | { via: 'brew'; formula: string } // needs Homebrew; else fall back to the guided commands
+  | { via: 'brew-cask'; cask: string } // Homebrew cask (GUI apps)
+  | { via: 'claude-login' } // runs `claude auth login` — opens your browser to sign in
   | { via: 'manual' }; // guided only — open docsUrl / deepLink / copy a command
 
 export interface Requirement {
@@ -89,7 +97,7 @@ export const REQUIREMENTS: Requirement[] = [
     blurb: 'Version control.',
     why: 'The scanner reads git status/branch for every repo in PROJECT_DIRS — no git, no repositories.',
     detect: { via: 'command', command: 'git', args: ['--version'], versionRe: '(\\d+\\.\\d+\\.\\d+)' },
-    install: { via: 'manual' },
+    install: { via: 'brew', formula: 'git' },
     docsUrl: 'https://git-scm.com/downloads',
     commands: [
       { label: 'macOS (Homebrew)', command: 'brew install git' },
@@ -118,7 +126,7 @@ export const REQUIREMENTS: Requirement[] = [
     blurb: 'The `gh` command.',
     why: 'Optional. Handy for richer GitHub operations from agents; the dashboard’s own GitHub sync uses a token, not this.',
     detect: { via: 'command', command: 'gh', args: ['--version'], versionRe: '(\\d+\\.\\d+\\.\\d+)' },
-    install: { via: 'manual' },
+    install: { via: 'brew', formula: 'gh' },
     docsUrl: 'https://cli.github.com',
     commands: [
       { label: 'macOS (Homebrew)', command: 'brew install gh' },
@@ -150,7 +158,7 @@ export const REQUIREMENTS: Requirement[] = [
     blurb: 'Code editor.',
     why: 'Recommended editor, and it provides the `code` CLI used to one-click the extension above.',
     detect: { via: 'command', command: 'code', args: ['--version'], versionRe: '(\\d+\\.\\d+\\.\\d+)' },
-    install: { via: 'manual' },
+    install: { via: 'brew-cask', cask: 'visual-studio-code' },
     docsUrl: 'https://code.visualstudio.com/download',
     commands: [{ label: 'macOS (Homebrew)', command: 'brew install --cask visual-studio-code' }],
   }),
@@ -162,11 +170,11 @@ export const REQUIREMENTS: Requirement[] = [
     category: 'account',
     required: true,
     blurb: 'Log the `claude` CLI into your Claude account.',
-    why: 'This is how you "connect your subscription": the agent runner uses the CLI’s OWN login (your Pro/Max session), not any API key pasted in the dashboard. Run `claude` once and complete the browser sign-in on this machine.',
-    detect: { via: 'manual' },
-    install: { via: 'manual' },
+    why: 'This is how you "connect your subscription": the agent runner uses the CLI’s OWN login (your Pro/Max session), not any API key pasted in the dashboard. Click Sign in — it runs `claude auth login`, which opens your browser to complete sign-in on this machine.',
+    detect: { via: 'claude-auth' },
+    install: { via: 'claude-login' },
     docsUrl: 'https://claude.ai',
-    commands: [{ label: 'Sign in', command: 'claude  # then follow the browser prompt' }],
+    commands: [{ label: 'Sign in (manual)', command: 'claude auth login' }],
   }),
   R({
     id: 'github-token',
