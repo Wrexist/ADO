@@ -71,6 +71,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
 
   const bus = new Bus(db);
+  bus.compact((msg) => app.log.info(msg)); // prune superseded latest-only rows before replay
   bus.replayFromDb((msg) => app.log.warn(msg));
 
   await app.register(cors, {

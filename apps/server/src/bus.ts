@@ -6,7 +6,7 @@
  * snapshot served to new SSE clients is always consistent with history, and
  * Last-Event-ID replay comes straight from the same table (council S5).
  */
-import { asc, gt, lt } from 'drizzle-orm';
+import { asc, gt, lt, sql } from 'drizzle-orm';
 import { parseEvent, type AccEvent, emptyState, reduce, type BusState, type Sample } from '@ado/shared';
 import type { Db } from './db';
 import { events, samples } from './db/schema';
@@ -32,6 +32,25 @@ export class Bus {
   private subscribers = new Set<BusSubscriber>();
 
   constructor(private db: Db) {}
+
+  /**
+   * Compact latest-only signals in the event log. health.checked (per service),
+   * tokens.rollup (one series), and stats.snapshot (per day) are append-only, but the
+   * reducer keeps only the newest of each — so superseded rows are pure boot-replay cost
+   * that grows without bound on an always-on server. Delete them, keeping max(seq) per key.
+   * Safe: the retained latest folds to the same state, and SSE resume only needs events
+   * after the client's checkpoint (and the global max seq is always retained). Run on boot
+   * BEFORE replay so the fold is cheaper.
+   */
+  compact(log: (msg: string) => void = () => {}): number {
+    const del = (q: Parameters<Db['run']>[0]) => Number(this.db.run(q).changes ?? 0);
+    let removed = 0;
+    removed += del(sql`DELETE FROM events WHERE type = 'health.checked' AND seq NOT IN (SELECT MAX(seq) FROM events WHERE type = 'health.checked' GROUP BY source_ref)`);
+    removed += del(sql`DELETE FROM events WHERE type = 'tokens.rollup' AND seq NOT IN (SELECT MAX(seq) FROM events WHERE type = 'tokens.rollup')`);
+    removed += del(sql`DELETE FROM events WHERE type = 'stats.snapshot' AND seq NOT IN (SELECT MAX(seq) FROM events WHERE type = 'stats.snapshot' GROUP BY json_extract(payload, '$.day'))`);
+    if (removed > 0) log(`bus: compacted ${removed} superseded event row(s)`);
+    return removed;
+  }
 
   /** Fold the persisted log into memory (boot). Corrupt rows are skipped, loudly. */
   replayFromDb(log: (msg: string) => void): void {

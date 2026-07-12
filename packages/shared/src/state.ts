@@ -40,6 +40,13 @@ export type HealthService = z.infer<typeof HealthService>;
 export const ServiceState = z.enum(['operational', 'degraded', 'down']);
 export type ServiceState = z.infer<typeof ServiceState>;
 
+/** UI tone tokens — aligned with the design tokens + kit; validated, not a free string. */
+export const Tone = z.enum(['violet', 'success', 'warning', 'info', 'danger', 'pink', 'muted']);
+export type Tone = z.infer<typeof Tone>;
+
+/** ISO-8601 timestamp with offset — reused by every entity so a bad stamp fails at the boundary. */
+export const isoTs = z.string().datetime({ offset: true });
+
 // —— entities —————————————————————————————————————————————————————————————————
 
 export const RepoCI = z.object({
@@ -56,7 +63,7 @@ export const Repo = z.object({
   status: RepoStatus,
   description: z.string(),
   branch: z.string(),
-  updatedTs: z.string(),
+  updatedTs: isoTs,
   language: Language.optional(),
   stars: z.number().int().nonnegative().optional(),
   prs: z.number().int().nonnegative().optional(),
@@ -84,7 +91,7 @@ export const Build = z.object({
   jobLabel: z.string(), // "#142 Build and Test"
   branch: z.string(),
   state: BuildState,
-  startedTs: z.string().nullable(),
+  startedTs: isoTs.nullable(),
   /** null while queued — honest absence, the UI masks it as "Queued". */
   elapsedSec: z.number().int().nonnegative().nullable(),
 });
@@ -94,7 +101,7 @@ export const Deployment = z.object({
   id: z.string(),
   name: z.string(),
   env: DeployEnv,
-  ts: z.string(),
+  ts: isoTs,
   ok: z.boolean(),
 });
 export type Deployment = z.infer<typeof Deployment>;
@@ -103,7 +110,7 @@ export const Agent = z.object({
   id: z.string(),
   name: z.string(),
   icon: z.string(),
-  tone: z.string(),
+  tone: Tone,
   kind: AgentKind, // runner = dispatched process; configured = roster definition
   status: AgentStatus,
   statusLine: z.string(),
@@ -115,15 +122,15 @@ export type Agent = z.infer<typeof Agent>;
 export const ActivityItem = z.object({
   id: z.string(),
   icon: z.string(),
-  tone: z.string(),
+  tone: Tone,
   title: z.string(),
   detail: z.string(),
-  ts: z.string(),
+  ts: isoTs,
 });
 export type ActivityItem = z.infer<typeof ActivityItem>;
 
 export const Sample = z.object({
-  ts: z.string(),
+  ts: isoTs,
   cpuPct: z.number().min(0).max(100),
   memPct: z.number().min(0).max(100),
   netPct: z.number().min(0).max(100),
@@ -133,7 +140,7 @@ export type Sample = z.infer<typeof Sample>;
 export const HealthCheck = z.object({
   service: HealthService,
   state: ServiceState,
-  checkedTs: z.string(),
+  checkedTs: isoTs,
 });
 export type HealthCheck = z.infer<typeof HealthCheck>;
 
@@ -141,7 +148,7 @@ export const TokensState = z.object({
   /** null = unavailable (unknown session-log format) — UI renders ≈— (council S2). */
   approxTokens: z.number().nonnegative().nullable(),
   windowLabel: z.string(), // "7 days"
-  updatedTs: z.string(),
+  updatedTs: isoTs,
 });
 export type TokensState = z.infer<typeof TokensState>;
 

@@ -32,17 +32,8 @@ export const samples = sqliteTable(
   (t) => [index('samples_ts_idx').on(t.ts)],
 );
 
-/** Daily stat snapshots — deltas ("↑2 this week") come only from here (2.4). */
-export const snapshots = sqliteTable(
-  'snapshots',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    day: text('day').notNull(), // YYYY-MM-DD
-    key: text('key').notNull(), // e.g. repos.total
-    value: real('value').notNull(),
-  },
-  (t) => [uniqueIndex('snapshots_day_key_unique').on(t.day, t.key)],
-);
+// (The `snapshots` table was removed — stat deltas now flow through stats.snapshot events
+// like everything else; dropped in migration 0002.)
 
 /** Catch-up scheduler: last-run per job; overdue jobs fire on boot (convention 13). */
 export const jobs = sqliteTable('jobs', {
