@@ -8,14 +8,19 @@ import {
   Icon,
   IconTile,
   StatusDot,
+  cx,
 } from '../../kit';
 import { CATEGORY_ICON, CATEGORY_TAG, CI_TONE, REPO_STATUS_LOOK } from '../../lib/repoLook';
+import { ENV_LABEL } from '../ops/maps';
+import { useBus } from '../../store/bus';
+import { latestDeployment } from '../../lib/selectors';
 import { timeAgo } from '../../lib/time';
 
 export function RepoCard({ repo }: { repo: Repo }) {
   const cat = CATEGORY_ICON[repo.category];
   const status = REPO_STATUS_LOOK[repo.status];
   const navigate = useNavigate();
+  const deploy = useBus((s) => latestDeployment(s.state, repo.id));
 
   const open = () => navigate(`/repositories/${repo.id}`);
 
@@ -59,13 +64,22 @@ export function RepoCard({ repo }: { repo: Repo }) {
 
       <p className="truncate text-body text-text2">{repo.description}</p>
 
-      {/* meta: branch | updated */}
+      {/* meta: branch | updated | last deploy (from real deploy events; absent = none) */}
       <div className="flex items-center gap-4 text-label text-text3">
         <span className="inline-flex items-center gap-1">
           <Icon name="branch" size={12} />
           {repo.branch}
         </span>
         <span>Updated {timeAgo(repo.updatedTs)}</span>
+        {deploy ? (
+          <span
+            className={cx('inline-flex items-center gap-1', deploy.ok ? 'text-success' : 'text-danger')}
+            title={`Last deploy: ${ENV_LABEL[deploy.env]} · ${timeAgo(deploy.ts)}`}
+          >
+            <Icon name="rocket" size={12} />
+            {ENV_LABEL[deploy.env]}
+          </span>
+        ) : null}
       </div>
 
       {/* progress row — pct in a reserved tabular slot; absent CI = honest state */}

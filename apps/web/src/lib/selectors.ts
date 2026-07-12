@@ -158,3 +158,14 @@ export function isNavActive(to: string | undefined, pathname: string): boolean {
   if (!to || to.includes('?')) return false;
   return pathname === to || (to !== '/' && pathname.startsWith(to + '/'));
 }
+
+/** The most recent deployment recorded for a repo (by ts), or null. Deploy events are
+ *  repo-tagged (repoId); an untagged/legacy deploy simply doesn't count toward a repo. */
+export function latestDeployment(s: BusState, repoId: string): Deployment | null {
+  let best: Deployment | null = null;
+  for (const d of s.deployments) {
+    if (d.repoId !== repoId) continue;
+    if (!best || d.ts > best.ts) best = d;
+  }
+  return best;
+}
