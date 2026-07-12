@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { Icon, type IconName, cx } from '../kit';
+import { useCmdK } from '../lib/useCmdK';
 import { ConnectionBadge } from './ConnectionBadge';
+import { ViewSwitcher } from './ViewSwitcher';
 
 /**
  * View A top bar — logo + title block, centered ⌘K search, actions, avatar.
@@ -20,17 +22,7 @@ function TopBarButton({ icon, label }: { icon: IconName; label: string }) {
 
 export function TopBarA() {
   const searchRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  useCmdK(searchRef);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-6 border-b bg-app px-5">
@@ -72,6 +64,7 @@ export function TopBarA() {
 
       {/* actions + avatar */}
       <div className="flex shrink-0 items-center gap-2">
+        <ViewSwitcher />
         <ConnectionBadge />
         <TopBarButton icon="plus" label="Create" />
         <TopBarButton icon="calendar" label="Calendar" />

@@ -3,7 +3,7 @@
 Personal mission-control dashboard for the Wrexist portfolio. Local-first monorepo.
 
 ## Stack & layout
-- `apps/web`: Vite + React 18 + TypeScript + Tailwind + Zustand. Routes: `/command` (View A), `/ops` (View B)
+- `apps/web`: Vite + React 18 + TypeScript + Tailwind + Zustand. Routes: `/command` (View A), `/ops` (View B), `/prompts` (Prompt Library), `/settings` (Connections)
 - `apps/server`: Fastify + TypeScript, SQLite via drizzle, SSE at `/events`, agent runner
 - `packages/shared`: typed event contracts (zod), design tokens
 - Node 20+, npm workspaces. Server binds 127.0.0.1 only. Secrets in `.env` (gitignored), never in code

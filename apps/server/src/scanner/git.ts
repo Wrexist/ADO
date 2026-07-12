@@ -20,7 +20,6 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
 export interface GitInfo {
   branch: string;
   lastCommitTs: string | null; // ISO, or null for a repo with no commits
-  dirtyCount: number;
 }
 
 export async function isGitRepo(dir: string): Promise<boolean> {
@@ -31,11 +30,8 @@ export async function isGitRepo(dir: string): Promise<boolean> {
 export async function readGit(dir: string): Promise<GitInfo> {
   const branch = (await git(dir, ['rev-parse', '--abbrev-ref', 'HEAD'])) ?? 'HEAD';
   const iso = await git(dir, ['log', '-1', '--format=%cI']);
-  const status = await git(dir, ['status', '--porcelain']);
-  const dirtyCount = status ? status.split('\n').filter(Boolean).length : 0;
   return {
     branch,
     lastCommitTs: iso && iso.length > 0 ? new Date(iso).toISOString() : null,
-    dirtyCount,
   };
 }

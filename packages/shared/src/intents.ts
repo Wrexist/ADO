@@ -46,8 +46,3 @@ export const CommandResponse = z.object({
   confirm: Intent.nullable(),
 });
 export type CommandResponse = z.infer<typeof CommandResponse>;
-
-export const QUICK_INTENTS: Array<{ label: string; text: string }> = [
-  { label: 'Status', text: 'status' },
-  { label: 'Recent activity', text: 'summarize recent activity' },
-];

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CommandResponse } from '@ado/shared';
 import { Button, Icon } from '../../kit';
 import { confirmIntent, runCommand } from '../../lib/command';
@@ -8,11 +8,21 @@ import { confirmIntent, runCommand } from '../../lib/command';
  * mutating intents show a preview with a Confirm button — nothing acts without it.
  * `variant` styles the send button for View A (violet round) vs View B (assistant).
  */
-export function CommandBox({ placeholder }: { placeholder: string }) {
+export function CommandBox({ placeholder, seed }: { placeholder: string; seed?: { text: string; n: number } }) {
   const [text, setText] = useState('');
   const [resp, setResp] = useState<CommandResponse | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // A suggestion chip prefills (never auto-runs) the box, then focuses it for editing.
+  // The nonce makes re-clicking the same chip re-trigger.
+  useEffect(() => {
+    if (seed) {
+      setText(seed.text);
+      inputRef.current?.focus();
+    }
+  }, [seed]);
 
   const submit = async () => {
     if (!text.trim() || busy) return;
@@ -46,6 +56,7 @@ export function CommandBox({ placeholder }: { placeholder: string }) {
     <div className="flex flex-col gap-3">
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}

@@ -33,7 +33,7 @@ The long-horizon aim is a full **AI Development OS** where humans and AI collabo
 ```
 ai-development-os/            (monorepo, npm workspaces)
 ├── apps/web        Vite + React 18 + TS + Tailwind + Zustand
-│                   SSE client · two routes (/command, /ops)
+│                   SSE client · routes: /command, /ops, /prompts, /settings
 ├── apps/server     Fastify + TS · SQLite (drizzle) · SSE stream
 │   ├── integrations/   github · sysmon · health
 │   ├── scanner/        walks PROJECT_DIRS: git status, ops.yml, TASK.md, gates

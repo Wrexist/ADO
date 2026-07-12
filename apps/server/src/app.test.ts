@@ -11,7 +11,6 @@ const ENV = {
   dbPath: ':memory:',
   demo: false,
   projectDirs: [],
-  githubToken: '',
 };
 
 const HOST_OK = { host: '127.0.0.1:8787' };

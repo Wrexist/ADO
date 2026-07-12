@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../kit';
+import { useCmdK } from '../lib/useCmdK';
 import { ConnectionBadge } from './ConnectionBadge';
+import { ViewSwitcher } from './ViewSwitcher';
 
 /**
  * View B top bar — "AI CONTROL / DASHBOARD" logo block left; search pill,
@@ -21,17 +23,7 @@ function BarIcon({ icon, label }: { icon: IconName; label: string }) {
 
 export function TopBarB() {
   const searchRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  useCmdK(searchRef);
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-6 border-b bg-app px-5">
@@ -52,6 +44,7 @@ export function TopBarB() {
 
       {/* right cluster */}
       <div className="flex shrink-0 items-center gap-2">
+        <ViewSwitcher />
         <ConnectionBadge />
         <div className="relative">
           <Icon

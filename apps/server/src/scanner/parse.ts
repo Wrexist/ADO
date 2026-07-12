@@ -28,7 +28,6 @@ function topLevelScalar(yaml: string, key: string): string | null {
 export interface OpsInfo {
   category: RepoCategory | null;
   status: RepoStatus;
-  hasBlockedGate: boolean;
 }
 
 /** Infer a category when ops.yml doesn't declare one — conservative, documented. */
@@ -43,7 +42,7 @@ function inferCategory(stack: string | null): RepoCategory | null {
 
 export function parseOps(repoDir: string): OpsInfo {
   const yaml = readText(join(repoDir, '.claude/ops.yml'));
-  if (!yaml) return { category: null, status: 'active', hasBlockedGate: false };
+  if (!yaml) return { category: null, status: 'active' };
 
   const declared = topLevelScalar(yaml, 'category');
   const category =
@@ -53,7 +52,7 @@ export function parseOps(repoDir: string): OpsInfo {
 
   // A gate line "status: blocked" anywhere marks the repo blocked (honest, cheap).
   const hasBlockedGate = /status:\s*blocked/i.test(yaml);
-  return { category, status: hasBlockedGate ? 'blocked' : 'active', hasBlockedGate };
+  return { category, status: hasBlockedGate ? 'blocked' : 'active' };
 }
 
 /** Count open checklist items ("- [ ]") in TASK.md. */

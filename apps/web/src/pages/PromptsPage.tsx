@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AGENTS,
@@ -189,10 +189,13 @@ function PromptCard({
   const cat = PROMPT_CATEGORIES.find((c) => c.id === p.category);
   const text = compose(p, model, agent);
   const usingAgent = Boolean(agent && agent.promptIds.includes(p.id));
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
 
   const copy = async () => {
     setCopied(await copyText(text));
-    setTimeout(() => setCopied(false), 1500);
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(false), 1500);
   };
 
   const run = async () => {

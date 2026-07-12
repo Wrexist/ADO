@@ -11,21 +11,25 @@
  */
 import { z } from 'zod';
 
-export type PromptCategory =
-  | 'game'
-  | 'mobile'
-  | 'steam'
-  | 'app'
-  | 'web'
-  | 'backend'
-  | 'testing'
-  | 'performance'
-  | 'security'
-  | 'refactor'
-  | 'docs'
-  | 'devops';
+/** Single source for the category set — the zod enum; the TS type is inferred from it. */
+export const PromptCategoryEnum = z.enum([
+  'game',
+  'mobile',
+  'steam',
+  'app',
+  'web',
+  'backend',
+  'testing',
+  'performance',
+  'security',
+  'refactor',
+  'docs',
+  'devops',
+]);
+export type PromptCategory = z.infer<typeof PromptCategoryEnum>;
 
-export type TargetModel = 'any' | 'claude' | 'gpt' | 'gemini';
+export const TargetModelEnum = z.enum(['any', 'claude', 'gpt', 'gemini']);
+export type TargetModel = z.infer<typeof TargetModelEnum>;
 
 export interface PromptTemplate {
   id: string;
@@ -151,7 +155,7 @@ Never trade correctness or determinism for speed without flagging it.`,
     dispatchable: true,
     body: `Implement save/load for {game}.
 Requirements: versioned schema with a migration path; atomic writes (temp file → rename) so a crash never corrupts a save; separate slots + autosave; human-diffable format in debug ({format}).
-Deliver the serializer, a v1→v2 migration example, and a corruption/So-recovery test. Never block the main thread on I/O.`,
+Deliver the serializer, a v1→v2 migration example, and a corruption/recovery test. Never block the main thread on I/O.`,
   }),
 
   // ── Mobile ───────────────────────────────────────────────────────────────
@@ -435,10 +439,6 @@ Rules: multi-stage build (build → slim runtime); non-root user; pinned base im
   }),
 ];
 
-export const PROMPT_BY_ID: Record<string, PromptTemplate> = Object.fromEntries(
-  PROMPTS.map((p) => [p.id, p]),
-);
-
 /**
  * Specialized agents — "trained" dispatch profiles for the domains Isac ships in
  * (games, apps, mobile, Steam). Each carries a system preamble (the training), a
@@ -500,7 +500,7 @@ export const AGENTS: SpecializedAgent[] = [
     promptIds: ['mobile-screen', 'mobile-analytics', 'mobile-size-coldstart'],
   }),
   AGENT({
-    id: 'steam-release',
+    id: 'steam-eng',
     name: 'Steam Release Engineer',
     blurb: 'Integrates Steamworks safely and prepares SteamPipe builds + launch checklists.',
     domain: 'steam',
@@ -535,10 +535,6 @@ export const AGENTS: SpecializedAgent[] = [
   }),
 ];
 
-export const AGENT_BY_ID: Record<string, SpecializedAgent> = Object.fromEntries(
-  AGENTS.map((a) => [a.id, a]),
-);
-
 /**
  * Compose the full dispatch text for a specialized agent running a given prompt: the
  * agent's training preamble + its verifiable loop + the model-rendered prompt body. This
@@ -567,23 +563,10 @@ export function renderAgentDispatch(
 export const CustomPromptInput = z.object({
   id: z.string().min(1).max(80).optional(),
   title: z.string().trim().min(1).max(80),
-  category: z.enum([
-    'game',
-    'mobile',
-    'steam',
-    'app',
-    'web',
-    'backend',
-    'testing',
-    'performance',
-    'security',
-    'refactor',
-    'docs',
-    'devops',
-  ]),
+  category: PromptCategoryEnum,
   summary: z.string().trim().min(1).max(200),
   tags: z.array(z.string().trim().min(1).max(24)).max(10).default([]),
-  recommendedModel: z.enum(['any', 'claude', 'gpt', 'gemini']).default('any'),
+  recommendedModel: TargetModelEnum.default('any'),
   body: z.string().trim().min(1).max(8000),
   dispatchable: z.boolean().default(true),
 });

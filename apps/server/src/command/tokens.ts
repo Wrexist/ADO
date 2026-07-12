@@ -48,6 +48,7 @@ export class TokenRollup {
       // null = nothing measured yet → UI shows ≈— "unavailable", never a fake 0-as-real
       payload: { approxTokens: anyMeasured ? total : null, windowLabel: `${WINDOW_DAYS} days` },
     });
+    this.log(`tokens: ${anyMeasured ? `≈${total}` : 'unavailable'} over ${WINDOW_DAYS}d`);
   }
 
   start(): void {

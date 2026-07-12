@@ -215,15 +215,17 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   };
   startGithub();
 
-  // Runner: dispatch headless agents. cwd allow-list comes from the scanner (only
-  // scanned repos are dispatchable); demo maps ids straight through for the sim agent.
+  // cwd allow-list: only scanned repos are dispatchable (demo maps ids straight through
+  // for the sim agent). Shared by the runner and the command center — defined once.
+  const cwdFor = (id: string): string | null =>
+    scanner ? scanner.cwdFor(id) : bus.snapshot().state.repos[id] ? `/repos/${id}` : null;
+
+  // Runner: dispatch headless agents.
   const runner = new Runner(
     bus,
     db,
     deps.spawner ?? new ClaudeSpawner(),
-    {
-      cwdFor: (id) => (scanner ? scanner.cwdFor(id) : bus.snapshot().state.repos[id] ? `/repos/${id}` : null),
-    },
+    { cwdFor },
     (msg) => app.log.info(msg),
   );
   const orphans = runner.reconcileOrphans();
@@ -240,10 +242,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
 
   // Command center (Phase 4): parse NL → intent → read now / preview-to-confirm for
-  // mutations. cwdFor resolves via scanner (real repos) or demo repos in the bus.
+  // mutations. Reuses the shared cwdFor allow-list resolver.
   const parser = new HeuristicParser();
-  const cwdFor = (id: string): string | null =>
-    scanner ? scanner.cwdFor(id) : bus.snapshot().state.repos[id] ? `/repos/${id}` : null;
   const cmdDeps = { bus, runner, cwdFor };
 
   app.post('/api/command', async (req, reply) => {
