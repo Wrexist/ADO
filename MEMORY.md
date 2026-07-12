@@ -9,6 +9,21 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · repoId on activity/deploy → per-project feeds
+- Closed the data gap: added optional `repoId` to the `ActivityItem` + `Deployment` zod
+  contracts (optional = old persisted events still replay). Set it in the emitters (runner
+  activity, github-sync deployments) and in the demo seed (mapped from the fixture's repo
+  display-name → id). The project page (`/repositories/:id`) now shows **Recent activity** and
+  **Deployments** for that repo; still honest empty states where absent. +1 reducer test.
+- **Demo-staleness bug found + fixed:** the demo seed uses stable event ids, and the smoke
+  booted against the persisted `acc.sqlite` (DB_PATH set in .env), so `bus.publish`'s
+  `onConflictDoNothing` skipped the re-seed → new `repoId` never landed (the classic
+  stable-id-blocks-updates trap). Fixes: (a) `env.ts` now defaults `--demo` to an in-memory db
+  unless DB_PATH is set (fresh fixture, no mixing with real data); (b) smoke.sh forces
+  `DB_PATH=:memory:` so screenshots always reflect the current seed. Root-caused via the raw
+  SSE snapshot (had zero repoId) + the "compacted 3 rows" log (proved a file db, not :memory:).
+- verify + smoke green; per-project activity + deployments confirmed in the screenshot.
+
 ## 2026-07-12 · Claude · Project command page (single-pane per repo)
 - New `/repositories/:id` — one clean screen per project tying together everything that IS
   honestly repo-scoped: header strip (category · status · branch · language · stars · PRs ·

@@ -117,4 +117,31 @@ describe('bus reducer (shared by server snapshot + web deltas)', () => {
     expect(s.repos.x.stars).toBe(42); // enrichment preserved despite explicit undefined
     expect(s.repos.x.ci?.state).toBe('success'); // enrichment preserved
   });
+
+  it('carries repoId through activity + deployment events (per-project feeds)', () => {
+    let s = reduce(
+      emptyState(),
+      parseEvent({
+        id: 'a1', ts, source: src, type: 'activity.appended',
+        payload: { item: { id: 'a1', icon: 'check', tone: 'success', title: 'SENTINEL', detail: 'Build passed', ts, repoId: 'sentinel' } },
+      }),
+    );
+    expect(s.activity[0].repoId).toBe('sentinel');
+
+    s = reduce(
+      s,
+      parseEvent({
+        id: 'd1', ts, source: src, type: 'deploy.recorded',
+        payload: { deployment: { id: 'd1', name: 'SENTINEL', env: 'production', ts, ok: true, repoId: 'sentinel' } },
+      }),
+    );
+    expect(s.deployments[0].repoId).toBe('sentinel');
+
+    // back-compat: an event with no repoId still parses (older persisted events replay)
+    const legacy = parseEvent({
+      id: 'a2', ts, source: src, type: 'activity.appended',
+      payload: { item: { id: 'a2', icon: 'branch', tone: 'info', title: 'X', detail: 'commit', ts } },
+    });
+    expect(reduce(s, legacy).activity[0].repoId).toBeUndefined();
+  });
 });

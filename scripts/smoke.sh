@@ -21,7 +21,9 @@ grep -qE '^VITE_ACC_TOKEN=.+' .env || { echo "✗ VITE_ACC_TOKEN not set in .env
 free() { command -v fuser >/dev/null 2>&1 && fuser -k -9 "$1"/tcp 2>/dev/null; return 0; }
 free 8787; free 5173; sleep 1
 
-npm run start -w @ado/server -- --demo > /tmp/acc-smoke-server.log 2>&1 &
+# Fresh in-memory db so the deterministic fixture seed ALWAYS applies fully — a persisted db
+# (DB_PATH in .env) would replay stale-id events and skip re-seeds (onConflictDoNothing).
+DB_PATH=:memory: npm run start -w @ado/server -- --demo > /tmp/acc-smoke-server.log 2>&1 &
 SRV=$!
 npm run dev -w @ado/web > /tmp/acc-smoke-web.log 2>&1 &
 WEB=$!

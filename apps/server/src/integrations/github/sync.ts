@@ -109,6 +109,7 @@ export class GitHubSync {
               env: 'production',
               ts: rel.publishedAt ?? now(),
               ok: true,
+              repoId: id,
             },
           },
         });

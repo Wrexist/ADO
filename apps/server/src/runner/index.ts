@@ -246,7 +246,7 @@ export class Runner {
       type: 'activity.appended',
       ts: new Date().toISOString(),
       source: { kind: 'runner', ref: repoId },
-      payload: { item: { id, icon, tone, title: repoId, detail, ts: new Date().toISOString() } },
+      payload: { item: { id, icon, tone, title: repoId, detail, ts: new Date().toISOString(), repoId } },
     });
   }
 

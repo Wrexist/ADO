@@ -103,6 +103,9 @@ export const Deployment = z.object({
   env: DeployEnv,
   ts: isoTs,
   ok: z.boolean(),
+  /** Repo this deployment belongs to — powers the per-project history. Optional for
+   *  back-compat with events persisted before repo tagging. */
+  repoId: z.string().optional(),
 });
 export type Deployment = z.infer<typeof Deployment>;
 
@@ -126,6 +129,9 @@ export const ActivityItem = z.object({
   title: z.string(),
   detail: z.string(),
   ts: isoTs,
+  /** Repo this activity belongs to — powers the per-project feed. Optional: absent = not
+   *  repo-scoped (agent-level, system), and older persisted events replay without it. */
+  repoId: z.string().optional(),
 });
 export type ActivityItem = z.infer<typeof ActivityItem>;
 

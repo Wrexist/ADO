@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Automation, BuildState, Repo } from '@ado/shared';
-import { AgentTile, Button, Card, Chip, GradientProgress, Icon, IconTile, StatusDot, cx, type Tone } from '../kit';
+import { AgentTile, Button, Card, Chip, FeedRow, GradientProgress, Icon, IconTile, StatusDot, cx, type Tone } from '../kit';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
 import { CATEGORY_ICON, CATEGORY_TAG, CI_TONE, REPO_STATUS_LOOK } from '../lib/repoLook';
-import { LANG_LABEL, asIcon } from '../views/ops/maps';
+import { LANG_LABEL, ENV_LABEL, ENV_TONE, asIcon } from '../views/ops/maps';
 import { timeAgo } from '../lib/time';
 import { dispatchPrompt } from '../lib/prompts';
 import { fetchAutomations, runAutomation } from '../lib/automations';
@@ -86,6 +86,8 @@ export function ProjectPage() {
     [state.builds, id],
   );
   const agents = useMemo(() => (repo?.agents ?? []).map((aid) => state.agents[aid]).filter(Boolean), [repo, state.agents]);
+  const activity = useMemo(() => state.activity.filter((a) => a.repoId === id).slice(0, 6), [state.activity, id]);
+  const deployments = useMemo(() => state.deployments.filter((d) => d.repoId === id).slice(0, 6), [state.deployments, id]);
 
   if (!repo) {
     return (
@@ -168,9 +170,22 @@ export function ProjectPage() {
               <p className="mt-2 text-label text-text3">No builds recorded for this repo yet.</p>
             )}
           </Card>
+
+          <Card className="p-5">
+            <h2 className="text-section font-semibold text-text1">Recent activity</h2>
+            {activity.length > 0 ? (
+              <div className="mt-1 flex flex-col divide-y divide-white/[0.05]">
+                {activity.map((a) => (
+                  <FeedRow key={a.id} icon={asIcon(a.icon)} tone={a.tone} title={a.title} detail={a.detail} time={timeAgo(a.ts)} />
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-label text-text3">No activity recorded for this repo yet.</p>
+            )}
+          </Card>
         </div>
 
-        {/* right: agents + automations */}
+        {/* right: agents · automations · deployments */}
         <div className="col-span-1 flex flex-col gap-4">
           <Card className="p-5">
             <h2 className="text-section font-semibold text-text1">Agents</h2>
@@ -202,6 +217,25 @@ export function ProjectPage() {
               <p className="mt-2 text-label text-text3">
                 None yet. <Link to={`/automations?repo=${repo.id}&new=1`} className="text-primary hover:text-text1">Add one</Link>.
               </p>
+            )}
+          </Card>
+
+          <Card className="p-5">
+            <h2 className="text-section font-semibold text-text1">Deployments</h2>
+            {deployments.length > 0 ? (
+              <div className="mt-2 flex flex-col divide-y divide-white/[0.05]">
+                {deployments.map((d) => (
+                  <div key={d.id} className="flex items-center gap-2 py-2">
+                    <Icon name="rocket" size={14} className="shrink-0 text-text3" />
+                    <span className="min-w-0 flex-1 truncate text-body text-text1">{d.name}</span>
+                    <Chip size="sm" tone={ENV_TONE[d.env]}>{ENV_LABEL[d.env]}</Chip>
+                    <Icon name={d.ok ? 'check' : 'bell'} size={13} className={d.ok ? 'text-success' : 'text-danger'} />
+                    <span className="w-12 shrink-0 text-right text-label tabular-nums text-text3">{timeAgo(d.ts)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-label text-text3">No deployments recorded for this repo yet.</p>
             )}
           </Card>
         </div>

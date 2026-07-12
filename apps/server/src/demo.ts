@@ -15,6 +15,8 @@ export function seedDemo(bus: Bus): void {
 
   // repos — View A cards enriched with View B table fields where ids match
   const byId = new Map(MOCK_VIEW_B.projects.map((p) => [p.id, p]));
+  // Map a repo's display name → id so demo activity/deployments carry repoId (per-project feeds).
+  const nameToId = new Map(MOCK_VIEW_A.repos.map((r) => [r.name, r.id]));
   for (const r of MOCK_VIEW_A.repos) {
     const b = byId.get(r.id);
     pub(`repo:${r.id}`, 'repo.upserted', r.updatedTs, {
@@ -53,7 +55,7 @@ export function seedDemo(bus: Bus): void {
   // deployments
   for (const d of MOCK_VIEW_B.deployments) {
     pub(`deploy:${d.id}`, 'deploy.recorded', d.ts, {
-      deployment: { id: d.id, name: d.name, env: d.env, ts: d.ts, ok: d.ok },
+      deployment: { id: d.id, name: d.name, env: d.env, ts: d.ts, ok: d.ok, repoId: nameToId.get(d.name) },
     });
   }
 
@@ -97,7 +99,7 @@ export function seedDemo(bus: Bus): void {
   // activity — one feed; both views project from it
   for (const it of [...MOCK_VIEW_A.activity, ...MOCK_VIEW_B.activity]) {
     pub(`activity:${it.id}`, 'activity.appended', it.ts, {
-      item: { id: it.id, icon: it.icon, tone: it.tone, title: it.title, detail: it.detail, ts: it.ts },
+      item: { id: it.id, icon: it.icon, tone: it.tone, title: it.title, detail: it.detail, ts: it.ts, repoId: nameToId.get(it.title) },
     });
   }
 

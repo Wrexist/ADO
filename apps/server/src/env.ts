@@ -46,12 +46,16 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
     );
   }
 
+  const demo = overrides.demo ?? process.argv.includes('--demo');
   return {
     port: overrides.port ?? Number(process.env.PORT ?? 8787),
     webOrigin: overrides.webOrigin ?? process.env.WEB_ORIGIN ?? 'http://localhost:5173',
     accToken,
-    dbPath: overrides.dbPath ?? process.env.DB_PATH ?? join(root, 'data/acc.sqlite'),
-    demo: overrides.demo ?? process.argv.includes('--demo'),
+    // Demo is a deterministic FIXTURE world — boot it fresh in memory (unless DB_PATH is set
+    // explicitly) so seed changes always take effect and demo data never mixes with real
+    // events on disk. Real runs persist to data/acc.sqlite.
+    dbPath: overrides.dbPath ?? process.env.DB_PATH ?? (demo ? ':memory:' : join(root, 'data/acc.sqlite')),
+    demo,
     projectDirs: overrides.projectDirs ?? parseProjectDirs(process.env.PROJECT_DIRS),
   };
 }
