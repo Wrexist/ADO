@@ -118,11 +118,14 @@ The repo ships a Claude Code operating harness so any session (human or agent) s
 - **`.claude/hooks/`** — reflexes: `pre-tool-use.sh` (blocks secret/data edits, `rm -rf` on root/globs, bare `--force`, `curl | sh`, `sudo` — fail-open so it never wedges a session), `post-tool-use.sh` (logs each tool call to `.claude/logs/`), `stop.sh` (nudges the verify + docs ritual when the tree is dirty).
 - **`.claude/agents/verifier.md`** — an independent verifier subagent that runs the gate, drives the flow, and audits against the honesty conventions before a change is called done.
 - **`.claude/skills/`** — 9 project-tuned tracks: agent-llm · debug · security · frontend · testing · refactor · docs · data · git-ops.
+- **`.claude/workflows/`** — opt-in multi-agent orchestration recipes: `understand` · `ship-feature` · `review` · `audit` · `harden` · `verify-gate`. Each fans work across subagents with an adversarial-verify pass so findings/plans earn their place (see [`.claude/workflows/README.md`](./.claude/workflows/README.md)).
 - **`.mcp.json`** — project MCP servers (GitHub, lazy-loaded via `${GITHUB_TOKEN}`).
 - **`MEMORY.md`** — cross-session shift log (alongside `TASK.md` + `LEARNINGS.md`).
 - **`run.sh`** — one headless `claude -p` pass + verify · **`install.sh`** — bootstrap the harness in a checkout.
 
 Bootstrap: `bash install.sh` (chmod hooks, validate config, create `.env`, `npm install`).
+
+**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so a change can't merge red. It runs on the Node 20 floor with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
 
 ---
 

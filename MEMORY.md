@@ -9,6 +9,23 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · workflows + CI
+- Added `.claude/workflows/` — six opt-in orchestration recipes (Claude Code Workflow scripts):
+  `understand` (parallel cited map), `ship-feature` (map → judge-panel design → vetted plan),
+  `review` (diff, adversarial-verify per finding), `audit` (whole-repo sweep → dedupe → verify →
+  fix list), `harden` (loop-until-dry hunt, 3-lens majority vote), `verify-gate` (verifier agent
+  runs verify+smoke ∥ convention audit ∥ completeness critic → pass/block). Each lens IS a
+  CLAUDE.md convention; every finding must survive an agent trying to refute it. `README.md` documents them.
+- Added `.github/workflows/ci.yml` — mirrors the local gate (`npm run verify`) on PR + main push;
+  Node 20 floor, `permissions: contents: read`, `npm ci` from lockfile, cancel-in-progress. Smoke
+  stays local (needs ACC_TOKEN + browser); CI doesn't fabricate a pass it can't run.
+- Validated all six scripts compile in the harness's async-function context (not `node --check`,
+  which wrongly rejects the top-level `return`/`await` the harness wraps) and lint clean; ci.yml YAML parses.
+- **Next / watch-outs:** workflows are authoring-only so far — none executed (no multi-agent opt-in
+  given this round). First real run should be `review` on a diff to confirm the fan-out + verify pass end-to-end.
+
+---
+
 ## 2026-07-12 · Claude · LOOPKIT harness adopted
 - Adopted the LOOPKIT `.claude/` harness, tailored to this repo: `settings.json`
   (permissions + hooks), `hooks/` (pre/post/stop "reflexes", fail-open), `agents/verifier.md`
