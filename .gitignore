@@ -11,7 +11,10 @@ dist/
 .env.local
 .env.*.local
 /data/
+apps/*/data/
 connections.json
+prompts.json
+automations.json
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

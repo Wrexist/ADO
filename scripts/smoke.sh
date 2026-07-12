@@ -32,8 +32,8 @@ for _ in $(seq 1 60); do curl -sf -H 'host: 127.0.0.1:8787' http://127.0.0.1:878
 for _ in $(seq 1 60); do curl -sf http://localhost:5173/ >/dev/null 2>&1 && break; sleep 1; done
 sleep 2
 
-echo "▶ capturing /command, /ops, /prompts, /workflows, /setup → $OUT/"
-node scripts/screenshot.mjs http://localhost:5173 "$OUT" "/command,/ops,/prompts,/workflows,/setup"
+echo "▶ capturing /command, /ops, /prompts, /workflows, /automations, /setup → $OUT/"
+node scripts/screenshot.mjs http://localhost:5173 "$OUT" "/command,/ops,/prompts,/workflows,/automations,/setup"
 RC=$?
 if [ "$RC" -eq 0 ]; then echo "✅ smoke green (render + zero console errors)"; else echo "✗ smoke failed (rc=$RC) — see /tmp/acc-smoke-*.log"; fi
 exit $RC

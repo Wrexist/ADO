@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
-import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, type ProbeResult } from '@ado/shared';
+import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, type ProbeResult, type AutomationTrigger } from '@ado/shared';
 import { openDb } from './db';
 import type { Env } from './env';
 import { Bus } from './bus';
@@ -31,6 +31,8 @@ import { backupDatabase } from './backup';
 import { probeAll, detectCapabilities, type ProbeContext } from './setup/probe';
 import { Installer } from './setup/install';
 import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
+import { AutomationStore } from './automations/store';
+import { AutomationEngine } from './automations/engine';
 import { Intent } from '@ado/shared';
 
 export interface AccServer {
@@ -241,7 +243,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     github = new GitHubSync(bus, client, (msg) => app.log.info(msg));
     github.start();
   };
-  startGithub();
+  // Boot-time sync only in real runs — tests (startSystem:false) stay hermetic (no network),
+  // so a GitHub fetch can't reject after teardown and flake the suite. The connect-live path
+  // (POST /api/connections/github) still starts it on demand.
+  if (deps.startSystem !== false) startGithub();
 
   // cwd allow-list: only scanned repos are dispatchable (demo maps ids straight through
   // for the sim agent). Shared by the runner and the command center — defined once.
@@ -258,6 +263,43 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   );
   const orphans = runner.reconcileOrphans();
   if (orphans > 0) app.log.warn(`runner: reconciled ${orphans} orphaned run(s) on boot`);
+
+  // Per-repo automations: saved prompts/recipes that run on command, on a schedule, or on a
+  // real CI event. Running = a real dispatched agent (same runner as /api/dispatch).
+  const automationsPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-autos-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'automations.json');
+  const automations = new AutomationStore(automationsPath);
+  // Demo world: seed a few example automations (behind --demo) so the page is self-documenting.
+  if (env.demo && automations.list().length === 0) {
+    const seed = (repoId: string, templateId: string, trigger: AutomationTrigger) => {
+      const t = AUTOMATION_TEMPLATES.find((x) => x.id === templateId);
+      if (t) automations.upsert({ repoId, name: t.name, task: t.task, trigger, enabled: true, source: { kind: 'prompt', ref: t.id } });
+    };
+    seed('sentinel', 'game-playtest-bughunt', { on: 'schedule', every: 'day' });
+    seed('dynasty-manager', 'steam-release-checklist', { on: 'manual' });
+    seed('bloom', 'fix-failed-build', { on: 'event', event: 'build.failed' });
+    seed('atlas', 'weekly-changelog', { on: 'schedule', every: 'week' });
+  }
+  const automationEngine = new AutomationEngine(
+    automations,
+    (repoId, task, model) => runner.dispatch({ repoId, task, model }),
+    (msg) => app.log.info(msg),
+  );
+
+  // Event triggers: fire on REAL CI/scan build events only — never on the runner's own builds
+  // (source 'runner'), so an automation can't retrigger itself. Off in demo/tests.
+  let unsubAutomations: (() => void) | null = null;
+  if (!env.demo && deps.startSystem !== false) {
+    unsubAutomations = bus.subscribe((frame) => {
+      if (frame.kind !== 'evt' || frame.evt.type !== 'build.updated') return;
+      if (frame.evt.source.kind === 'runner') return;
+      const { build } = frame.evt.payload;
+      const name = build.state === 'failed' ? 'build.failed' : build.state === 'success' ? 'build.success' : null;
+      if (name) automationEngine.onBuildEvent(build.repo, name);
+    });
+  }
 
   app.post('/api/dispatch', async (req, reply) => {
     const body = (req.body ?? {}) as { repoId?: string; task?: string; model?: string };
@@ -308,6 +350,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     // Daily headline-stat snapshot for trend deltas (catch-up fires on boot; the post-scan
     // capture above corrects day-one once repos are populated).
     scheduler.register({ name: 'stats-snapshot', intervalMs: 24 * 60 * 60 * 1000, runOnBoot: true, run: snapshotStats });
+    // Scheduled automations: an hourly tick fires any that are due (catch-up on boot).
+    scheduler.register({ name: 'automations-tick', intervalMs: 60 * 60 * 1000, runOnBoot: true, run: () => automationEngine.tickScheduled() });
     // Nightly WAL-safe backup — true catch-up: only fires if a day has actually elapsed.
     if (env.dbPath !== ':memory:') {
       const backupDir = join(dirname(env.dbPath), 'backups');
@@ -436,6 +480,35 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const workflowsDir = findWorkflowsDir();
   app.get('/api/workflows', async () => ({ workflows: workflowsDir ? readWorkflows(workflowsDir) : [] }));
 
+  // Automations CRUD + manual run. Token-gated like prompts/connections (a user's saved
+  // recipes aren't world-readable). Built-in templates ship in the client bundle.
+  app.get('/api/automations', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { automations: automations.list() };
+  });
+  app.post('/api/automations', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    try {
+      return { automation: automations.upsert(req.body ?? {}) };
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+  app.delete('/api/automations/:id', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!automations.remove((req.params as { id: string }).id)) return reply.code(404).send({ error: 'unknown automation' });
+    return { ok: true };
+  });
+  app.post('/api/automations/:id/run', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    try {
+      return automationEngine.runNow((req.params as { id: string }).id);
+    } catch (err) {
+      const msg = (err as Error).message;
+      return reply.code(msg === 'unknown automation' ? 404 : 400).send({ error: msg });
+    }
+  });
+
   return {
     app,
     bus,
@@ -445,6 +518,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     health,
     runner,
     close: async () => {
+      unsubAutomations?.();
       scanner?.stop();
       github?.stop();
       sysmon?.stop();

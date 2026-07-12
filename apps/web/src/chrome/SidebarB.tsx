@@ -26,7 +26,7 @@ const GROUPS: NavGroup[] = [
     eyebrow: 'AI Tools',
     items: [
       { icon: 'agents', label: 'AI Agents', to: '/agents' },
-      { icon: 'workflow', label: 'Automation', to: '/planned/automation' },
+      { icon: 'workflow', label: 'Automations', to: '/automations' },
       { icon: 'pipeline', label: 'Workflows', to: '/workflows' },
       { icon: 'chat', label: 'Prompts', to: '/prompts' },
       { icon: 'sparkle', label: 'Models', to: '/planned/models' },

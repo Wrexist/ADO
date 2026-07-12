@@ -16,6 +16,7 @@ import { DeploymentsPage } from './pages/DeploymentsPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { SetupPage } from './pages/SetupPage';
 import { WorkflowsPage } from './pages/WorkflowsPage';
+import { AutomationsPage } from './pages/AutomationsPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { CommandPalette } from './chrome/CommandPalette';
 import { startBus } from './bus/connect';
@@ -40,6 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />
+        <Route path="/automations" element={<AutomationsPage />} />
         <Route path="/planned/:slug" element={<PlaceholderPage />} />
         {/* kit demo — every component in every state (gate p1 criterion) */}
         <Route path="/kit" element={<KitPage />} />

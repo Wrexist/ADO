@@ -9,6 +9,33 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · Per-repo Automations (+ mobile/game templates)
+- New `/automations` (replaces the `/planned/automation` stub): bind a prompt/recipe to any
+  repo and run it **on command · on a schedule · on a CI event**. A run = a real dispatched
+  `claude -p` agent in that repo (same runner as the command center) — never fabricated output.
+- Shared: `Automation` + `AutomationTrigger` (manual/schedule{hour,day,week}/event{build.failed,
+  build.success}) + `AUTOMATION_TEMPLATES` — one-click "standard prompts" incl. the mobile/game
+  pieces (nightly playtest bug-hunt, balance pass, patch notes, Steam release readiness,
+  TestFlight prep, App Store metadata, perf+a11y audit, crash triage, fix-the-failed-build,
+  weekly changelog, dep/security). Pure helpers `isScheduleDue` / `eventMatches`.
+- Server: `automations/store.ts` (JSON, CRUD) + `automations/engine.ts` (runNow / onBuildEvent /
+  tickScheduled, 2-min debounce, dispatch-failure caught). Event triggers subscribe to the bus
+  but **ignore runner-origin builds (`source.kind==='runner'`) so an automation can't retrigger
+  itself** — no loops. Scheduled via an hourly `automations-tick` scheduler job. 5 endpoints,
+  token-gated. 12 tests. `--demo` seeds 4 example automations so the page is self-documenting.
+- Web: `AutomationsPage` (list grouped by repo, template-picker add-form, trigger dropdown,
+  Run now / Pause / delete). Wired into both sidebars + ⌘K.
+- **Couldn't fetch the X article** (x.com 403 unauth; syndication also 403; search didn't
+  surface that author) — built the templates from established 2026 Claude-Code mobile/game
+  practice, NOT from the tweet. If Isac pastes the text, fold its specifics in.
+- **Next / watch-outs:** event triggers cover build.failed/success (clean repo mapping via
+  build.repo); deploy events skipped (no reliable repo mapping yet). Workflows aren't auto-run
+  (they're a Claude Code construct) — automations dispatch prompts; a workflow binding would
+  dispatch its recipe as a single-agent prompt. Live event/scheduled dispatch needs the claude
+  CLI + scanned repos (unverified in CI, same as the runner).
+
+---
+
 ## 2026-07-12 · Claude · Setup — real buttons over copy-commands
 - Per Isac: replace copy-commands with real Install/Connect buttons. Expanded the one-click
   allow-list beyond npm/VS-Code-ext to **Homebrew** (`brew install` / `brew install --cask` →

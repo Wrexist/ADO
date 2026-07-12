@@ -29,6 +29,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
     items: [
       { icon: 'chat', label: 'Prompt Library', to: '/prompts' },
       { icon: 'workflow', label: 'Workflows', to: '/workflows' },
+      { icon: 'pipeline', label: 'Automations', to: '/automations' },
       { icon: 'code', label: 'Code Assistant', to: '/planned/code-assistant' },
       { icon: 'games', label: 'Game Builder', to: '/planned/game-builder' },
       { icon: 'wand', label: 'UI Generator', to: '/planned/ui-generator' },
