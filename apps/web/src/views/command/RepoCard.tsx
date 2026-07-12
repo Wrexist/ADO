@@ -30,6 +30,15 @@ export function RepoCard({ repo }: { repo: Repo }) {
           <StatusDot tone={status.tone} label={status.label} />
           <button
             type="button"
+            aria-label={`Automate ${repo.name}`}
+            title="Add an automation for this repo"
+            onClick={() => navigate(`/automations?repo=${repo.id}&new=1`)}
+            className="rounded p-1 text-text3 transition-colors duration-150 ease-soft hover:text-primary"
+          >
+            <Icon name="workflow" size={14} />
+          </button>
+          <button
+            type="button"
             aria-label={`View ${repo.name} in Repositories`}
             onClick={() => navigate(`/repositories?cat=${repo.category}`)}
             className="rounded p-1 text-text3 transition-colors duration-150 ease-soft hover:text-text1"

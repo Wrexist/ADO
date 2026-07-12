@@ -9,6 +9,21 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · Automations polish (sources · edit · per-repo deep-link)
+- Source picker in the add/edit form: **Templates · Prompt Library · Workflows · Custom**.
+  Workflows are now bindable — picking a recipe prefills a single-agent task built from its
+  meta (goal + phases), honestly labelled "full multi-agent version runs in Claude Code".
+  Prompt-Library entries prefill from `body` (editable {placeholders}).
+- **Edit** any automation in place (was delete+recreate) — the form reopens prefilled and
+  saves by id. Pause/Enable/Run now/Delete unchanged.
+- Per-repo entry point: every RepoCard (command dashboard + Repositories) gets an "Automate"
+  action → `/automations?repo=<id>&new=1`, which filters the page to that repo and opens the
+  form preselected. `?repo=` shows a "Showing: <repo> · Show all" chip.
+- No server change — automations still store the final task string + dispatch it; source
+  {kind,ref} is display-only. verify + smoke green (form + workflow-tab captured, 0 console errors).
+
+---
+
 ## 2026-07-12 · Claude · Per-repo Automations (+ mobile/game templates)
 - New `/automations` (replaces the `/planned/automation` stub): bind a prompt/recipe to any
   repo and run it **on command · on a schedule · on a CI event**. A run = a real dispatched
