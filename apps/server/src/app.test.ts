@@ -100,3 +100,43 @@ describe('bus persistence + replay (event-sourced snapshot)', () => {
     sqlite.close();
   });
 });
+
+describe('prompt library API (custom entries, token-gated)', () => {
+  let srv: AccServer;
+  const AUTH = { ...HOST_OK, 'x-acc-token': 'test-token' };
+  beforeAll(async () => {
+    srv = await buildServer(ENV, { startSystem: false });
+  });
+  afterAll(async () => {
+    await srv.close();
+  });
+
+  it('refuses reads and writes without the token (a user’s prompts aren’t public)', async () => {
+    expect((await srv.app.inject({ method: 'GET', url: '/api/prompts', headers: HOST_OK })).statusCode).toBe(401);
+    expect((await srv.app.inject({ method: 'POST', url: '/api/prompts', headers: HOST_OK, payload: {} })).statusCode).toBe(401);
+  });
+
+  it('creates, lists, and deletes a custom prompt', async () => {
+    const create = await srv.app.inject({
+      method: 'POST',
+      url: '/api/prompts',
+      headers: AUTH,
+      payload: { title: 'My prompt', category: 'game', summary: 'do a thing', body: 'Body {x}', recommendedModel: 'claude' },
+    });
+    expect(create.statusCode).toBe(200);
+    const id = create.json().prompt.id as string;
+    expect(id).toMatch(/^custom-/);
+
+    const list = await srv.app.inject({ method: 'GET', url: '/api/prompts', headers: AUTH });
+    expect(list.json().prompts.map((p: { id: string }) => p.id)).toContain(id);
+
+    const del = await srv.app.inject({ method: 'DELETE', url: `/api/prompts/${id}`, headers: AUTH });
+    expect(del.statusCode).toBe(200);
+    expect((await srv.app.inject({ method: 'DELETE', url: `/api/prompts/${id}`, headers: AUTH })).statusCode).toBe(404);
+  });
+
+  it('rejects invalid input with 400', async () => {
+    const res = await srv.app.inject({ method: 'POST', url: '/api/prompts', headers: AUTH, payload: { title: '', category: 'game', summary: 's', body: 'b' } });
+    expect(res.statusCode).toBe(400);
+  });
+});

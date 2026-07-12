@@ -27,6 +27,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
   {
     eyebrow: 'AI Tools',
     items: [
+      { icon: 'chat', label: 'Prompt Library', to: '/prompts' },
       { icon: 'code', label: 'Code Assistant' },
       { icon: 'games', label: 'Game Builder' },
       { icon: 'wand', label: 'UI Generator' },

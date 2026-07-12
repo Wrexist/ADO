@@ -28,7 +28,7 @@ const GROUPS: NavGroup[] = [
       { icon: 'agents', label: 'AI Agents' },
       { icon: 'workflow', label: 'Automation' },
       { icon: 'pipeline', label: 'Workflows' },
-      { icon: 'chat', label: 'Prompts' },
+      { icon: 'chat', label: 'Prompts', to: '/prompts' },
       { icon: 'sparkle', label: 'Models' },
     ],
   },

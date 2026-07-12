@@ -2,7 +2,18 @@
 
 Living tracker. Updated every session. Current phase drives what's actionable; `/gate` refuses Phase N+1 while N is open.
 
-**Current phase: 6 — Hardening** 🔴 (p0/p1/p2/p3(sim)/p4 passed; p2.5 real-usage gate + p3 real-claude confirmation pending Isac; p5 parked. Phase 4 command center done)
+**Current phase: 6 — Hardening** 🔴 (p0/p1/p2/p3(sim)/p4 passed; p2.5 real-usage gate + p3 real-claude confirmation pending Isac; p5 parked. Phase 4 command center done; Phase 6 in progress — Prompt Library + optimized loops + WAL-safe backup landed)
+
+---
+
+## Done (Phase 6 — Prompt Library + optimized loops + hardening)
+- [x] **Prompt Library — model-optimized catalog** (`@ado/shared/prompts`): 26 curated, production-grade prompts heavy on **games / mobile / Steam / apps** (+ web/backend/testing/perf/security/refactor/docs/devops), 12 categories. Each prompt has a general `body` + optional per-model `variants`; `renderPrompt(p, model)` prepends a per-model **tuning preamble** (Claude/GPT/Gemini) and picks the best body — so the same prompt comes out **shaped for the selected AI** without duplicating every entry. No-fabrication respected (copy/marketing prompts flagged single-shot drafts, `dispatchable:false`).
+- [x] **Trained specialized agents** (`@ado/shared` AGENTS): Game Developer, Mobile Developer, Steam Release Engineer, App Feature Builder — each a dispatch profile with a **system preamble (the training)**, recommended model, and an explicit **verifiable loop + exit check** (convention 6: loops run only on checkable work). `renderAgentDispatch(agent, prompt, model)` wraps a paired prompt with the preamble + loop so the runner **iterates against the exit check** instead of one-shotting.
+- [x] **Custom prompts — easy/clean/smooth add** — server `PromptStore` (gitignored `data/prompts.json`, same trust model as connections) with zod-validated CRUD (`CustomPromptInput` shared schema); token-gated `GET/POST/DELETE /api/prompts` (a user's prompts aren't world-readable; built-ins ship in the client bundle). `/prompts` page: trained-agents strip, model selector (Any/Claude/GPT/Gemini → live "optimized for" rendering), category chips w/ counts, search, per-card **Copy / Preview / Run in repo** (dispatches the rendered text to a scanned repo), and inline **New/Edit/Delete** for custom entries. Nav wired in both sidebars (View A "Prompt Library", View B "Prompts").
+- [x] **Optimized loops — catch-up scheduler** (`scheduler/`, convention 13): jobs-table-backed, **last-run persisted**, **overdue jobs fire on boot** (a laptop asleep past a nightly job still gets one on wake); injectable clock for tests; a failing job doesn't advance its clock (retries) and never crashes the scheduler; timers unref'd. Token rollup migrated onto it (`runOnBoot`); sub-minute samplers stay on their own intervals by design.
+- [x] **P6 — WAL-safe nightly backup** (`backup/`): `VACUUM INTO` (consistent snapshot incl. WAL — a raw copy under WAL corrupts), **reopens the copy and asserts the event row-count matches** the source (fails loudly + deletes a bad copy), then **7-copy rotation**. Registered as a daily scheduled job (true catch-up: only fires if a day elapsed).
+- [x] **Verify green** — typecheck ×3 · lint · 64/64 tests (added scheduler ×5, backup ×3, prompt-store ×5, prompt-API ×3) · build. Zero console errors on `/command`, `/ops`, `/prompts` at 1536px.
+- [ ] **P6 remaining** (still `open`): Playwright visual baselines wired into verify; launchd/pm2 autostart; README quickstart pass; 50-repo scale render check.
 
 ---
 

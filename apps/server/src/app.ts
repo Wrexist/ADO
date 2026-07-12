@@ -13,6 +13,7 @@ import type { Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
 import { ConnectionsStore } from './connections/store';
+import { PromptStore } from './prompts/store';
 import { seedDemo } from './demo';
 import { Scanner } from './scanner';
 import { GitHubSync } from './integrations/github/sync';
@@ -25,6 +26,8 @@ import { ClaudeSpawner, type Spawner } from './runner/spawner';
 import { HeuristicParser } from './command/parser';
 import { respond, execute } from './command/execute';
 import { TokenRollup } from './command/tokens';
+import { Scheduler } from './scheduler';
+import { backupDatabase } from './backup';
 import { Intent } from '@ado/shared';
 
 export interface AccServer {
@@ -163,6 +166,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return key ? process.env[key] : undefined;
   });
 
+  // Custom prompt library — the user's own entries (built-ins ship in @ado/shared).
+  const promptsPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-prompts-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'prompts.json');
+  const prompts = new PromptStore(promptsPath);
+
   // Real data source: scan configured project dirs (skipped in demo/no-dirs runs).
   let scanner: Scanner | null = null;
   if (!env.demo && env.projectDirs.length > 0) {
@@ -232,15 +242,34 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const tokens = new TokenRollup(bus, db, (msg) => app.log.info(msg));
 
   // System layer: real CPU/mem/net sampling + health checks (real mode only; demo
-  // seeds deterministic samples/health for the frozen baseline world).
+  // seeds deterministic samples/health for the frozen baseline world). Sub-minute
+  // samplers stay on their own naked intervals — a missed 10s sample is meaningless.
+  // Catch-up-worthy recurring work (rollup, nightly backup) goes through the scheduler.
   let sysmon: Sysmon | null = null;
   let health: HealthChecker | null = null;
+  let scheduler: Scheduler | null = null;
   if (!env.demo && deps.startSystem !== false) {
     sysmon = new Sysmon(bus, (msg) => app.log.warn(msg));
     sysmon.start();
     health = new HealthChecker(bus, () => connections.resolve('anthropic') ?? '', (msg) => app.log.info(msg));
     health.start();
-    tokens.start(); // AI Tokens Used card, summed from the run log
+
+    scheduler = new Scheduler(db, (msg) => app.log.warn(msg));
+    // Token rollup: cheap + idempotent, so refresh the card on every boot too.
+    scheduler.register({ name: 'token-rollup', intervalMs: 60 * 60 * 1000, runOnBoot: true, run: () => tokens.rollup() });
+    // Nightly WAL-safe backup — true catch-up: only fires if a day has actually elapsed.
+    if (env.dbPath !== ':memory:') {
+      const backupDir = join(dirname(env.dbPath), 'backups');
+      scheduler.register({
+        name: 'db-backup',
+        intervalMs: 24 * 60 * 60 * 1000,
+        run: () => {
+          const r = backupDatabase(sqlite, backupDir);
+          app.log.info(`backup: ${r.rows} events → ${r.file}${r.rotatedOut.length ? ` (rotated ${r.rotatedOut.length})` : ''}`);
+        },
+      });
+    }
+    scheduler.start();
   }
 
   // Connections (Settings page). Every route requires the token — GET included, since
@@ -276,6 +305,27 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return { status: connections.status(id) };
   });
 
+  // Prompt library (custom entries). Token-gated like connections — a user's saved
+  // prompts aren't world-readable. Built-ins are served from the client bundle.
+  app.get('/api/prompts', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { prompts: prompts.list() };
+  });
+  app.post('/api/prompts', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    try {
+      return { prompt: prompts.upsert(req.body ?? {}) };
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+  app.delete('/api/prompts/:id', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    if (!prompts.remove(id)) return reply.code(404).send({ error: 'unknown prompt' });
+    return { ok: true };
+  });
+
   return {
     app,
     bus,
@@ -290,6 +340,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       sysmon?.stop();
       health?.stop();
       tokens.stop();
+      scheduler?.stop();
       runner.stop();
       await app.close();
       sqlite.close();
