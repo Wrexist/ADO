@@ -55,19 +55,22 @@ export function OpsPage() {
           {/* header — copy single-shot; the count is derived */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-title font-semibold text-text1">Good morning, Isac 👋</h1>
+              <h1 className="text-title font-semibold text-text1">Operations 👋</h1>
               <p className="mt-1 text-body text-text2">
                 {allWell} {repoCount} projects active.
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Link to="/planned/new-project">
-                <Button>New Project</Button>
+              <Link to="/repositories?add=1">
+                <Button>
+                  <Icon name="plus" size={14} />
+                  Add project
+                </Button>
               </Link>
               <Link to="/prompts">
                 <Button variant="outline">
                   <Icon name="sparkle" size={14} />
-                  AI Assistant
+                  Prompt Library
                 </Button>
               </Link>
             </div>

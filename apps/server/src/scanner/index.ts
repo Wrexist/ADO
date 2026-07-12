@@ -64,10 +64,13 @@ export class Scanner {
     return this.idToDir.get(repoId) ?? null;
   }
 
-  /** Full scan of every configured root, then install watches. */
+  /** Full scan of every configured root, then install watches. A root can be EITHER a single
+   *  git repo OR a folder that holds repos one level down — so "add my project" works whether
+   *  the user points at the repo or its parent. */
   async start(): Promise<void> {
     for (const root of this.projectDirs) {
-      for (const dir of subdirs(root)) {
+      const candidates = (await isGitRepo(root)) ? [root] : subdirs(root);
+      for (const dir of candidates) {
         if (await isGitRepo(dir)) {
           this.repoDirs.add(dir);
           await this.scanRepo(dir);

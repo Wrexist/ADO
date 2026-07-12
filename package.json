@@ -15,6 +15,7 @@
     "setup": "node scripts/bootstrap-env.mjs",
     "predev": "node scripts/bootstrap-env.mjs",
     "dev": "concurrently -n server,web -c magenta,cyan \"npm run dev -w @ado/server\" \"npm run dev -w @ado/web\"",
+    "demo": "concurrently -n server,web -c magenta,cyan \"npm run start -w @ado/server -- --demo\" \"npm run dev -w @ado/web\"",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "test": "vitest run",

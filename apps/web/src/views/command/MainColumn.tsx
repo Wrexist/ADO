@@ -72,7 +72,7 @@ export function MainColumn() {
       {/* header row — copy is a single-shot draft (convention 6) */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-title font-semibold text-text1">Welcome back, Isac! 👋</h1>
+          <h1 className="text-title font-semibold text-text1">Welcome back 👋</h1>
           <p className="mt-1 text-body text-text2">
             Here's what's happening with your projects today.
           </p>
@@ -95,10 +95,10 @@ export function MainColumn() {
               </button>
             ))}
           </div>
-          <Link to="/planned/new-project">
+          <Link to="/repositories?add=1">
             <Button>
               <Icon name="plus" size={14} />
-              New
+              Add project
             </Button>
           </Link>
         </div>
@@ -114,7 +114,7 @@ export function MainColumn() {
           iconTone="violet"
         />
         <StatCard
-          label="Active Agents"
+          label="AI Agents"
           value={String(agentsTotal)}
           sub={`${running.length} running`}
           subDotTone="success"
@@ -210,18 +210,24 @@ export function MainColumn() {
       {/* running agents — live runner processes only */}
       <div className="mt-8">
         <SectionHeader title="Running Agents" action="View all agents" actionTo="/agents" />
-        <div className="mt-4 grid grid-cols-5 gap-3">
-          {running.map((a) => (
-            <AgentTile
-              key={a.id}
-              icon={a.icon as IconName}
-              name={a.name}
-              statusLine={a.statusLine}
-              pct={a.pct}
-              tone={a.tone as Tone}
-            />
-          ))}
-        </div>
+        {running.length > 0 ? (
+          <div className="mt-4 grid grid-cols-5 gap-3">
+            {running.map((a) => (
+              <AgentTile
+                key={a.id}
+                icon={a.icon as IconName}
+                name={a.name}
+                statusLine={a.statusLine}
+                pct={a.pct}
+                tone={a.tone as Tone}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-card border bg-card">
+            <EmptyState icon="agents" title="No agents running right now" hint="Dispatch a task from the command box or a project page to put an agent to work." />
+          </div>
+        )}
       </div>
     </main>
   );
@@ -239,29 +245,28 @@ function FirstRunCard() {
         <Icon name="repos" size={22} />
       </span>
       <div>
-        <p className="text-section font-semibold text-text1">You're all set — now add your projects</p>
+        <p className="text-section font-semibold text-text1">Let's bring in your projects</p>
         <p className="mx-auto mt-1 max-w-[52ch] text-body text-text2">
-          AI Control Center scans the folders you list in{' '}
-          <code className="rounded bg-elevated px-1 py-0.5 text-label text-text1">PROJECT_DIRS</code> for git repos,
-          then tracks their builds, agents, and deployments right here.
+          Connect GitHub to see your repos instantly, or point us at a local folder. Then AI Control Center
+          tracks their builds, agents, and deployments right here.
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <Link to="/setup">
+        <Link to="/settings">
           <Button>
-            <Icon name="sparkle" size={14} />
-            Open Setup
+            <Icon name="github" size={14} />
+            Connect GitHub
           </Button>
         </Link>
-        <Link to="/settings">
-          <Button variant="ghost">Settings</Button>
+        <Link to="/repositories?add=1">
+          <Button variant="ghost">
+            <Icon name="plus" size={14} />
+            Add a local folder
+          </Button>
         </Link>
       </div>
       <p className="max-w-[52ch] text-label text-text3">
-        Add e.g.{' '}
-        <code className="rounded bg-elevated px-1 py-0.5 text-text2">PROJECT_DIRS=~/code,~/projects</code> to your{' '}
-        <code className="rounded bg-elevated px-1 py-0.5 text-text2">.env</code>, then restart — your repos appear
-        automatically.
+        GitHub pulls your repos in under a minute — no restart. A local folder is scanned live on this machine.
       </p>
     </div>
   );

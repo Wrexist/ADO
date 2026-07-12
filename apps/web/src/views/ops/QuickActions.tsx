@@ -7,9 +7,9 @@ import { asIcon } from './maps';
  * an honest placeholder where the flow isn't built yet) — no dead buttons.
  */
 const ACTIONS = [
-  { id: 'create-repo', label: 'Create Repository', icon: 'repo', to: '/planned/new-project' },
+  { id: 'create-repo', label: 'Add Project', icon: 'repo', to: '/repositories?add=1' },
   { id: 'new-agent', label: 'New AI Agent', icon: 'agent', to: '/planned/new-agent' },
-  { id: 'deploy', label: 'Deploy Application', icon: 'cloud', to: '/deployments' },
+  { id: 'deploy', label: 'View Deployments', icon: 'cloud', to: '/deployments' },
   { id: 'workflow', label: 'View Workflows', icon: 'workflow', to: '/workflows' },
   { id: 'analytics', label: 'View Analytics', icon: 'chart', to: '/planned/analytics' },
   { id: 'secrets', label: 'Manage Secrets', icon: 'lock', to: '/settings' },

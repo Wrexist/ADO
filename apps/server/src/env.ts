@@ -18,7 +18,7 @@ export interface Env {
 }
 
 /** Expand a leading ~ to the home dir; trim whitespace. */
-function expandHome(p: string): string {
+export function expandHome(p: string): string {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '';
   const t = p.trim();
   if (t === '~') return home;

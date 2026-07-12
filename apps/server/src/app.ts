@@ -3,17 +3,19 @@
  * tests can build an app against :memory: without binding a port.
  */
 import { randomUUID } from 'node:crypto';
+import { statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, type ProbeResult, type AutomationTrigger } from '@ado/shared';
 import { openDb } from './db';
-import type { Env } from './env';
+import { expandHome, type Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
 import { ConnectionsStore } from './connections/store';
 import { PromptStore } from './prompts/store';
+import { ProjectDirsStore } from './projects/store';
 import { seedDemo } from './demo';
 import { Scanner } from './scanner';
 import { GitHubSync } from './integrations/github/sync';
@@ -225,13 +227,30 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     });
   };
 
-  // Real data source: scan configured project dirs (skipped in demo/no-dirs runs).
+  // Real data source: scan project dirs for git repos. Dirs come from .env PROJECT_DIRS
+  // AND a runtime store (added from the UI) — so a user can add a project without editing
+  // .env or restarting. The scanner is REBUILDABLE live (mirror of startGithub below): add
+  // a dir → persist → rebuild → repos stream in over SSE. No restart.
+  const projectDirsPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-projectdirs-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'project-dirs.json');
+  const projectDirs = new ProjectDirsStore(projectDirsPath);
+  const allProjectDirs = (): string[] => Array.from(new Set([...env.projectDirs, ...projectDirs.list()]));
+
   let scanner: Scanner | null = null;
-  if (!env.demo && env.projectDirs.length > 0) {
-    scanner = new Scanner(bus, env.projectDirs, (msg) => app.log.info(msg));
-    // Capture an accurate stat snapshot once the initial scan has populated repos.
-    void scanner.start().then(() => snapshotStats()).catch((err) => app.log.error(err));
-  }
+  const rebuildScanner = async (): Promise<void> => {
+    scanner?.stop();
+    scanner = null;
+    if (env.demo) return;
+    const dirs = allProjectDirs();
+    if (dirs.length === 0) return;
+    scanner = new Scanner(bus, dirs, (msg) => app.log.info(msg));
+    await scanner.start();
+    snapshotStats(); // accurate snapshot once the scan populated repos
+  };
+  // Boot scan only in real runs; tests (startSystem:false) stay hermetic (no fs walk/watch).
+  if (deps.startSystem !== false) void rebuildScanner().catch((err) => app.log.error(err));
 
   // GitHub enrichment: token comes from the connections store (or an injected client).
   // Restartable so the Settings page connects GitHub live — no server restart needed.
@@ -451,6 +470,36 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return { ok: true };
   });
 
+  // Projects (Add a folder to scan). Token-gated. Adding a dir persists it and rebuilds the
+  // scanner LIVE — no .env edit, no restart. `.env` PROJECT_DIRS are shown read-only (env-managed).
+  app.get('/api/projects', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { dirs: projectDirs.list(), envDirs: env.projectDirs };
+  });
+  app.post('/api/projects', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const raw = ((req.body ?? {}) as { dir?: string }).dir;
+    if (!raw || !raw.trim()) return reply.code(400).send({ error: 'a folder path is required' });
+    const dir = expandHome(raw);
+    let ok = false;
+    try {
+      ok = statSync(dir).isDirectory();
+    } catch {
+      return reply.code(400).send({ error: `folder not found: ${dir}` });
+    }
+    if (!ok) return reply.code(400).send({ error: `not a folder: ${dir}` });
+    projectDirs.add(dir);
+    await rebuildScanner(); // live rescan — repos appear without a restart
+    return { dirs: projectDirs.list(), repos: Object.keys(bus.snapshot().state.repos).length };
+  });
+  app.delete('/api/projects', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const raw = ((req.body ?? {}) as { dir?: string }).dir;
+    if (raw && raw.trim()) projectDirs.remove(expandHome(raw));
+    await rebuildScanner();
+    return { dirs: projectDirs.list() };
+  });
+
   // Setup page: probe the machine for required tools/keys/config and one-click install the
   // auto-installable ones. Reads real state (never fabricates "installed"); the install
   // command is derived server-side from the catalog by id — the client only sends an id.
@@ -481,11 +530,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!requireToken(req, reply)) return undefined;
     return { results: setupResults };
   });
-  app.post('/api/setup/probe', async () => {
+  app.post('/api/setup/probe', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
     await refreshSetup();
     return { results: setupResults };
   });
   app.post('/api/setup/install', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
     const id = ((req.body ?? {}) as { id?: string }).id;
     const requirement = id ? REQUIREMENT_BY_ID[id] : undefined;
     if (!requirement) return reply.code(404).send({ error: 'unknown requirement' });

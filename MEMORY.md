@@ -9,6 +9,43 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · add-a-project from the UI + first-run clarity (whole-app easier-to-use pass)
+Surveyed the complete app for install/use/understand friction (3 parallel readers). Unanimous #1:
+you couldn't add a project without editing PROJECT_DIRS in .env and RESTARTING — and that one gap
+cascaded (dispatch, automations, prompts, per-project pages all gate on scanned repos), while 4
+prominent "New/Create" buttons dead-ended at /planned/*. Built the fix + a batch of clarity wins.
+- **Runtime project management (server):** `ProjectDirsStore` (persisted JSON, like connections)
+  + token-gated `GET/POST/DELETE /api/projects`. The scanner is now REBUILDABLE live
+  (`rebuildScanner()`, mirror of `startGithub`) over env dirs ∪ stored dirs — add a folder →
+  persist → rescan → repos stream in over SSE, no restart. Scanner also accepts EITHER a repo
+  folder OR a folder-of-repos (`isGitRepo(root) ? [root] : subdirs(root)`) so "add my project"
+  works whichever the user points at. Verified LIVE: `POST /api/projects` on a temp git repo →
+  `{repos:1}`; bad path → 400; no token → 401. +5 tests.
+- **Add-a-project UI (web):** `AddProjectPanel` (folder input → `addProject`, live result, list of
+  scanned folders with remove) on `/repositories?add=1`; the 4 dead-end buttons (dashboard "New",
+  top-bar "+", Ops "New Project", Quick Actions "Create Repository") now all deep-link here; the
+  empty state is an "Add a project" button. `lib/projects.ts` client.
+- **GitHub-first onboarding:** `FirstRunCard` now leads with **Connect GitHub** (instant, restart-
+  free real data — the path was fully built but never surfaced) + "Add a local folder"; dropped the
+  ".env + restart" copy.
+- **Clarity bundle (survey-driven, honest):** de-personalized greetings ("Welcome back 👋",
+  "Operations 👋"); fixed the misleading "Active Agents" KPI → "AI Agents" (total, with N running
+  sub); added the missing "Running Agents" empty state; command box copy now honest ("Ask about
+  status, or create and dispatch a task") + live suggestion chips (reuse the built-in `seed`);
+  humanized the intent result chip (no raw `dispatch_task · heuristic · 82%` — plain label + tooltip);
+  "Deploy Application" → "View Deployments"; Ops "AI Assistant" button → "Prompt Library"; help-card
+  "Open AI Assistant" → "Ask the command center".
+- **Papercuts:** `npm run demo` one-command demo; closed the two ungated setup routes
+  (`/api/setup/probe`, `/api/setup/install` now require the token — the web already sends it).
+- verify green (131 tests) · smoke green (0 console errors) · captured the new first-run + add panel.
+- **Deferred (clear follow-ups, not done this turn):** group the ~14 `/planned/*` nav items under a
+  "Soon" disclosure; Settings split Active vs "save now / activates later" (37 connectors say Saved ✓
+  but only github/anthropic/slack/discord are wired); visible System-Health info icon; plain
+  System-Status service names; prompt "Run in repo" dropdown shows slugs not names; AgentsPage build
+  rows show raw repo id; ⌘K palette actions (Add project / Dispatch); a runtime "connect Claude
+  subscription" note cross-linking Settings↔Setup (the CLI `auth login`/`status`/`setup-token`
+  subcommands are REAL — verified — so Setup Sign-in is not a dead-end).
+
 ## 2026-07-12 · Claude · zero-config onboarding (was: offline until hand-configured)
 Isac hit the wall: on a fresh machine the app is OFFLINE until you hand-create `.env`, generate
 a token, paste it into ACC_TOKEN + VITE_ACC_TOKEN, and start the server (Setup screenshot showed
