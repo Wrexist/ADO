@@ -35,7 +35,15 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
   const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
   const envFile = join(root, '.env');
   if (existsSync(envFile)) {
-    // Node 20.12+ built-in dotenv; never logs values.
+    // Built-in dotenv (no dependency); never logs values. Added in Node 20.12 / 21.7 —
+    // guard so a Node in the declared >=20.12 floor that's actually older fails with a
+    // clear, actionable message instead of a cryptic "process.loadEnvFile is not a function".
+    if (typeof process.loadEnvFile !== 'function') {
+      throw new Error(
+        `This server needs Node >=20.12 for the built-in .env loader (process.loadEnvFile); running ${process.version}. ` +
+          'Upgrade Node, or export the .env values into the environment before starting.',
+      );
+    }
     process.loadEnvFile(envFile);
   }
 

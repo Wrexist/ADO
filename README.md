@@ -133,7 +133,7 @@ The repo ships a Claude Code operating harness so any session (human or agent) s
 
 Bootstrap: `bash install.sh` (chmod hooks, validate config, create `.env`, `npm install`).
 
-**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so a change can't merge red. It runs on the Node 20 floor with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
+**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so a change can't merge red. It runs on the Node 20.12 floor with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
 
 ---
 

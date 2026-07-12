@@ -9,6 +9,32 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · fixed 3 real-run bugs from the PR #1 Codex review
+PR #1 merged (merge commit); an automated Codex review flagged 3 P2 bugs, all verified real
+and all in real-`claude`-run paths the demo world masks. Per the merged-PR workflow, restarted
+`claude/project-planning-goals-l1r23w` from `origin/main` and pushed the fixes there (a fresh
+change; the merged PR is finished, not reused — no new PR opened, none requested).
+- **Runner stderr deadlock (`runner/spawner.ts`):** `claude -p` was spawned with `stdio[2]='pipe'`
+  but only stdout is read (readline, stream-json). A child emitting >~64KB to stderr (verbose
+  diagnostics, repeated auth/tool errors) fills the pipe buffer and blocks on write → the run
+  hangs until the 15-min wall-clock timeout kills it. Fix: `stdio[2]='ignore'` — can't merge into
+  stdout (would corrupt the JSONL), and the UI shows only stdout, so drop it at the OS level.
+- **Repo agent tag unresolvable (`runner/index.ts`):** after a run, `repo.enriched` stored the
+  display string `Agent · <repo>` in `repo.agents`, but `state.agents` is keyed by `agentId`
+  (=== `runId`) and the project page resolves `state.agents[aid]` — so in real runs the per-project
+  Agents panel/avatar stack stayed EMPTY (demo hid it: it seeds real agent ids). Fix: store the
+  `runId` (newest-first, deduped, capped at 5) so it resolves; the label lives on the agent record.
+  +1 regression test (seed repo → dispatch → assert `repo.agents` holds a resolvable runId).
+- **Node floor vs `process.loadEnvFile` (`env.ts`):** the built-in dotenv (no dep) needs Node
+  20.12, but `engines`, CI, and docs said "20/≥20" — on 20.0–20.11 a configured install throws a
+  cryptic `TypeError` before reading `.env` and can't boot. Fix: bumped the declared floor to
+  `>=20.12` (package.json engines · CI `node-version: 20.12` so CI tests the real floor · README ·
+  CLAUDE.md · requirements catalog) AND guarded the call with a clear "needs Node >=20.12" error.
+- verify green (typecheck ×3 · lint · 126 tests · build). No demo-visible render change (real-run +
+  boot-path + docs only), so no new screenshots — they'd be identical to the last set.
+- **Watch-out:** the send_later PR check-in (trig from earlier) couldn't be deleted (permission
+  stream hiccup); it's self-cancelling — when it fires it'll see the PR merged and stop.
+
 ## 2026-07-12 · Claude · three real features: deploy status · notifications · LLM parser
 Built + shipped the three the user asked for, pushed together.
 - **Per-repo deploy status (Feature 1):** `latestDeployment(state, repoId)` selector →

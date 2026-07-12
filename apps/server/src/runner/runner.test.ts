@@ -71,6 +71,32 @@ describe('runner (Prompts 3.1–3.2)', () => {
     sqlite.close();
   });
 
+  it('tags the repo with the runId (resolves in state.agents), not the display name', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    // repo.enriched is dropped for an unknown repo (honest), so seed the repo first.
+    bus.publish({
+      id: 'repo:sentinel',
+      type: 'repo.upserted',
+      ts: '2026-07-09T00:00:00.000Z',
+      source: { kind: 'scanner', ref: 'sentinel' },
+      payload: {
+        repo: { id: 'sentinel', name: 'Sentinel', category: 'app', status: 'active', description: '', branch: 'main', updatedTs: '2026-07-09T00:00:00.000Z' },
+      },
+    });
+    const runner = new Runner(bus, db, fakeSpawner(SUCCESS_STREAM), { cwdFor });
+    const { runId } = runner.dispatch({ repoId: 'sentinel', task: 'x' });
+    await drain();
+
+    const s = bus.snapshot().state;
+    // the tag is the runId, and it resolves to the real agent record (the bug: a display
+    // name like "Agent · sentinel" filtered out to an empty per-project Agents panel).
+    expect(s.repos.sentinel.agents).toContain(runId);
+    expect(s.agents[runId]).toBeDefined();
+    expect(s.repos.sentinel.agents!.every((aid) => Boolean(s.agents[aid]))).toBe(true);
+    sqlite.close();
+  });
+
   it('rejects a dispatch whose repo is not in the cwd allow-list (council S12/cwd)', () => {
     const { db, sqlite } = openDb(':memory:');
     const runner = new Runner(new Bus(db), db, fakeSpawner([]), { cwdFor });
