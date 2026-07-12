@@ -8,7 +8,9 @@ import {
   buildRows,
   rosterAgents,
   runningAgents,
+  statDelta,
   systemHealthPct,
+  weekDelta,
 } from '../lib/selectors';
 import { ProjectsOverview } from '../views/ops/ProjectsOverview';
 import { BuildQueue } from '../views/ops/BuildQueue';
@@ -34,6 +36,7 @@ export function OpsPage() {
   const running = runningAgents(state).length;
   const roster = rosterAgents(state).length;
   const health = systemHealthPct(state);
+  const agentSeries = (state.statHistory.agentsActive ?? []).map((p) => p.value);
   const allWell =
     health != null && health >= 95
       ? 'Everything looks great.'
@@ -67,7 +70,13 @@ export function OpsPage() {
 
           {/* stat cards ×5 — all derived from the store */}
           <div className="mt-6 grid grid-cols-5 gap-4">
-            <StatCard label="Repositories" value={String(repoCount)} icon="github" iconTone="violet" />
+            <StatCard
+              label="Repositories"
+              value={String(repoCount)}
+              delta={weekDelta(statDelta(repoCount, state.statHistory.repos))}
+              icon="github"
+              iconTone="violet"
+            />
             <StatCard
               label="Active Builds"
               value={String(runningBuilds)}
@@ -83,11 +92,13 @@ export function OpsPage() {
               value={String(agentsTotal)}
               sub={`${running} running · ${roster} configured`}
               subDotTone="success"
-              visual={<Sparkline points={[]} tone="success" width={80} height={30} />}
+              // Real active-agent series once ≥2 daily snapshots exist; flat until then.
+              visual={<Sparkline points={agentSeries.length >= 2 ? agentSeries : []} tone="success" width={80} height={30} />}
             />
             <StatCard
               label="Deployments"
               value={String(state.deployments.length)}
+              delta={weekDelta(statDelta(state.deployments.length, state.statHistory.deployments))}
               icon="cloud"
               iconTone="info"
             />

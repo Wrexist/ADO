@@ -111,6 +111,20 @@ export const TokensRollupEvent = z.object({
   }),
 });
 
+/**
+ * One-per-day rollup of headline stat values → powers the "↑2 this week" deltas.
+ * Deltas are computed against these STORED daily values (never invented): a fresh
+ * install shows no delta until a day of history accrues; --demo seeds a week.
+ */
+export const StatsSnapshotEvent = z.object({
+  ...base,
+  type: z.literal('stats.snapshot'),
+  payload: z.object({
+    day: z.string(), // YYYY-MM-DD — one snapshot per day (event id is stable per day)
+    values: z.record(z.string(), z.number()), // key (repos/deployments/agentsActive/tokens) → value
+  }),
+});
+
 /** Logged on every dashboard open — feeds the p2.5 daily-driver gate. */
 export const AppOpenedEvent = z.object({
   ...base,
@@ -131,6 +145,7 @@ export const AccEvent = z.discriminatedUnion('type', [
   SystemSampleEvent,
   HealthCheckedEvent,
   TokensRollupEvent,
+  StatsSnapshotEvent,
   AppOpenedEvent,
 ]);
 export type AccEvent = z.infer<typeof AccEvent>;

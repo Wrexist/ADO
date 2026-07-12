@@ -125,4 +125,22 @@ export function seedDemo(bus: Bus): void {
     approxTokens: 2_400_000,
     windowLabel: '7 days',
   });
+
+  // stat history → the "↑N this week" deltas render in the baseline world (real mode
+  // accrues these live via the daily stats-snapshot job). One point per day for a week;
+  // oldest-in-window is the delta baseline, so repos read +2 and deployments +1 vs today.
+  const repoCount = MOCK_VIEW_A.repos.length;
+  const deployCount = MOCK_VIEW_B.deployments.length;
+  const agentSeries = [3, 4, 3, 5, 4, 6, 5]; // day-7 … day-1, feeds the View B agents sparkline
+  for (let d = 7; d >= 1; d--) {
+    const day = new Date(new Date(MOCK_NOW).getTime() - d * 86_400_000).toISOString().slice(0, 10);
+    pub(`stats:${day}`, 'stats.snapshot', `${day}T12:00:00.000Z`, {
+      day,
+      values: {
+        repos: repoCount - (d >= 4 ? 2 : 1),
+        deployments: deployCount - (d >= 4 ? 1 : 0),
+        agentsActive: agentSeries[7 - d],
+      },
+    });
+  }
 }

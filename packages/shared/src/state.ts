@@ -151,6 +151,11 @@ const SAMPLE_CAP = 360; // 1h of 10s samples
 const ACTIVITY_CAP = 100;
 const DEPLOYMENT_CAP = 50;
 const BUILD_CAP = 100; // evict oldest TERMINAL builds past this; live builds are never dropped
+const STAT_HISTORY_CAP = 60; // ~2 months of daily stat snapshots per key (for trend deltas)
+
+/** One day's stored value of a headline stat — the source for "↑2 this week" deltas. */
+export const StatPoint = z.object({ day: z.string(), value: z.number() });
+export type StatPoint = z.infer<typeof StatPoint>;
 
 export const BusState = z.object({
   repos: z.record(z.string(), Repo),
@@ -161,6 +166,7 @@ export const BusState = z.object({
   samples: z.array(Sample), // oldest first, capped
   health: z.record(z.string(), HealthCheck),
   tokens: TokensState.nullable(),
+  statHistory: z.record(z.string(), z.array(StatPoint)), // key → daily points, oldest first
 });
 export type BusState = z.infer<typeof BusState>;
 
@@ -174,6 +180,7 @@ export function emptyState(): BusState {
     samples: [],
     health: {},
     tokens: null,
+    statHistory: {},
   };
 }
 
@@ -269,6 +276,20 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
     case 'tokens.rollup': {
       const t = p as { approxTokens: number | null; windowLabel: string };
       return { ...state, tokens: { ...t, updatedTs: evt.ts } };
+    }
+    case 'stats.snapshot': {
+      // Fold one day's headline values into per-key history (last write per day wins),
+      // kept oldest-first and capped. This is what trend deltas read from — no history,
+      // no delta (honest), never a computed-from-thin-air number.
+      const { day, values } = p as { day: string; values: Record<string, number> };
+      const statHistory = { ...state.statHistory };
+      for (const [key, value] of Object.entries(values)) {
+        const rest = (statHistory[key] ?? []).filter((e) => e.day !== day);
+        statHistory[key] = [...rest, { day, value }]
+          .sort((a, b) => a.day.localeCompare(b.day))
+          .slice(-STAT_HISTORY_CAP);
+      }
+      return { ...state, statHistory };
     }
     default:
       // Unknown event type: ignore honestly (forward compatibility) — never crash the UI.

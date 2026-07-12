@@ -85,6 +85,23 @@ describe('bus reducer (shared by server snapshot + web deltas)', () => {
     expect(s.builds['done-119']).toBeDefined(); // newest terminal kept
   });
 
+  it('folds stats.snapshot into per-day history (last write per day wins, sorted oldest-first)', () => {
+    let s = emptyState();
+    const snap = (id: string, day: string, repos: number) => parseEvent({
+      id, ts, source: { kind: 'app', ref: 'stats' }, type: 'stats.snapshot',
+      payload: { day, values: { repos } },
+    });
+    s = reduce(s, snap('a', '2026-07-05', 5));
+    s = reduce(s, snap('b', '2026-07-07', 7));
+    s = reduce(s, snap('c', '2026-07-06', 6));
+    s = reduce(s, snap('d', '2026-07-07', 8)); // same day again → replaces, not duplicates
+    expect(s.statHistory.repos.map((p) => [p.day, p.value])).toEqual([
+      ['2026-07-05', 5],
+      ['2026-07-06', 6],
+      ['2026-07-07', 8],
+    ]);
+  });
+
   it('repo.upserted never clobbers enrichment, even when a field is explicitly undefined', () => {
     // (reduce() directly — the future-emitter footgun the strip-undefined merge guards against)
     let s = reduce(emptyState(), {

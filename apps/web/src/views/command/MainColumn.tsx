@@ -11,13 +11,13 @@ import {
   type Tone,
 } from '../../kit';
 import { useBus } from '../../store/bus';
-import { reposList, repoTabs, runningAgents } from '../../lib/selectors';
+import { reposList, repoTabs, runningAgents, statDelta, weekDelta } from '../../lib/selectors';
 import { approxTokens } from '../../lib/time';
 import { RepoCard } from './RepoCard';
 
 /**
  * View A main column — renders EXCLUSIVELY from the bus store (Prompt 2.1).
- * Deltas ("↑2 this week") are hidden until daily snapshots exist (2.4): no
+ * Deltas ("↑2 this week") come from stored daily snapshots (stats.snapshot): no
  * history → no delta, never an invented one (DATA_MAP rule).
  */
 
@@ -77,6 +77,7 @@ export function MainColumn() {
         <StatCard
           label="Total Repositories"
           value={String(repos.length)}
+          delta={weekDelta(statDelta(repos.length, state.statHistory.repos))}
           icon="repos"
           iconTone="violet"
         />
@@ -91,6 +92,7 @@ export function MainColumn() {
         <StatCard
           label="Deployments"
           value={String(state.deployments.length)}
+          delta={weekDelta(statDelta(state.deployments.length, state.statHistory.deployments))}
           icon="rocket"
           iconTone="info"
         />

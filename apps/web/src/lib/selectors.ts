@@ -4,7 +4,7 @@
  * (deltas need daily snapshots — 2.4; agent-count/health series — 2.4), the value is
  * absent and the UI shows its honest state instead.
  */
-import type { Agent, BusState, Deployment, HealthService, Repo, ServiceState } from '@ado/shared';
+import type { Agent, BusState, Deployment, HealthService, Repo, ServiceState, StatPoint } from '@ado/shared';
 
 export function reposList(s: BusState): Repo[] {
   return Object.values(s.repos).sort((a, b) => b.updatedTs.localeCompare(a.updatedTs));
@@ -19,6 +19,34 @@ export function repoTabs(s: BusState) {
     { id: 'apps', label: 'Apps', count: count('app') },
     { id: 'libraries', label: 'Libraries', count: count('library') },
   ];
+}
+
+/**
+ * Trend delta for a headline stat: the current live value minus its value from ~windowDays
+ * ago, read from STORED daily snapshots (stats.snapshot). Returns null until ≥2 days of
+ * history exist — no history, no delta (honest), never a fabricated trend. The window is
+ * anchored to the latest snapshot day (deterministic; works for the frozen --demo world).
+ */
+export function statDelta(current: number | null, history: StatPoint[] | undefined, windowDays = 7): number | null {
+  if (current == null || !history || history.length < 2) return null;
+  const latestDay = history[history.length - 1].day;
+  const cutoffMs = Date.parse(`${latestDay}T00:00:00Z`) - windowDays * 86_400_000;
+  const cutoff = new Date(cutoffMs).toISOString().slice(0, 10);
+  const baseline = history.find((p) => p.day >= cutoff && p.day < latestDay) ?? history[0];
+  return current - baseline.value;
+}
+
+/** Live count of running runner agents — the "Active Agents" headline value. */
+export function activeAgentCount(s: BusState): number {
+  return Object.values(s.agents).filter((a) => a.kind === 'runner' && a.status === 'running').length;
+}
+
+/** A StatCard delta line from a computed weekly change (null/0 → no line — honest). */
+export function weekDelta(
+  n: number | null,
+): { label: string; trend: 'up' | 'down'; tone: 'success' | 'danger' } | undefined {
+  if (n == null || n === 0) return undefined;
+  return { label: `${Math.abs(n)} this week`, trend: n > 0 ? 'up' : 'down', tone: n > 0 ? 'success' : 'danger' };
 }
 
 export function sidebarCounts(s: BusState) {

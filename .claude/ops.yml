@@ -87,6 +87,7 @@ gates:
   - name: p3.5-pixel-polish          # NEW (D1/B1/B2): the 1:1 match, now judged AFTER real data
     criteria:
       - with real data + a frozen deterministic --demo seed, both views match design/reference/*.png on layout, spacing, color, and component presence (NOT digits)
+      # 2026-07-12: stat-card trend deltas ("↑2 this week") + the View B agent sparkline now render from stored stats.snapshot history (event-sourced; --demo seeds a week) — closes the last stat-card subline gap vs the references. Remaining for this gate: Isac's side-by-side sign-off + pixel-diff baselines.
       - Playwright visual baselines captured against the --demo seed with known-dynamic regions masked
       - Isac has compared both views against the images and logged approval in TASK.md
     attempts: 5

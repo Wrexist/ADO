@@ -193,11 +193,35 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       : join(dirname(env.dbPath), 'prompts.json');
   const prompts = new PromptStore(promptsPath);
 
+  // Daily headline-stat snapshot → powers the "↑2 this week" deltas. Unique id per emit so
+  // the reducer keeps the latest value per day (a boot capture that lands before the first
+  // scan finishes is corrected by the post-scan capture below). No history → no delta
+  // (honest); --demo seeds a week of history directly.
+  const snapshotStats = () => {
+    const st = bus.snapshot().state;
+    const running = Object.values(st.agents).filter((a) => a.kind === 'runner' && a.status === 'running').length;
+    const values: Record<string, number> = {
+      repos: Object.keys(st.repos).length,
+      deployments: st.deployments.length,
+      agentsActive: running,
+    };
+    if (st.tokens?.approxTokens != null) values.tokens = st.tokens.approxTokens;
+    const now = new Date().toISOString();
+    bus.publish({
+      id: `stats:${now.slice(0, 10)}:${now}`,
+      type: 'stats.snapshot',
+      ts: now,
+      source: { kind: 'app', ref: 'stats' },
+      payload: { day: now.slice(0, 10), values },
+    });
+  };
+
   // Real data source: scan configured project dirs (skipped in demo/no-dirs runs).
   let scanner: Scanner | null = null;
   if (!env.demo && env.projectDirs.length > 0) {
     scanner = new Scanner(bus, env.projectDirs, (msg) => app.log.info(msg));
-    void scanner.start().catch((err) => app.log.error(err));
+    // Capture an accurate stat snapshot once the initial scan has populated repos.
+    void scanner.start().then(() => snapshotStats()).catch((err) => app.log.error(err));
   }
 
   // GitHub enrichment: token comes from the connections store (or an injected client).
@@ -277,6 +301,9 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     scheduler = new Scheduler(db, (msg) => app.log.warn(msg));
     // Token rollup: cheap + idempotent, so refresh the card on every boot too.
     scheduler.register({ name: 'token-rollup', intervalMs: 60 * 60 * 1000, runOnBoot: true, run: () => tokens.rollup() });
+    // Daily headline-stat snapshot for trend deltas (catch-up fires on boot; the post-scan
+    // capture above corrects day-one once repos are populated).
+    scheduler.register({ name: 'stats-snapshot', intervalMs: 24 * 60 * 60 * 1000, runOnBoot: true, run: snapshotStats });
     // Nightly WAL-safe backup — true catch-up: only fires if a day has actually elapsed.
     if (env.dbPath !== ':memory:') {
       const backupDir = join(dirname(env.dbPath), 'backups');

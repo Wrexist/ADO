@@ -19,6 +19,15 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] **README quickstart** — refreshed to the real current state (was stale at "Phase 0"); verified every command (`verify`/`dev`/`--demo`/`smoke`/`autostart`), added demo/autostart/smoke sections + accurate architecture tree.
 - [ ] **P6 remaining** (gate still `open`): Playwright **pixel-diff** baselines wired into verify (deferred to after p3.5 visual sign-off — the smoke gate covers render+console regressions until then); real one-week daily use (`p2.5`) + real `claude -p` run (`p3`) — both Isac's to close.
 
+## Audit & hardening round (2026-07-12)
+Ran a 3-way parallel audit (server / web / shared) and acted on the findings.
+- [x] **Correctness/security/resource bugs** — scanner stale-id (rescans silently dropped), GitHub enrich staleness + unbounded log growth, **ACC_TOKEN leaked into the server log** via the SSE `?token=` query (now redacted), runner concurrency-slot leak on throw, queued-run orphan reconcile + drain-past-unrunnable, unbounded `builds` growth (now capped), enrichment-clobber on explicit-undefined, SSE sample bypassing zod + unguarded frame handlers, health-fetch timeout, SSE socket error handler, ciFromRun false-red for cancelled/skipped. All with regression tests.
+- [x] **No-fabrication chrome** — removed the hardcoded bell "3" badge, avatar presence dot, and red alert dot (no bus source).
+- [x] **Cleanup** — removed dead exports/fields (QUICK_INTENTS, PROMPT_BY_ID, AGENT_BY_ID, Env.githubToken, git dirtyCount, OpsInfo.hasBlockedGate, StatusDot labelTone); consolidated prompt enums (zod-once); deduped cwdFor; extracted useCmdK; fixed doc counts (39 connectors, 25 prompts, real route set).
+- [x] **Navigation/wiring** — Command⇄Ops ViewSwitcher in both top bars (/ops was previously unreachable from the UI); AI-assistant suggestion chips now prefill the command box.
+- [x] **Stat-card trend deltas (feature)** — new event-sourced `stats.snapshot` (daily rollup via the catch-up scheduler) + reducer history + `statDelta` selector → "↑2 this week" on Repositories/Deployments in both views, and a real active-agent sparkline on View B. Honest: no history → no delta; real mode accrues live, `--demo` seeds a week. **Closes the p3.5 stat-card subline gap.**
+- verify green (typecheck ×3, 75 tests, build); zero console errors on /command, /ops, /prompts.
+
 ---
 
 ## Done (Phase 4 — Command center)
