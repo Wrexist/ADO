@@ -4,7 +4,7 @@
  * While disconnected the UI flags itself reconnecting/stale — pre-sleep values are
  * never silently presented as live (council S5).
  */
-import { parseEvent, parseSnapshot } from '@ado/shared';
+import { parseEvent, parseSnapshot, Sample } from '@ado/shared';
 import { ACC_TOKEN, SERVER_URL } from '../lib/config';
 import { useBus } from '../store/bus';
 
@@ -27,22 +27,32 @@ export function startBus(): void {
   es.onopen = () => setConnection('live');
   es.onerror = () => setConnection('reconnecting'); // EventSource retries itself
 
-  es.addEventListener('snapshot', (e) => {
+  // Every frame is validated at the boundary (convention 12: unstable interfaces via
+  // validated adapters). A malformed frame is dropped and logged — never thrown out of
+  // the listener (which would silently kill the handler and strand the UI on live).
+  const onFrame = (label: string, handle: (data: string, id: string) => void) => (e: Event) => {
     const msg = e as MessageEvent<string>;
-    applySnapshot(parseSnapshot(JSON.parse(msg.data)));
+    try {
+      handle(msg.data, msg.lastEventId);
+    } catch (err) {
+      console.error(`bus: dropped malformed ${label} frame`, err);
+    }
+  };
+
+  es.addEventListener('snapshot', onFrame('snapshot', (data) => {
+    applySnapshot(parseSnapshot(JSON.parse(data)));
     setConnection('live');
-  });
+  }));
 
-  es.addEventListener('evt', (e) => {
-    const msg = e as MessageEvent<string>;
-    applyEvent(Number(msg.lastEventId), parseEvent(JSON.parse(msg.data)));
-  });
+  es.addEventListener('evt', onFrame('evt', (data, id) => {
+    applyEvent(Number(id), parseEvent(JSON.parse(data)));
+  }));
 
-  // Transient sysmon samples — folded into state, no seq checkpoint.
-  es.addEventListener('sample', (e) => {
-    const msg = e as MessageEvent<string>;
-    applySample(JSON.parse(msg.data) as Parameters<typeof applySample>[0]);
-  });
+  // Transient sysmon samples — folded into state, no seq checkpoint. Zod-validated like
+  // the durable frames (was the one channel bypassing validation).
+  es.addEventListener('sample', onFrame('sample', (data) => {
+    applySample(Sample.parse(JSON.parse(data)));
+  }));
 
   // App-open logging — feeds the p2.5 daily-driver gate. Fire-and-forget.
   const sessionId = crypto.randomUUID();

@@ -66,4 +66,38 @@ describe('bus reducer (shared by server snapshot + web deltas)', () => {
     }));
     expect(s.tokens?.approxTokens).toBeNull();
   });
+
+  it('caps builds at 100, evicting oldest TERMINAL first and never live ones', () => {
+    let s: BusState = emptyState();
+    const mkBuild = (id: string, state: string, startedTs: string | null) => parseEvent({
+      id: `bevt-${id}`, ts, source: { kind: 'runner', ref: id }, type: 'build.updated',
+      payload: { build: { id, repo: 'r', jobLabel: 'j', branch: 'main', state, startedTs, elapsedSec: null } },
+    });
+    // 3 live (running) builds must survive regardless of cap
+    for (const id of ['live-1', 'live-2', 'live-3']) s = reduce(s, mkBuild(id, 'running', ts));
+    // 120 terminal builds with strictly increasing start times
+    for (let i = 0; i < 120; i++) {
+      s = reduce(s, mkBuild(`done-${String(i).padStart(3, '0')}`, 'success', `2026-07-09T09:00:00.${String(i).padStart(3, '0')}Z`));
+    }
+    expect(Object.keys(s.builds).length).toBe(100); // bounded, not unbounded
+    expect(s.builds['live-1'] && s.builds['live-2'] && s.builds['live-3']).toBeTruthy(); // live never dropped
+    expect(s.builds['done-000']).toBeUndefined(); // oldest terminal evicted
+    expect(s.builds['done-119']).toBeDefined(); // newest terminal kept
+  });
+
+  it('repo.upserted never clobbers enrichment, even when a field is explicitly undefined', () => {
+    // (reduce() directly — the future-emitter footgun the strip-undefined merge guards against)
+    let s = reduce(emptyState(), {
+      type: 'repo.upserted', ts,
+      payload: { repo: { id: 'x', name: 'X', category: 'app', status: 'active', description: 'd', branch: 'main', updatedTs: ts, stars: 42, ci: { label: 'CI', pct: 100, state: 'success' } } },
+    });
+    expect(s.repos.x.stars).toBe(42);
+    s = reduce(s, {
+      type: 'repo.upserted', ts,
+      payload: { repo: { id: 'x', name: 'X', category: 'app', status: 'testing', description: 'd', branch: 'main', updatedTs: ts, stars: undefined, ci: undefined } },
+    });
+    expect(s.repos.x.status).toBe('testing'); // base field updated
+    expect(s.repos.x.stars).toBe(42); // enrichment preserved despite explicit undefined
+    expect(s.repos.x.ci?.state).toBe('success'); // enrichment preserved
+  });
 });

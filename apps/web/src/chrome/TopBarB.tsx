@@ -7,7 +7,7 @@ import { ConnectionBadge } from './ConnectionBadge';
  * View B top bar — "AI CONTROL / DASHBOARD" logo block left; search pill,
  * bell (red dot), chat, settings, avatar right. ⌘K focuses search here too.
  */
-function BarIcon({ icon, label, alert }: { icon: IconName; label: string; alert?: boolean }) {
+function BarIcon({ icon, label }: { icon: IconName; label: string }) {
   return (
     <button
       type="button"
@@ -15,9 +15,6 @@ function BarIcon({ icon, label, alert }: { icon: IconName; label: string; alert?
       className="relative flex h-9 w-9 items-center justify-center rounded-tile text-text2 transition-colors duration-150 ease-soft hover:bg-elevated hover:text-text1"
     >
       <Icon name={icon} size={16} />
-      {alert ? (
-        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger ring-2 ring-app" />
-      ) : null}
     </button>
   );
 }
@@ -72,7 +69,7 @@ export function TopBarB() {
             ⌘K
           </kbd>
         </div>
-        <BarIcon icon="bell" label="Notifications" alert />
+        <BarIcon icon="bell" label="Notifications" />
         <BarIcon icon="chat" label="Messages" />
         <Link
           to="/settings"

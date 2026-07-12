@@ -11,6 +11,9 @@ describe('github mappers (pure)', () => {
     expect(ciFromRun({ workflowName: 'CI', status: 'in_progress', conclusion: null })).toMatchObject({ pct: 50, state: 'running' });
     expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: 'success' })).toMatchObject({ pct: 100, state: 'success' });
     expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: 'failure' })).toMatchObject({ state: 'failed' });
+    // cancelled/skipped are terminal but NOT failures — never a false red bar
+    expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: 'cancelled' })).toMatchObject({ state: 'queued' });
+    expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: null })).toMatchObject({ state: 'queued' });
   });
 
   it('normalizes language + infers category', () => {

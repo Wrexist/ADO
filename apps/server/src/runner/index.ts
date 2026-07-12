@@ -7,7 +7,7 @@
  * spawns get a turn cap + minimal env (in the Spawner). Registry survives restart: a
  * `running` row on boot is an orphan, reconciled to `failed`.
  */
-import { and, eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Bus } from '../bus';
 import type { Db } from '../db';
 import { runs } from '../db/schema';
@@ -47,9 +47,13 @@ export class Runner {
     this.opts = { ...DEFAULTS, ...opts };
   }
 
-  /** On boot, any run still marked running died with the previous process → failed. */
+  /**
+   * On boot, any run still marked running OR queued is an orphan: a `running` row's
+   * process died with the previous server, and the in-memory queue that owned the
+   * `queued` rows is gone — neither can ever resolve itself → failed.
+   */
   reconcileOrphans(): number {
-    const orphans = this.db.select().from(runs).where(eq(runs.status, 'running')).all();
+    const orphans = this.db.select().from(runs).where(inArray(runs.status, ['running', 'queued'])).all();
     for (const o of orphans) {
       this.db
         .update(runs)
@@ -72,21 +76,75 @@ export class Runner {
       .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', status: 'queued', startedTs: now })
       .run();
 
-    // Reflect as a queued build immediately (backs the Build Queue).
+    // Reflect as a queued build immediately (backs the Build Queue), then let the
+    // semaphore-aware drain start it now or hold it until a slot frees.
     this.emitBuild(runId, input, 'queued', null);
-
-    if (this.active < this.opts.maxConcurrent) {
-      void this.run(runId, input, cwd);
-    } else {
-      this.queue.push({ id: runId, input });
-      this.log(`runner: queued ${runId} (${this.active}/${this.opts.maxConcurrent} active)`);
-    }
+    this.queue.push({ id: runId, input });
+    this.drainNext();
     return { runId };
+  }
+
+  /** Start queued runs up to the concurrency limit; fail any whose cwd is no longer allowed. */
+  private drainNext(): void {
+    while (this.active < this.opts.maxConcurrent) {
+      const next = this.queue.shift();
+      if (!next) return;
+      const cwd = this.opts.cwdFor(next.input.repoId);
+      if (!cwd) {
+        // Repo left the allow-list while queued — fail it honestly and keep draining
+        // (the old code dropped it silently AND stopped pulling the rest of the queue).
+        this.failRun(next.id, next.input, null, 'repo left the allow-list before it could run');
+        continue;
+      }
+      void this.run(next.id, next.input, cwd); // run() increments `active` synchronously
+    }
+  }
+
+  /** Mark a run failed end-to-end (DB + build + agent). Best-effort; never throws. */
+  private failRun(runId: string, input: DispatchInput, startedMs: number | null, reason: string): void {
+    try {
+      this.db
+        .update(runs)
+        .set({
+          status: 'failed',
+          endedTs: new Date().toISOString(),
+          durationMs: startedMs ? Date.now() - startedMs : null,
+          note: reason.slice(0, 200),
+        })
+        .where(eq(runs.id, runId))
+        .run();
+    } catch { /* best effort */ }
+    try { this.emitBuild(runId, input, 'failed', startedMs); } catch { /* best effort */ }
+    try {
+      this.bus.publish({
+        id: `agent-evt:${runId}:fail:${Date.now()}`,
+        type: 'agent.upserted',
+        ts: new Date().toISOString(),
+        source: { kind: 'runner', ref: runId },
+        payload: { agent: { id: runId, name: this.agentName(input), icon: 'code', tone: 'danger', kind: 'runner', status: 'failed', statusLine: 'Failed', pct: null } },
+      });
+    } catch { /* best effort */ }
   }
 
   private async run(runId: string, input: DispatchInput, cwd: string): Promise<void> {
     this.active++;
     const startedMs = Date.now();
+    // The whole run is wrapped so ANY throw (spawn, DB write, a zod-invalid publish,
+    // handle.done rejecting) still marks the run failed AND releases the slot. Before,
+    // active-- lived past the last await with no catch: one throw leaked a slot forever
+    // (and surfaced as an unhandledRejection), eventually wedging the runner.
+    try {
+      await this.runBody(runId, input, cwd, startedMs);
+    } catch (err) {
+      this.log(`runner: ${runId} crashed: ${(err as Error).message}`);
+      this.failRun(runId, input, startedMs, (err as Error).message);
+    } finally {
+      this.active--;
+      this.drainNext();
+    }
+  }
+
+  private async runBody(runId: string, input: DispatchInput, cwd: string, startedMs: number): Promise<void> {
     this.db.update(runs).set({ status: 'running' }).where(eq(runs.id, runId)).run();
 
     const agentId = runId;
@@ -176,13 +234,6 @@ export class Runner {
       source: { kind: 'runner', ref: runId },
       payload: { repoId: input.repoId, patch: { agents: [this.agentName(input)] } },
     });
-
-    this.active--;
-    const next = this.queue.shift();
-    if (next) {
-      const cwdNext = this.opts.cwdFor(next.input.repoId);
-      if (cwdNext) void this.run(next.id, next.input, cwdNext);
-    }
   }
 
   private agentName(input: DispatchInput): string {

@@ -115,12 +115,41 @@ describe('runner (Prompts 3.1–3.2)', () => {
     sqlite.close();
   });
 
-  it('reconciles orphaned running rows to failed on boot', () => {
+  it('reconciles orphaned running AND queued rows to failed on boot', () => {
     const { db, sqlite } = openDb(':memory:');
     db.insert(runs).values({ id: 'r-old', repoId: 'sentinel', task: 'x', model: 'default', status: 'running', startedTs: '2026-07-09T00:00:00.000Z' }).run();
+    // a queued row's in-memory queue is gone on restart — it must be reconciled too
+    db.insert(runs).values({ id: 'q-old', repoId: 'sentinel', task: 'y', model: 'default', status: 'queued', startedTs: '2026-07-09T00:00:00.000Z' }).run();
     const runner = new Runner(new Bus(db), db, fakeSpawner([]), { cwdFor });
-    expect(runner.reconcileOrphans()).toBe(1);
+    expect(runner.reconcileOrphans()).toBe(2);
     expect(db.select().from(runs).where(eq(runs.id, 'r-old')).get()!.status).toBe('failed');
+    expect(db.select().from(runs).where(eq(runs.id, 'q-old')).get()!.status).toBe('failed');
+    sqlite.close();
+  });
+
+  it('a throw inside run() releases the slot and drains the queue (no wedge)', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    // First spawn throws; the second works. With maxConcurrent=1, the second only runs
+    // if the failed first correctly released its slot (the old code leaked it forever).
+    let calls = 0;
+    const flaky: Spawner = {
+      spawn(): SpawnHandle {
+        calls++;
+        if (calls === 1) throw new Error('spawn boom');
+        async function* gen() { for (const l of SUCCESS_STREAM) yield l; }
+        return { lines: gen(), done: Promise.resolve(0), kill: () => {} };
+      },
+    };
+    const runner = new Runner(bus, db, flaky, { cwdFor, maxConcurrent: 1 });
+
+    const a = runner.dispatch({ repoId: 'sentinel', task: 'a' });
+    await drain();
+    expect(db.select().from(runs).where(eq(runs.id, a.runId)).get()!.status).toBe('failed'); // spawn threw
+
+    const b = runner.dispatch({ repoId: 'sentinel', task: 'b' });
+    await drain();
+    expect(db.select().from(runs).where(eq(runs.id, b.runId)).get()!.status).toBe('done'); // slot was free
     sqlite.close();
   });
 });

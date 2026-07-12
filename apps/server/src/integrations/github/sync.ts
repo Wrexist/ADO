@@ -70,14 +70,29 @@ export class GitHubSync {
       if (typeof prs === 'number') patch.prs = prs;
       if (run) patch.ci = ciFromRun(run);
 
-      this.bus.publish({
-        id: `gh-enrich:${id}:${gh.pushedAt ?? now()}`,
-        type: 'repo.enriched',
-        ts: now(),
-        source: { kind: 'github', ref: `${gh.owner}/${gh.name}` },
-        payload: { repoId: id, patch },
-      });
-      enriched++;
+      // Emit ONLY when the patch actually changes something. Keying the id on pushedAt
+      // was wrong twice over: PR/CI change without a push (repeat id → dedup drops the
+      // update → stale UI), and a never-pushed repo fell back to now() (fresh id every
+      // 60s → unbounded log growth). Compare against current state; fresh id on change.
+      const current = this.bus.snapshot().state.repos[id];
+      const changed =
+        !current ||
+        ('stars' in patch && current.stars !== patch.stars) ||
+        ('language' in patch && current.language !== patch.language) ||
+        ('prs' in patch && current.prs !== patch.prs) ||
+        ('ci' in patch && JSON.stringify(current.ci) !== JSON.stringify(patch.ci));
+
+      if (changed) {
+        const ts = now();
+        this.bus.publish({
+          id: `gh-enrich:${id}:${ts}`,
+          type: 'repo.enriched',
+          ts,
+          source: { kind: 'github', ref: `${gh.owner}/${gh.name}` },
+          payload: { repoId: id, patch },
+        });
+        enriched++;
+      }
 
       // Releases → deployments (idempotent by release id).
       const releases = await this.client.listReleases(gh.owner, gh.name).catch(() => []);

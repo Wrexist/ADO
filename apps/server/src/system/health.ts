@@ -35,6 +35,7 @@ export class HealthChecker {
     try {
       const res = await fetch('https://api.anthropic.com/v1/models', {
         headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+        signal: AbortSignal.timeout(5000), // a hung endpoint must not pile up 60s requests
       });
       this.emit('anthropic', res.ok ? 'operational' : 'degraded');
     } catch {

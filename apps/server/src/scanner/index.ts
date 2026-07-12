@@ -84,10 +84,15 @@ export class Scanner {
       const ops = parseOps(dir);
       const id = slug(basename(dir));
       this.idToDir.set(id, dir);
+      // Unique id per emit: the bus dedups on event id, so a stable `scan:${id}` would
+      // drop every rescan after the first (openTasks/status/branch would freeze forever).
+      // Rescans only fire on boot + debounced file-change events, so growth is bounded and
+      // the reducer merges base-over-enrichment field-by-field regardless of id.
+      const ts = new Date().toISOString();
       this.bus.publish({
-        id: `scan:${id}`,
+        id: `scan:${id}:${ts}`,
         type: 'repo.upserted',
-        ts: new Date().toISOString(),
+        ts,
         source: { kind: 'scanner', ref: dir },
         payload: {
           repo: {
@@ -97,7 +102,7 @@ export class Scanner {
             status: ops.status,
             description: parseDescription(dir),
             branch: git.branch,
-            updatedTs: git.lastCommitTs ?? new Date().toISOString(),
+            updatedTs: git.lastCommitTs ?? ts,
             openTasks: parseOpenTasks(dir),
           },
         },

@@ -150,6 +150,7 @@ export type TokensState = z.infer<typeof TokensState>;
 const SAMPLE_CAP = 360; // 1h of 10s samples
 const ACTIVITY_CAP = 100;
 const DEPLOYMENT_CAP = 50;
+const BUILD_CAP = 100; // evict oldest TERMINAL builds past this; live builds are never dropped
 
 export const BusState = z.object({
   repos: z.record(z.string(), Repo),
@@ -187,10 +188,13 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
   switch (evt.type) {
     case 'repo.upserted': {
       // Merge, not replace: scanner owns base fields, GitHub/runner own enrichment.
-      // Omitted keys (e.g. scanner has no `agents`) preserve whatever a prior source set.
+      // Strip undefined from the incoming repo so a source that omits (scanner: no CI/
+      // agents) OR explicitly clears an enrichment field never wipes what another source
+      // set — the merge stays additive and enrichment-safe for every field, not just agents.
       const { repo } = p as { repo: Repo };
       const prev = state.repos[repo.id];
-      const merged: Repo = { ...prev, ...repo, agents: repo.agents ?? prev?.agents };
+      const incoming = Object.fromEntries(Object.entries(repo).filter(([, v]) => v !== undefined));
+      const merged = { ...prev, ...incoming } as Repo;
       return { ...state, repos: { ...state.repos, [repo.id]: merged } };
     }
     case 'repo.enriched': {
@@ -207,7 +211,24 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
     }
     case 'build.updated': {
       const { build } = p as { build: Build };
-      return { ...state, builds: { ...state.builds, [build.id]: build } };
+      const builds = { ...state.builds, [build.id]: build };
+      // Bound the map: on an always-on server, an id-per-CI-run would grow forever and
+      // re-serialize into every snapshot frame. Evict OLDEST TERMINAL builds first;
+      // never drop running/queued (those are live and bounded by the runner semaphore).
+      const ids = Object.keys(builds);
+      if (ids.length > BUILD_CAP) {
+        const terminal = ids
+          .map((id) => builds[id])
+          .filter((b) => b.state === 'success' || b.state === 'failed')
+          .sort((a, b) => (a.startedTs ?? '').localeCompare(b.startedTs ?? ''));
+        let over = ids.length - BUILD_CAP;
+        for (const b of terminal) {
+          if (over <= 0) break;
+          delete builds[b.id];
+          over--;
+        }
+      }
+      return { ...state, builds };
     }
     case 'deploy.recorded': {
       const { deployment } = p as { deployment: Deployment };

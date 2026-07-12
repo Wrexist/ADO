@@ -6,7 +6,7 @@ import { ConnectionBadge } from './ConnectionBadge';
  * View A top bar — logo + title block, centered ⌘K search, actions, avatar.
  * ⌘K / Ctrl+K focuses the search input (quality floor).
  */
-function TopBarButton({ icon, label, badge }: { icon: IconName; label: string; badge?: string }) {
+function TopBarButton({ icon, label }: { icon: IconName; label: string }) {
   return (
     <button
       type="button"
@@ -14,11 +14,6 @@ function TopBarButton({ icon, label, badge }: { icon: IconName; label: string; b
       className="relative flex h-9 w-9 items-center justify-center rounded-tile border bg-card text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
     >
       <Icon name={icon} size={16} />
-      {badge ? (
-        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">
-          {badge}
-        </span>
-      ) : null}
     </button>
   );
 }
@@ -80,12 +75,11 @@ export function TopBarA() {
         <ConnectionBadge />
         <TopBarButton icon="plus" label="Create" />
         <TopBarButton icon="calendar" label="Calendar" />
-        <TopBarButton icon="bell" label="Notifications" badge="3" />
-        <div className="relative ml-1">
+        <TopBarButton icon="bell" label="Notifications" />
+        <div className="ml-1">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary">
             IM
           </span>
-          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-success ring-2 ring-app" />
         </div>
       </div>
     </header>

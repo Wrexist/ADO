@@ -52,7 +52,23 @@ export interface AccDeps {
 
 export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
   const { db, sqlite } = openDb(env.dbPath);
-  const app = Fastify({ logger: env.dbPath !== ':memory:' });
+  // The SSE token rides the URL (`/events?token=…`) because EventSource can't set headers,
+  // and the default logger serializes req.url — writing the shared secret to the log file.
+  // Redact it in a custom req serializer (headers are never serialized, so header tokens
+  // stay safe on their own).
+  const app = Fastify({
+    logger: env.dbPath !== ':memory:'
+      ? {
+          serializers: {
+            req: (req: FastifyRequest) => ({
+              method: req.method,
+              url: (req.url ?? '').replace(/([?&]token=)[^&]*/i, '$1[redacted]'),
+              remoteAddress: req.ip,
+            }),
+          },
+        }
+      : false,
+  });
 
   const bus = new Bus(db);
   bus.replayFromDb((msg) => app.log.warn(msg));
@@ -66,8 +82,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
   app.get('/health', async () => ({
     status: 'ok',
-    phase: 2,
-    seq: bus.snapshot().seq,
+    seq: bus.snapshot().seq, // the fold cursor — a real liveness signal, unlike a hardcoded phase
     ts: new Date().toISOString(),
   }));
 
@@ -111,10 +126,15 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       else send(null, 'sample', frame.sample);
     });
     const ping = setInterval(() => reply.raw.write(': ping\n\n'), 15_000);
-    req.raw.on('close', () => {
+    let closed = false;
+    const cleanup = () => {
+      if (closed) return; // 'close' and 'error' can both fire — release once
+      closed = true;
       clearInterval(ping);
       unsubscribe();
-    });
+    };
+    req.raw.on('close', cleanup);
+    reply.raw.on('error', cleanup); // abrupt client reset emits 'error' on the hijacked socket
   });
 
   /** App-open logging — feeds the p2.5 daily-driver gate. Token enforced by the hook. */
