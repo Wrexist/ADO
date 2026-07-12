@@ -17,9 +17,23 @@ export function RepoCard({ repo }: { repo: Repo }) {
   const status = REPO_STATUS_LOOK[repo.status];
   const navigate = useNavigate();
 
+  const open = () => navigate(`/repositories/${repo.id}`);
+
   return (
-    <HoverCard className="flex flex-col gap-3 p-4">
-      {/* header: icon · name+tag · status · menu */}
+    <HoverCard
+      className="flex cursor-pointer flex-col gap-3 p-4 focus-visible:ring-1 focus-visible:ring-primary/50"
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${repo.name}`}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      }}
+    >
+      {/* header: icon · name+tag · status · automate */}
       <div className="flex items-start gap-3">
         <IconTile icon={cat.icon} tone={cat.tone} size="lg" />
         <div className="min-w-0 flex-1">
@@ -32,18 +46,13 @@ export function RepoCard({ repo }: { repo: Repo }) {
             type="button"
             aria-label={`Automate ${repo.name}`}
             title="Add an automation for this repo"
-            onClick={() => navigate(`/automations?repo=${repo.id}&new=1`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/automations?repo=${repo.id}&new=1`);
+            }}
             className="rounded p-1 text-text3 transition-colors duration-150 ease-soft hover:text-primary"
           >
             <Icon name="workflow" size={14} />
-          </button>
-          <button
-            type="button"
-            aria-label={`View ${repo.name} in Repositories`}
-            onClick={() => navigate(`/repositories?cat=${repo.category}`)}
-            className="rounded p-1 text-text3 transition-colors duration-150 ease-soft hover:text-text1"
-          >
-            <Icon name="dots" size={14} />
           </button>
         </div>
       </div>

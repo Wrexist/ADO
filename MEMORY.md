@@ -9,6 +9,26 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · Project command page (single-pane per repo)
+- New `/repositories/:id` — one clean screen per project tying together everything that IS
+  honestly repo-scoped: header strip (category · status · branch · language · stars · PRs ·
+  CI bar), **Dispatch an agent** box (real `claude -p` via the runner), Recent builds
+  (state.builds where repo===id), Agents (repo.agents → state.agents), and this repo's
+  Automations with Run + Manage. Repo cards (dashboard + Repositories) are now the click
+  target → the project page (accessible: role=button, tabIndex, Enter/Space); the corner
+  "Automate" shortcut stays (stopPropagation). ⌘K repo results point here too.
+- **Honest data gap (left as empty states, not faked):** activity + deployments have no
+  repoId in their contracts, so they're omitted from the per-project view rather than matched
+  by name. Worth a future event-contract change (tag activity/deploy with repoId) to enrich it.
+- **Workflow fan-out finding:** the `.claude/workflows` recipes are a Claude Code SESSION
+  feature — there is no headless CLI to run them as multi-agent fan-out (`claude --help` has
+  no workflow command; only `ultrareview` is a real headless multi-agent path). So the app
+  can't drive true fan-out; workflow automations stay single-agent-follows-the-recipe. Don't
+  claim otherwise. If asked again, offer wiring `claude ultrareview` as an opt-in review action.
+- verify + smoke green (added /repositories/sentinel to the smoke set).
+
+---
+
 ## 2026-07-12 · Claude · Automations polish (sources · edit · per-repo deep-link)
 - Source picker in the add/edit form: **Templates · Prompt Library · Workflows · Custom**.
   Workflows are now bindable — picking a recipe prefills a single-agent task built from its

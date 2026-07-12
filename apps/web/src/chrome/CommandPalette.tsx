@@ -69,7 +69,7 @@ export function CommandPalette() {
       label: r.name,
       sub: `Repository · ${r.category}`,
       icon: 'repos',
-      to: `/repositories?cat=${r.category}`,
+      to: `/repositories/${r.id}`,
     }));
     const agents: Item[] = Object.values(state.agents).map((a) => ({
       id: `agent:${a.id}`,

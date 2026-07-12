@@ -11,6 +11,7 @@ import { KitPage } from './pages/KitPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PromptsPage } from './pages/PromptsPage';
 import { RepositoriesPage } from './pages/RepositoriesPage';
+import { ProjectPage } from './pages/ProjectPage';
 import { AgentsPage } from './pages/AgentsPage';
 import { DeploymentsPage } from './pages/DeploymentsPage';
 import { ActivityPage } from './pages/ActivityPage';
@@ -36,6 +37,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/prompts" element={<PromptsPage />} />
         <Route path="/repositories" element={<RepositoriesPage />} />
+        <Route path="/repositories/:id" element={<ProjectPage />} />
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/deployments" element={<DeploymentsPage />} />
         <Route path="/activity" element={<ActivityPage />} />
