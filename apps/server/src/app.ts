@@ -24,6 +24,7 @@ import { HealthChecker } from './system/health';
 import { Runner } from './runner';
 import { ClaudeSpawner, type Spawner } from './runner/spawner';
 import { HeuristicParser } from './command/parser';
+import { ClaudeParser } from './command/claudeParser';
 import { respond, execute } from './command/execute';
 import { TokenRollup } from './command/tokens';
 import { Scheduler } from './scheduler';
@@ -334,14 +335,21 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
 
   // Command center (Phase 4): parse NL → intent → read now / preview-to-confirm for
-  // mutations. Reuses the shared cwdFor allow-list resolver.
-  const parser = new HeuristicParser();
+  // mutations. Reuses the shared cwdFor allow-list resolver. Claude parses when an
+  // Anthropic key is connected (fuzzier language); it self-falls-back to the heuristic
+  // parser with no key or on any API error, so the box works offline (parsedBy is honest).
+  const parser = new ClaudeParser(
+    () => connections.resolve('anthropic'),
+    new HeuristicParser(),
+    fetch,
+    (msg) => app.log.info(msg),
+  );
   const cmdDeps = { bus, runner, cwdFor };
 
   app.post('/api/command', async (req, reply) => {
     const text = ((req.body ?? {}) as { text?: string }).text?.trim();
     if (!text) return reply.code(400).send({ error: 'text is required' });
-    const intent = parser.parse(text, Object.keys(bus.snapshot().state.repos));
+    const intent = await parser.parse(text, Object.keys(bus.snapshot().state.repos));
     return respond(intent, cmdDeps);
   });
 
