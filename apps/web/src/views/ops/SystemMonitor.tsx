@@ -12,7 +12,7 @@ export function SystemMonitor() {
 
   return (
     <Card className="p-5">
-      <SectionHeader title="System Monitor" action="View full metrics" />
+      <SectionHeader title="System Monitor" action="View full metrics" actionTo="/planned/performance" />
       <div className="mt-3 grid grid-cols-3 gap-2.5">
         {series.map((s) => (
           <div key={s.id} className="rounded-tile bg-elevated p-2.5">

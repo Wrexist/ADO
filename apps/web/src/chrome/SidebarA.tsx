@@ -16,10 +16,10 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
   {
     eyebrow: 'Workspace',
     items: [
-      { icon: 'repos', label: 'Repositories', count: counts.repositories },
-      { icon: 'games', label: 'Games', count: counts.games },
-      { icon: 'agents', label: 'Agents', count: counts.agents },
-      { icon: 'templates', label: 'Templates' },
+      { icon: 'repos', label: 'Repositories', count: counts.repositories, to: '/repositories' },
+      { icon: 'games', label: 'Games', count: counts.games, to: '/repositories?cat=game' },
+      { icon: 'agents', label: 'Agents', count: counts.agents, to: '/agents' },
+      { icon: 'templates', label: 'Templates', to: '/planned/templates' },
       { icon: 'keys', label: 'Secrets & Keys', to: '/settings' },
       { icon: 'integrations', label: 'Integrations', to: '/settings' },
     ],
@@ -28,27 +28,27 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
     eyebrow: 'AI Tools',
     items: [
       { icon: 'chat', label: 'Prompt Library', to: '/prompts' },
-      { icon: 'code', label: 'Code Assistant' },
-      { icon: 'games', label: 'Game Builder' },
-      { icon: 'wand', label: 'UI Generator' },
-      { icon: 'database', label: 'Database' },
-      { icon: 'chart', label: 'Analytics' },
+      { icon: 'code', label: 'Code Assistant', to: '/planned/code-assistant' },
+      { icon: 'games', label: 'Game Builder', to: '/planned/game-builder' },
+      { icon: 'wand', label: 'UI Generator', to: '/planned/ui-generator' },
+      { icon: 'database', label: 'Database', to: '/planned/database' },
+      { icon: 'chart', label: 'Analytics', to: '/planned/analytics' },
     ],
   },
   {
     eyebrow: 'Deploy & Release',
     items: [
-      { icon: 'rocket', label: 'Deployments' },
-      { icon: 'pipeline', label: 'CI/CD Pipelines' },
-      { icon: 'releases', label: 'Releases' },
+      { icon: 'rocket', label: 'Deployments', to: '/deployments' },
+      { icon: 'pipeline', label: 'CI/CD Pipelines', to: '/planned/cicd-pipelines' },
+      { icon: 'releases', label: 'Releases', to: '/deployments' },
     ],
   },
   {
     eyebrow: 'Settings',
     items: [
       { icon: 'settings', label: 'Workspace Settings', to: '/settings' },
-      { icon: 'team', label: 'Team' },
-      { icon: 'billing', label: 'Billing' },
+      { icon: 'team', label: 'Team', to: '/planned/team' },
+      { icon: 'billing', label: 'Billing', to: '/planned/billing' },
     ],
   },
 ];

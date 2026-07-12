@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { tokens } from '@ado/shared';
 import { Card, Chip, Icon, IconTile, PillTabs } from '../../kit';
 import { useBus } from '../../store/bus';
@@ -93,12 +94,12 @@ export function ProjectsOverview() {
         })}
       </div>
 
-      <button
-        type="button"
-        className="mt-1 w-full border-t border-white/[0.05] pt-3 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:text-text1"
+      <Link
+        to="/repositories"
+        className="mt-1 block w-full border-t border-white/[0.05] pt-3 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:text-text1"
       >
         View all repositories
-      </button>
+      </Link>
     </Card>
   );
 }

@@ -10,6 +10,11 @@ import { OpsPage } from './pages/OpsPage';
 import { KitPage } from './pages/KitPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PromptsPage } from './pages/PromptsPage';
+import { RepositoriesPage } from './pages/RepositoriesPage';
+import { AgentsPage } from './pages/AgentsPage';
+import { DeploymentsPage } from './pages/DeploymentsPage';
+import { ActivityPage } from './pages/ActivityPage';
+import { PlaceholderPage } from './pages/PlaceholderPage';
 import { startBus } from './bus/connect';
 import './index.css';
 
@@ -25,6 +30,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/ops" element={<OpsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/prompts" element={<PromptsPage />} />
+        <Route path="/repositories" element={<RepositoriesPage />} />
+        <Route path="/agents" element={<AgentsPage />} />
+        <Route path="/deployments" element={<DeploymentsPage />} />
+        <Route path="/activity" element={<ActivityPage />} />
+        <Route path="/planned/:slug" element={<PlaceholderPage />} />
         {/* kit demo — every component in every state (gate p1 criterion) */}
         <Route path="/kit" element={<KitPage />} />
       </Routes>

@@ -11,7 +11,7 @@ export function RecentDeployments() {
 
   return (
     <Card className="p-5">
-      <SectionHeader title="Recent Deployments" action="View all" />
+      <SectionHeader title="Recent Deployments" action="View all" actionTo="/deployments" />
       <div className="mt-2 flex flex-col divide-y divide-white/[0.05]">
         {rows.map((d) => (
           <div key={d.id} className="flex items-center gap-2.5 py-3">

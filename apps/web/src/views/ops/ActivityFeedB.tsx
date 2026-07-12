@@ -10,7 +10,7 @@ export function ActivityFeedB() {
 
   return (
     <Card className="p-5">
-      <SectionHeader title="Activity Feed" action="View all" />
+      <SectionHeader title="Activity Feed" action="View all" actionTo="/activity" />
       <div className="mt-2 flex flex-col divide-y divide-white/[0.05]">
         {items.map((a) => (
           <FeedRow

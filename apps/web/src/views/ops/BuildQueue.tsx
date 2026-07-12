@@ -13,7 +13,7 @@ export function BuildQueue() {
 
   return (
     <Card className="p-5">
-      <SectionHeader title="Build Queue" action="View all" />
+      <SectionHeader title="Build Queue" action="View all" actionTo="/agents" />
       <div className="mt-2 flex flex-col divide-y divide-white/[0.05]">
         {rows.map((b) => (
           <div key={b.id} className="flex items-center gap-3 py-3">

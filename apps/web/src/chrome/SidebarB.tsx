@@ -13,38 +13,38 @@ const GROUPS: NavGroup[] = [
   {
     eyebrow: 'Workspace',
     items: [
-      { icon: 'repos', label: 'Repositories' },
-      { icon: 'games', label: 'Games' },
-      { icon: 'grid', label: 'Apps' },
-      { icon: 'cloud', label: 'Websites' },
-      { icon: 'integrations', label: 'Services' },
-      { icon: 'database', label: 'Databases' },
+      { icon: 'repos', label: 'Repositories', to: '/repositories' },
+      { icon: 'games', label: 'Games', to: '/repositories?cat=game' },
+      { icon: 'grid', label: 'Apps', to: '/repositories?cat=app' },
+      { icon: 'cloud', label: 'Websites', to: '/repositories?cat=web' },
+      { icon: 'integrations', label: 'Services', to: '/repositories?cat=service' },
+      { icon: 'database', label: 'Databases', to: '/planned/database' },
       { icon: 'lock', label: 'Secrets', to: '/settings' },
     ],
   },
   {
     eyebrow: 'AI Tools',
     items: [
-      { icon: 'agents', label: 'AI Agents' },
-      { icon: 'workflow', label: 'Automation' },
-      { icon: 'pipeline', label: 'Workflows' },
+      { icon: 'agents', label: 'AI Agents', to: '/agents' },
+      { icon: 'workflow', label: 'Automation', to: '/planned/automation' },
+      { icon: 'pipeline', label: 'Workflows', to: '/planned/workflows' },
       { icon: 'chat', label: 'Prompts', to: '/prompts' },
-      { icon: 'sparkle', label: 'Models' },
+      { icon: 'sparkle', label: 'Models', to: '/planned/models' },
     ],
   },
   {
     eyebrow: 'Monitoring',
     items: [
-      { icon: 'chart', label: 'Analytics' },
-      { icon: 'list', label: 'Logs' },
-      { icon: 'bell', label: 'Alerts' },
-      { icon: 'health', label: 'Performance' },
+      { icon: 'chart', label: 'Analytics', to: '/planned/analytics' },
+      { icon: 'list', label: 'Logs', to: '/activity' },
+      { icon: 'bell', label: 'Alerts', to: '/planned/alerts' },
+      { icon: 'health', label: 'Performance', to: '/planned/performance' },
     ],
   },
   {
     eyebrow: 'Settings',
     items: [
-      { icon: 'team', label: 'Team' },
+      { icon: 'team', label: 'Team', to: '/planned/team' },
       { icon: 'integrations', label: 'Integrations', to: '/settings' },
       { icon: 'settings', label: 'Settings', to: '/settings' },
     ],
@@ -103,9 +103,11 @@ export function SidebarB() {
             <p className="text-label text-text2">{proPlan.body}</p>
           </div>
         </div>
-        <Button size="sm" className="mt-3 w-full">
-          {proPlan.cta}
-        </Button>
+        <Link to="/planned/billing" className="mt-3 block">
+          <Button size="sm" className="w-full">
+            {proPlan.cta}
+          </Button>
+        </Link>
       </Card>
     </aside>
   );

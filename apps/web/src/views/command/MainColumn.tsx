@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AgentTile,
   Button,
@@ -65,10 +66,12 @@ export function MainColumn() {
               </button>
             ))}
           </div>
-          <Button>
-            <Icon name="plus" size={14} />
-            New
-          </Button>
+          <Link to="/planned/new-project">
+            <Button>
+              <Icon name="plus" size={14} />
+              New
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -127,17 +130,17 @@ export function MainColumn() {
           ))}
         </div>
 
-        <button
-          type="button"
-          className="mt-4 w-full rounded-card border bg-card py-2.5 text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
+        <Link
+          to="/repositories"
+          className="mt-4 block w-full rounded-card border bg-card py-2.5 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
         >
           View all repositories →
-        </button>
+        </Link>
       </div>
 
       {/* running agents — live runner processes only */}
       <div className="mt-8">
-        <SectionHeader title="Running Agents" action="View all agents" />
+        <SectionHeader title="Running Agents" action="View all agents" actionTo="/agents" />
         <div className="mt-4 grid grid-cols-5 gap-3">
           {running.map((a) => (
             <AgentTile

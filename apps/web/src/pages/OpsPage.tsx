@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { SidebarB } from '../chrome/SidebarB';
 import { TopBarB } from '../chrome/TopBarB';
 import { StaleBanner } from '../chrome/StaleBanner';
@@ -60,11 +61,15 @@ export function OpsPage() {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Button>New Project</Button>
-              <Button variant="outline">
-                <Icon name="sparkle" size={14} />
-                AI Assistant
-              </Button>
+              <Link to="/planned/new-project">
+                <Button>New Project</Button>
+              </Link>
+              <Link to="/prompts">
+                <Button variant="outline">
+                  <Icon name="sparkle" size={14} />
+                  AI Assistant
+                </Button>
+              </Link>
             </div>
           </div>
 

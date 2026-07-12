@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -54,12 +55,12 @@ export function RightRail() {
             <p className="py-6 text-center text-body text-text3">No activity yet</p>
           ) : null}
         </div>
-        <button
-          type="button"
-          className="mt-2 w-full border-t border-white/[0.05] pt-3 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:text-text1"
+        <Link
+          to="/activity"
+          className="mt-2 block w-full border-t border-white/[0.05] pt-3 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:text-text1"
         >
           View all activity →
-        </button>
+        </Link>
       </Card>
 
       {/* System Status — health-check events; unknown is honest */}
