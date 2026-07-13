@@ -10,6 +10,7 @@
  * so the pipeline is exercised end-to-end before real sources exist.
  */
 import { z } from 'zod';
+import { Diagnosis, Incident } from './incidents';
 import {
   Agent,
   ActivityItem,
@@ -132,6 +133,20 @@ export const AppOpenedEvent = z.object({
   payload: z.object({ sessionId: z.string() }),
 });
 
+/** A failure captured anywhere (server/web/runner) — the self-diagnosis feed's raw input. */
+export const IncidentReportedEvent = z.object({
+  ...base,
+  type: z.literal('incident.reported'),
+  payload: z.object({ incident: Incident }),
+});
+
+/** The AI-or-heuristic root-cause analysis attached to a reported incident. */
+export const IncidentDiagnosedEvent = z.object({
+  ...base,
+  type: z.literal('incident.diagnosed'),
+  payload: z.object({ incidentId: z.string(), diagnosis: Diagnosis }),
+});
+
 /** The discriminated union all consumers switch on. */
 export const AccEvent = z.discriminatedUnion('type', [
   RepoUpsertedEvent,
@@ -147,6 +162,8 @@ export const AccEvent = z.discriminatedUnion('type', [
   TokensRollupEvent,
   StatsSnapshotEvent,
   AppOpenedEvent,
+  IncidentReportedEvent,
+  IncidentDiagnosedEvent,
 ]);
 export type AccEvent = z.infer<typeof AccEvent>;
 export type AccEventType = AccEvent['type'];

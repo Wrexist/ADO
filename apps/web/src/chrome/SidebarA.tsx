@@ -11,7 +11,7 @@ import { sidebarCounts, isNavActive } from '../lib/selectors';
 type NavEntry = { icon: IconName; label: string; count?: number; active?: boolean; to?: string };
 type NavGroup = { eyebrow?: string; items: NavEntry[] };
 
-const buildGroups = (counts: { repositories: number; games: number; agents: number }): NavGroup[] => [
+const buildGroups = (counts: { repositories: number; games: number; agents: number; diagnostics: number }): NavGroup[] => [
   { items: [{ icon: 'overview', label: 'Overview', to: '/command' }] },
   {
     eyebrow: 'Workspace',
@@ -42,6 +42,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
     items: [
       { icon: 'rocket', label: 'Deployments', to: '/deployments' },
       { icon: 'health', label: 'Performance', to: '/performance' },
+      { icon: 'sparkle', label: 'Diagnostics', count: counts.diagnostics || undefined, to: '/diagnostics' },
       { icon: 'pipeline', label: 'CI/CD Pipelines', to: '/planned/cicd-pipelines' },
       { icon: 'releases', label: 'Releases', to: '/deployments' },
     ],
@@ -100,7 +101,7 @@ export function SidebarA() {
   const state = useBus((s) => s.state);
   const location = useLocation();
   const path = location.pathname;
-  const raw = buildGroups(sidebarCounts(state));
+  const raw = buildGroups({ ...sidebarCounts(state), diagnostics: state.incidents.length });
   // Real destinations stay in their groups; unbuilt (/planned/*) items collapse into one
   // dimmed "Soon" disclosure so the working surface stands out.
   const groups = raw.map((g) => ({

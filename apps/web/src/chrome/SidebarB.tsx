@@ -38,6 +38,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { icon: 'chart', label: 'Analytics', to: '/analytics' },
       { icon: 'health', label: 'Performance', to: '/performance' },
+      { icon: 'sparkle', label: 'Diagnostics', to: '/diagnostics' },
       { icon: 'list', label: 'Activity', to: '/activity' },
       { icon: 'bell', label: 'Alerts', to: '/planned/alerts' },
     ],

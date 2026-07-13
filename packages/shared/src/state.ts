@@ -7,6 +7,7 @@
  * no drift.
  */
 import { z } from 'zod';
+import { Diagnosis, Incident, IncidentRecord } from './incidents';
 
 // —— enums ————————————————————————————————————————————————————————————————————
 
@@ -165,6 +166,7 @@ const ACTIVITY_CAP = 100;
 const DEPLOYMENT_CAP = 50;
 const BUILD_CAP = 100; // evict oldest TERMINAL builds past this; live builds are never dropped
 const STAT_HISTORY_CAP = 60; // ~2 months of daily stat snapshots per key (for trend deltas)
+const INCIDENT_CAP = 50; // newest-first ring of self-diagnosis incidents
 
 /** One day's stored value of a headline stat — the source for "↑2 this week" deltas. */
 export const StatPoint = z.object({ day: z.string(), value: z.number() });
@@ -180,6 +182,7 @@ export const BusState = z.object({
   health: z.record(z.string(), HealthCheck),
   tokens: TokensState.nullable(),
   statHistory: z.record(z.string(), z.array(StatPoint)), // key → daily points, oldest first
+  incidents: z.array(IncidentRecord), // newest first, capped — self-diagnosis feed
 });
 export type BusState = z.infer<typeof BusState>;
 
@@ -194,6 +197,7 @@ export function emptyState(): BusState {
     health: {},
     tokens: null,
     statHistory: {},
+    incidents: [],
   };
 }
 
@@ -303,6 +307,25 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
           .slice(-STAT_HISTORY_CAP);
       }
       return { ...state, statHistory };
+    }
+    case 'incident.reported': {
+      // Newest-first, dedupe by id, bounded. A re-reported id replaces the prior record
+      // (a fresh occurrence supersedes it) — matches activity.appended semantics.
+      const { incident } = p as { incident: Incident };
+      const incidents = [incident, ...state.incidents.filter((i) => i.id !== incident.id)].slice(
+        0,
+        INCIDENT_CAP,
+      );
+      return { ...state, incidents };
+    }
+    case 'incident.diagnosed': {
+      // Attach the diagnosis to its incident and flip it to 'diagnosed'. If the incident was
+      // already evicted (past the cap) the map is a no-op — dropped honestly, never faked.
+      const { incidentId, diagnosis } = p as { incidentId: string; diagnosis: Diagnosis };
+      const incidents = state.incidents.map((i) =>
+        i.id === incidentId ? { ...i, diagnosis, status: 'diagnosed' as const } : i,
+      );
+      return { ...state, incidents };
     }
     default:
       // Unknown event type: ignore honestly (forward compatibility) — never crash the UI.

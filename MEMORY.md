@@ -377,6 +377,35 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-13 · Claude · Self-healing (incident capture → AI diagnosis → confirmed fix)
+- shipped: an honest realization of "if it breaks, fix itself" in three layers.
+  (1) **Resilience** — a root React `ErrorBoundary` (reports the crash, shows a calm fallback,
+  recovers on navigation via a pathname resetKey) + Fastify `setErrorHandler` (500s only) +
+  process `unhandledRejection`/`uncaughtException` hooks (log + report, deliberately NO exit —
+  staying up degraded beats dying for a local dashboard).
+  (2) **AI diagnosis** — `IncidentDiagnoser` asks the Messages API WHY via a FORCED, `strict`
+  tool call on **`claude-opus-4-8`** (root-cause = the debugging case that earns the top model,
+  conv. 5), validated by the shared zod `Diagnosis`; self-falls-back to a **heuristic** (pattern
+  table: network/timeout/auth/null-deref/zod/sqlite/…) with honest low confidence when no key /
+  API error. `IncidentReporter` throttles identical failures to 1/min (a render loop can't flood
+  the API), publishes `incident.reported` then `incident.diagnosed` through the bus — the web sees
+  both over SSE, no polling.
+  (3) **Confirmed fix** — `/diagnostics` page lists each incident + its diagnosis (severity chip,
+  why/fix/prevention, confidence, provenance) and a repo-scoped **Dispatch fix** that runs a REAL
+  agent via the existing runner + cwd allow-list. NOT unattended auto-edit — the user picks the
+  repo and clicks (same "nothing acts without confirm" rule). New shared contracts
+  (`incidents.ts`: Incident/Diagnosis/IncidentRecord + 2 events + reducer, bounded ring cap 50),
+  nav in both sidebars (live incident-count badge on View A) + ⌘K entry, and a `--demo` seed of
+  two example incidents so the page is self-documenting.
+- verify green (typecheck ×3 · lint · **141 tests**, +15 incident server + 3 shared reducer · build);
+  zero console errors on /command · /ops · /diagnostics at 1536px. Opened a PR for the ADO repo.
+- next / watch-outs: fix-dispatch needs the target repo scanned + `claude` installed (honest 403/400
+  otherwise). The diagnoser runs opus per incident — the 1/min throttle bounds cost, but if incident
+  volume ever spikes, consider a cheaper triage model in front. Auto-APPLYING a fix stays deliberately
+  out of scope (unsafe for a running app); the confirmed dispatch is the line.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

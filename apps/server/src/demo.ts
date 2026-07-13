@@ -131,6 +131,46 @@ export function seedDemo(bus: Bus): void {
     windowLabel: '7 days',
   });
 
+  // incidents → the self-diagnosis feed. Two diagnosed examples so /diagnostics is
+  // self-documenting in the demo world (real mode captures these live when things break):
+  // one AI-diagnosed server fault, one heuristic-diagnosed web crash. Reported then diagnosed,
+  // exactly as the runtime does it.
+  const incTs = (minAgo: number) => new Date(new Date(MOCK_NOW).getTime() - minAgo * 60_000).toISOString();
+  const seedIncident = (
+    inc: { id: string; source: 'server' | 'web' | 'runner'; kind: string; message: string; context?: string; stack?: string; minAgo: number },
+    dx: { summary: string; rootCause: string; severity: 'low' | 'medium' | 'high' | 'critical'; suggestedFix: string; prevention: string; confidence: number; diagnosedBy: 'claude' | 'heuristic' },
+  ) => {
+    const ts = incTs(inc.minAgo);
+    pub(`incident:${inc.id}`, 'incident.reported', ts, {
+      incident: { id: inc.id, ts, source: inc.source, kind: inc.kind, message: inc.message, context: inc.context, stack: inc.stack, status: 'open' },
+    });
+    pub(`incident-dx:${inc.id}`, 'incident.diagnosed', incTs(inc.minAgo - 0.2), { incidentId: inc.id, diagnosis: dx });
+  };
+  seedIncident(
+    { id: 'demo-inc-1', source: 'server', kind: 'route-error', minAgo: 12, context: 'GET /api/command', message: "TypeError: Cannot read properties of undefined (reading 'pct')", stack: "at respond (command/execute.ts:64)\nat POST /api/command" },
+    {
+      summary: 'A command targeted a repo that has no CI data yet.',
+      rootCause: 'The command handler read repo.ci.pct without guarding the case where a scanned repo has never run CI, so ci is undefined.',
+      severity: 'high',
+      suggestedFix: 'Guard the access with optional chaining (repo.ci?.pct) and render the honest “no CI” state when it is absent.',
+      prevention: 'Keep ci optional in the Repo contract (it already is) and never assume enrichment fields exist at read sites.',
+      confidence: 0.86,
+      diagnosedBy: 'claude',
+    },
+  );
+  seedIncident(
+    { id: 'demo-inc-2', source: 'web', kind: 'react-render', minAgo: 40, context: '/ops · in ActivityFeedB', message: "Cannot read properties of null (reading 'map')" },
+    {
+      summary: 'A feed component mapped over a value that was null.',
+      rootCause: 'Code accessed a property/method on a value that was undefined or null — a shape assumption that did not hold at runtime.',
+      severity: 'medium',
+      suggestedFix: 'Add a null/undefined guard (optional chaining, a default, or an early return) at the access site the stack points to.',
+      prevention: 'Parse external/boundary data with zod so a wrong shape fails loudly at the edge, not deep in a component.',
+      confidence: 0.45,
+      diagnosedBy: 'heuristic',
+    },
+  );
+
   // stat history → the "↑N this week" deltas render in the baseline world (real mode
   // accrues these live via the daily stats-snapshot job). One point per day for a week;
   // oldest-in-window is the delta baseline, so repos read +2 and deployments +1 vs today.

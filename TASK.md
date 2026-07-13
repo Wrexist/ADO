@@ -6,6 +6,37 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Self-healing round (2026-07-13) — "if it breaks, fix itself"
+Built an honest realization of the ask: the app degrades gracefully instead of breaking, uses the
+Anthropic key to explain WHY each failure happened, and offers a **confirmed** one-click fix. Auto-
+applying unattended AI code edits to a running app was explicitly rejected as unsafe (the opposite of
+"never breaks") — the fix is one-click-with-a-repo-picker through the existing runner + cwd allow-list.
+- [x] **Shared contracts** (`@ado/shared/incidents`): `Incident` / `Diagnosis` / `IncidentRecord` zod
+  types (self-contained leaf module → no reducer import cycle) + `incident.reported` / `incident.diagnosed`
+  events + reducer (`state.incidents`, newest-first, dedupe by id, cap 50, merge diagnosis + flip status).
+  3 new reducer tests.
+- [x] **Server — `IncidentDiagnoser`** (`incidents/diagnoser.ts`): forced **strict** tool call on
+  **`claude-opus-4-8`** (root-cause = the debugging case reserved for the top model, conv. 5), zod-validated,
+  with a **heuristic fallback** (pattern table: network/timeout/auth/rate-limit/not-found/null-deref/zod/
+  sqlite + kind→severity) that never throws and is honest about low confidence. Thin fetch adapter pinned to
+  a fixed anthropic-version (conv. 12); injectable FetchFn seam.
+- [x] **Server — `IncidentReporter`** + wiring: publishes `incident.reported` then (fire-and-forget, own
+  catch) `incident.diagnosed`; **throttles identical failures to 1/min** so a crash loop can't flood the bus
+  or the API. Fastify `setErrorHandler` (reports 500s only, still returns clean JSON) + process
+  `unhandledRejection`/`uncaughtException` hooks in index.ts (log + report, **no exit** — degrade, don't die).
+  Endpoints: `GET /api/incidents`, `POST /api/incidents` (web ErrorBoundary reports here), `POST
+  /api/incidents/:id/fix` (confirmed, repo-scoped dispatch — 404/400/403 honestly). 15 new server tests.
+- [x] **Web — resilience + surface**: root `ErrorBoundary` (reports the crash → `/api/incidents`, calm
+  fallback, recovers on navigation via a pathname resetKey) wrapping all routes; **`/diagnostics`** page —
+  each incident with severity chip, why/fix/prevention, confidence + provenance (AI vs heuristic), and a
+  repo-scoped **Dispatch fix**. Nav in both sidebars (live incident-count badge on View A) + ⌘K entry.
+- [x] **`--demo` seed**: two example diagnosed incidents (one Claude, one heuristic) so `/diagnostics` is
+  self-documenting in the demo world; real mode only ever shows real captured failures.
+- [x] **verify green** (typecheck ×3 · lint · **141 tests** · build); zero console errors on
+  `/command` · `/ops` · `/diagnostics` at 1536px. Screenshots sent to Isac. PR opened for the ADO repo.
+
+---
+
 ## Done (Phase 6 — Prompt Library + optimized loops + hardening)
 - [x] **Prompt Library — model-optimized catalog** (`@ado/shared/prompts`): 25 curated, production-grade prompts heavy on **games / mobile / Steam / apps** (+ web/backend/testing/perf/security/refactor/docs/devops), 12 categories. Each prompt has a general `body` + optional per-model `variants`; `renderPrompt(p, model)` prepends a per-model **tuning preamble** (Claude/GPT/Gemini) and picks the best body — so the same prompt comes out **shaped for the selected AI** without duplicating every entry. No-fabrication respected (copy/marketing prompts flagged single-shot drafts, `dispatchable:false`).
 - [x] **Trained specialized agents** (`@ado/shared` AGENTS): Game Developer, Mobile Developer, Steam Release Engineer, App Feature Builder — each a dispatch profile with a **system preamble (the training)**, recommended model, and an explicit **verifiable loop + exit check** (convention 6: loops run only on checkable work). `renderAgentDispatch(agent, prompt, model)` wraps a paired prompt with the preamble + loop so the runner **iterates against the exit check** instead of one-shotting.
