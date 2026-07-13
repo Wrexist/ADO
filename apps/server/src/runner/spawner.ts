@@ -47,7 +47,12 @@ export class ClaudeSpawner implements Spawner {
     const child = spawn('claude', args, {
       cwd: opts.cwd,
       env: minimalEnv(),
-      stdio: ['ignore', 'pipe', 'pipe'],
+      // stderr → 'ignore' (not 'pipe'): we consume only stdout (the stream-json line
+      // protocol) via readline. A piped-but-unread stderr deadlocks the child once it
+      // exceeds the OS pipe buffer (~64KB of verbose/auth diagnostics), so the run would
+      // hang until the wall-clock timeout. Merging stderr into stdout would corrupt the
+      // JSONL, so we drop it at the OS level instead.
+      stdio: ['ignore', 'pipe', 'ignore'],
     });
     // Best-effort: drop the child's scheduling priority so a build can't pin the box.
     try {

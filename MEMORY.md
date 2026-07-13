@@ -9,6 +9,146 @@ Each entry: date · who · what shipped · what's next / watch-outs.
 
 ---
 
+## 2026-07-12 · Claude · placeholder/unfinished sweep — graduate, remove, or fix honestly
+Audited the whole repo (web myself + a server/shared Explore agent) for placeholders + unfinished
+code, then triaged each: build it from real data, remove it (vestigial), or make it honest.
+- **Graduated 2 placeholders to REAL pages (real data, honest empty states):**
+  - `/performance` (`PerformancePage`) — CPU/mem/net full series from `state.samples`, System Health
+    (with ⓘ formula), build throughput (tracked/pass-rate/failed). "This machine" qualifier. Wires the
+    dead SystemMonitor "View full metrics" + Sidebar Performance.
+  - `/analytics` (`AnalyticsPage`) — repos by category, build outcomes, deployments by env, token
+    trend — all rolled up from stored events; trends/empties honest. Wires Sidebar + Quick Actions.
+- **Removed vestigial SaaS cruft** (wrong for a local single-user tool): the Pro Plan/Upgrade card
+  (SidebarB) + Billing/Team/Messages/Calendar nav items; pruned them (+ graduated performance/analytics,
+  + dead new-project) from the `PLANNED` registry (16 → 9). Relabelled SidebarB "Logs" → "Activity".
+- **Server honesty fixes (from the agent audit):**
+  - **Runner health now emitted** (`health.ts` tick emits `runner` operational via an injectable
+    state cb) — before, `runner` was never reported, so System Health was silently capped ≤95% and the
+    status row was permanently "No data". +2 tests.
+  - **`repo.removed` now emitted on rescan** (`app.ts` rebuildScanner diffs prior vs fresh scanner ids;
+    `Scanner.repoIds()`) — completes last turn's DELETE /api/projects: removing a folder now prunes its
+    repos instead of leaving ghosts. GitHub-only repos untouched (never in the scanner id set). +1 test
+    (add real git repo → appears; remove → gone).
+  - **Compact `agent.upserted`** (highest-volume latest-only type, keyed by runId) in `bus.compact()` so
+    a dispatch's progress ticks don't accrete/replay forever.
+  - Removed dead `ADAPTER_VERSION` export; corrected the run-log schema comment (verifyVerdict/humanAction
+    are reserved-for-parked-analyzer, not written).
+- **Copy honesty:** Ops AssistantPanel chips now carry a real repo (old "Fix bugs" chips dead-ended on
+  "which repo?") + honest subcopy; DeploymentsPage subtitle dropped "and the runner" (runner emits builds,
+  not deploys).
+- verify green (133 tests) · smoke green (0 console errors); captured the 2 new pages.
+- **Left honest (not removed, no data yet):** Templates, Code Assistant, Game Builder, UI Generator,
+  Database, CI/CD, Models, Alerts, New-agent — genuine future features, grouped in the "Soon" disclosure.
+
+## 2026-07-12 · Claude · clarity follow-ups (nav Soon · Settings split · health info · slug→name · ⌘K acts)
+Cleared the five deferred clarity items from the easier-to-use pass.
+- **Nav "Soon" disclosure:** both sidebars now filter `/planned/*` items out of their groups into
+  one dimmed, collapsed `<details>` "Soon (N)" (A: 9, B: 6) so the working surface stands out. Items
+  still open their honest placeholder — just out of the way. `isPlanned(to)` = `startsWith('/planned/')`.
+- **Settings Active vs More:** split into "Active integrations" (wired — real work now) and a collapsed
+  "More integrations (N) — save a key now, activates in a later release" `<details>` (auto-opens while
+  searching). Fixed the misleading chip (was "Saved · wiring soon" on untouched cards → now "Preview");
+  button "Connect"→"Save key" for non-wired. Corrected the catalog: **slack + discord are `wired:true`**
+  (the notifier consumes them) so "Active" is truthful (now GitHub · Claude · Slack · Discord).
+- **System Health + status names:** added a reusable `info?` prop to `StatCard` → a visible ⓘ next to
+  the label carrying `HEALTH_FORMULA_DOC` (was a hover-only title on the whole card); dropped the
+  permanent empty "collecting data" sparkline. Renamed the System Status service labels to plain names
+  (Local Server · Anthropic API · GitHub · Agent Runner) in `selectors.ts` (one source; fixes both
+  dashboards) — "Deployments/All Systems/Build Servers" mislabelled what's actually pinged.
+- **slug→name honesty:** AgentsPage build rows + PromptsPage "Run in repo" dropdown now resolve
+  `state.repos[id].name` instead of printing the raw id slug.
+- **⌘K acts, not just navigates:** the palette gained an Actions section (Add a project · New automation ·
+  Connect GitHub · Dispatch an agent to <repo>) that opens the real surface where the action happens
+  (add-project panel, automation form, dispatch box) — nothing mutates without the normal confirm.
+- verify green (131 tests) · smoke green (0 console errors); confirmed the Soon disclosure, Settings
+  split, and System Health ⓘ render on /command · /ops · /settings.
+
+## 2026-07-12 · Claude · add-a-project from the UI + first-run clarity (whole-app easier-to-use pass)
+Surveyed the complete app for install/use/understand friction (3 parallel readers). Unanimous #1:
+you couldn't add a project without editing PROJECT_DIRS in .env and RESTARTING — and that one gap
+cascaded (dispatch, automations, prompts, per-project pages all gate on scanned repos), while 4
+prominent "New/Create" buttons dead-ended at /planned/*. Built the fix + a batch of clarity wins.
+- **Runtime project management (server):** `ProjectDirsStore` (persisted JSON, like connections)
+  + token-gated `GET/POST/DELETE /api/projects`. The scanner is now REBUILDABLE live
+  (`rebuildScanner()`, mirror of `startGithub`) over env dirs ∪ stored dirs — add a folder →
+  persist → rescan → repos stream in over SSE, no restart. Scanner also accepts EITHER a repo
+  folder OR a folder-of-repos (`isGitRepo(root) ? [root] : subdirs(root)`) so "add my project"
+  works whichever the user points at. Verified LIVE: `POST /api/projects` on a temp git repo →
+  `{repos:1}`; bad path → 400; no token → 401. +5 tests.
+- **Add-a-project UI (web):** `AddProjectPanel` (folder input → `addProject`, live result, list of
+  scanned folders with remove) on `/repositories?add=1`; the 4 dead-end buttons (dashboard "New",
+  top-bar "+", Ops "New Project", Quick Actions "Create Repository") now all deep-link here; the
+  empty state is an "Add a project" button. `lib/projects.ts` client.
+- **GitHub-first onboarding:** `FirstRunCard` now leads with **Connect GitHub** (instant, restart-
+  free real data — the path was fully built but never surfaced) + "Add a local folder"; dropped the
+  ".env + restart" copy.
+- **Clarity bundle (survey-driven, honest):** de-personalized greetings ("Welcome back 👋",
+  "Operations 👋"); fixed the misleading "Active Agents" KPI → "AI Agents" (total, with N running
+  sub); added the missing "Running Agents" empty state; command box copy now honest ("Ask about
+  status, or create and dispatch a task") + live suggestion chips (reuse the built-in `seed`);
+  humanized the intent result chip (no raw `dispatch_task · heuristic · 82%` — plain label + tooltip);
+  "Deploy Application" → "View Deployments"; Ops "AI Assistant" button → "Prompt Library"; help-card
+  "Open AI Assistant" → "Ask the command center".
+- **Papercuts:** `npm run demo` one-command demo; closed the two ungated setup routes
+  (`/api/setup/probe`, `/api/setup/install` now require the token — the web already sends it).
+- verify green (131 tests) · smoke green (0 console errors) · captured the new first-run + add panel.
+- **Deferred (clear follow-ups, not done this turn):** group the ~14 `/planned/*` nav items under a
+  "Soon" disclosure; Settings split Active vs "save now / activates later" (37 connectors say Saved ✓
+  but only github/anthropic/slack/discord are wired); visible System-Health info icon; plain
+  System-Status service names; prompt "Run in repo" dropdown shows slugs not names; AgentsPage build
+  rows show raw repo id; ⌘K palette actions (Add project / Dispatch); a runtime "connect Claude
+  subscription" note cross-linking Settings↔Setup (the CLI `auth login`/`status`/`setup-token`
+  subcommands are REAL — verified — so Setup Sign-in is not a dead-end).
+
+## 2026-07-12 · Claude · zero-config onboarding (was: offline until hand-configured)
+Isac hit the wall: on a fresh machine the app is OFFLINE until you hand-create `.env`, generate
+a token, paste it into ACC_TOKEN + VITE_ACC_TOKEN, and start the server (Setup screenshot showed
+"Server offline / Failed to fetch / set VITE_ACC_TOKEN"). Killed that friction end-to-end.
+- **Auto-provision `.env` (`scripts/bootstrap-env.mjs`):** idempotent + non-destructive — generates
+  a strong ACC_TOKEN (crypto) and a MATCHING VITE_ACC_TOKEN only if missing; never changes an
+  existing token; preserves all other keys/comments; chmod 600; never prints the token. Wired into
+  EVERY start path so first run is zero-config: root `predev` (→ `npm run dev` just works), server
+  `prestart` (→ autostart pm2/launchd + smoke + any `npm run start`), `install.sh`, `install-autostart.sh`,
+  `smoke.sh`, and a `npm run setup` alias. Verified live: `npm run start` → prestart bootstrap →
+  server boots → `/health` 200 → dashboard shows **"Live"**.
+- **First-run onboarding card (`MainColumn` `FirstRunCard`):** when the server is online but zero
+  repos are scanned, instead of a bare 0/0/0 grid the dashboard shows a friendly welcome — folder
+  icon, "now add your projects", the real next step (`PROJECT_DIRS` in `.env`), and Open Setup /
+  Settings CTAs. Honest: renders ONLY at `repos.length === 0`, so it never masks real data and the
+  demo (which has repos) never shows it. Category tabs with no repos get a light EmptyState.
+- Kept convention 9 intact: the server still REQUIRES a token — bootstrap just always provides one
+  before start. env.ts keeps its (now clear) guard as the headless-misconfig safety net.
+- README quickstart rewritten to `npm install && npm run dev` (zero-config). verify green (126
+  tests) · smoke green (0 console errors) · captured a real empty-world `/command` showing the card.
+- **Watch-out:** adding a project is still "edit PROJECT_DIRS + restart" (read at boot) — a runtime
+  "add folder → rescan" endpoint would make it fully clickable; good next step for onboarding.
+
+## 2026-07-12 · Claude · fixed 3 real-run bugs from the PR #1 Codex review
+PR #1 merged (merge commit); an automated Codex review flagged 3 P2 bugs, all verified real
+and all in real-`claude`-run paths the demo world masks. Per the merged-PR workflow, restarted
+`claude/project-planning-goals-l1r23w` from `origin/main` and pushed the fixes there (a fresh
+change; the merged PR is finished, not reused — no new PR opened, none requested).
+- **Runner stderr deadlock (`runner/spawner.ts`):** `claude -p` was spawned with `stdio[2]='pipe'`
+  but only stdout is read (readline, stream-json). A child emitting >~64KB to stderr (verbose
+  diagnostics, repeated auth/tool errors) fills the pipe buffer and blocks on write → the run
+  hangs until the 15-min wall-clock timeout kills it. Fix: `stdio[2]='ignore'` — can't merge into
+  stdout (would corrupt the JSONL), and the UI shows only stdout, so drop it at the OS level.
+- **Repo agent tag unresolvable (`runner/index.ts`):** after a run, `repo.enriched` stored the
+  display string `Agent · <repo>` in `repo.agents`, but `state.agents` is keyed by `agentId`
+  (=== `runId`) and the project page resolves `state.agents[aid]` — so in real runs the per-project
+  Agents panel/avatar stack stayed EMPTY (demo hid it: it seeds real agent ids). Fix: store the
+  `runId` (newest-first, deduped, capped at 5) so it resolves; the label lives on the agent record.
+  +1 regression test (seed repo → dispatch → assert `repo.agents` holds a resolvable runId).
+- **Node floor vs `process.loadEnvFile` (`env.ts`):** the built-in dotenv (no dep) needs Node
+  20.12, but `engines`, CI, and docs said "20/≥20" — on 20.0–20.11 a configured install throws a
+  cryptic `TypeError` before reading `.env` and can't boot. Fix: bumped the declared floor to
+  `>=20.12` (package.json engines · CI `node-version: 20.12` so CI tests the real floor · README ·
+  CLAUDE.md · requirements catalog) AND guarded the call with a clear "needs Node >=20.12" error.
+- verify green (typecheck ×3 · lint · 126 tests · build). No demo-visible render change (real-run +
+  boot-path + docs only), so no new screenshots — they'd be identical to the last set.
+- **Watch-out:** the send_later PR check-in (trig from earlier) couldn't be deleted (permission
+  stream hiccup); it's self-cancelling — when it fires it'll see the PR merged and stop.
+
 ## 2026-07-12 · Claude · three real features: deploy status · notifications · LLM parser
 Built + shipped the three the user asked for, pushed together.
 - **Per-repo deploy status (Feature 1):** `latestDeployment(state, repoId)` selector →
@@ -234,6 +374,35 @@ Built + shipped the three the user asked for, pushed together.
 - **Next / watch-outs:** `p2.5` (one week of real daily use) + `p3` (a real `claude -p` run) are
   Isac's to close; `p3.5` pixel-diff baselines wait for the visual sign-off. Turn real
   `/planned/*` placeholders into features as prioritized.
+
+---
+
+## 2026-07-13 · Claude · Self-healing (incident capture → AI diagnosis → confirmed fix)
+- shipped: an honest realization of "if it breaks, fix itself" in three layers.
+  (1) **Resilience** — a root React `ErrorBoundary` (reports the crash, shows a calm fallback,
+  recovers on navigation via a pathname resetKey) + Fastify `setErrorHandler` (500s only) +
+  process `unhandledRejection`/`uncaughtException` hooks (log + report, deliberately NO exit —
+  staying up degraded beats dying for a local dashboard).
+  (2) **AI diagnosis** — `IncidentDiagnoser` asks the Messages API WHY via a FORCED, `strict`
+  tool call on **`claude-opus-4-8`** (root-cause = the debugging case that earns the top model,
+  conv. 5), validated by the shared zod `Diagnosis`; self-falls-back to a **heuristic** (pattern
+  table: network/timeout/auth/null-deref/zod/sqlite/…) with honest low confidence when no key /
+  API error. `IncidentReporter` throttles identical failures to 1/min (a render loop can't flood
+  the API), publishes `incident.reported` then `incident.diagnosed` through the bus — the web sees
+  both over SSE, no polling.
+  (3) **Confirmed fix** — `/diagnostics` page lists each incident + its diagnosis (severity chip,
+  why/fix/prevention, confidence, provenance) and a repo-scoped **Dispatch fix** that runs a REAL
+  agent via the existing runner + cwd allow-list. NOT unattended auto-edit — the user picks the
+  repo and clicks (same "nothing acts without confirm" rule). New shared contracts
+  (`incidents.ts`: Incident/Diagnosis/IncidentRecord + 2 events + reducer, bounded ring cap 50),
+  nav in both sidebars (live incident-count badge on View A) + ⌘K entry, and a `--demo` seed of
+  two example incidents so the page is self-documenting.
+- verify green (typecheck ×3 · lint · **141 tests**, +15 incident server + 3 shared reducer · build);
+  zero console errors on /command · /ops · /diagnostics at 1536px. Opened a PR for the ADO repo.
+- next / watch-outs: fix-dispatch needs the target repo scanned + `claude` installed (honest 403/400
+  otherwise). The diagnoser runs opus per incident — the 1/min throttle bounds cost, but if incident
+  volume ever spikes, consider a cheaper triage model in front. Auto-APPLYING a fix stays deliberately
+  out of scope (unsafe for a running app); the confirmed dispatch is the line.
 
 ---
 

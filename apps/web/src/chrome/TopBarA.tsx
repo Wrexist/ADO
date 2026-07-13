@@ -57,8 +57,7 @@ export function TopBarA() {
       <div className="flex shrink-0 items-center gap-2">
         <ViewSwitcher />
         <ConnectionBadge />
-        <TopBarButton icon="plus" label="Create" to="/planned/new-project" />
-        <TopBarButton icon="calendar" label="Calendar" to="/planned/calendar" />
+        <TopBarButton icon="plus" label="Add project" to="/repositories?add=1" />
         <TopBarButton icon="bell" label="Notifications" to="/activity" />
         <Link
           to="/settings"

@@ -10,7 +10,7 @@ export function DeploymentsPage() {
   const rows = recentDeployments(state, 50);
 
   return (
-    <PageShell title="Deployments" subtitle="Releases and deployments recorded from GitHub and the runner.">
+    <PageShell title="Deployments" subtitle="Releases and deployments recorded from GitHub.">
       {rows.length > 0 ? (
         <Card className="mt-6 flex flex-col divide-y divide-white/[0.05] p-2">
           {rows.map((d) => (

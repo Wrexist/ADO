@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { RepoCategory } from '@ado/shared';
-import { Card, Icon, cx } from '../kit';
+import { Button, Card, Icon, cx } from '../kit';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
 import { reposList } from '../lib/selectors';
 import { RepoCard } from '../views/command/RepoCard';
+import { AddProjectPanel } from '../views/AddProjectPanel';
 
 const CATS: Array<{ id: RepoCategory | 'all'; label: string }> = [
   { id: 'all', label: 'All' },
@@ -22,7 +23,14 @@ export function RepositoriesPage() {
   const [params, setParams] = useSearchParams();
   const cat = params.get('cat') ?? 'all';
   const [query, setQuery] = useState('');
+  const [adding, setAdding] = useState(false);
   const repos = reposList(state);
+
+  // Deep-link: /repositories?add=1 (from the first-run card, the "New" buttons, empty states)
+  // opens the add panel straight away.
+  useEffect(() => {
+    if (params.get('add') === '1') setAdding(true);
+  }, [params]);
 
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -71,7 +79,17 @@ export function RepositoriesPage() {
             className="h-9 w-full rounded-tile border bg-card pl-9 pr-3 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
           />
         </div>
+        <Button variant={adding ? 'ghost' : 'primary'} onClick={() => setAdding((a) => !a)}>
+          <Icon name="plus" size={14} />
+          {adding ? 'Close' : 'Add project'}
+        </Button>
       </div>
+
+      {adding ? (
+        <div className="mt-4">
+          <AddProjectPanel autoFocus />
+        </div>
+      ) : null}
 
       {visible.length > 0 ? (
         <div className="mt-6 grid grid-cols-3 gap-4">
@@ -90,9 +108,15 @@ export function RepositoriesPage() {
             </p>
             <p className="text-label text-text3">
               {repos.length === 0
-                ? 'Set PROJECT_DIRS or connect GitHub in Settings to populate this.'
+                ? 'Add a local folder to scan, or connect GitHub in Settings.'
                 : 'Try another category or clear the filter.'}
             </p>
+            {repos.length === 0 && !adding ? (
+              <Button className="mt-2" onClick={() => setAdding(true)}>
+                <Icon name="plus" size={14} />
+                Add a project
+              </Button>
+            ) : null}
           </div>
         </Card>
       )}

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Button, Card, Icon, IconTile, cx, type IconName } from '../kit';
+import { Icon, cx, type IconName } from '../kit';
 import { isNavActive } from '../lib/selectors';
 
 /**
@@ -36,16 +36,16 @@ const GROUPS: NavGroup[] = [
   {
     eyebrow: 'Monitoring',
     items: [
-      { icon: 'chart', label: 'Analytics', to: '/planned/analytics' },
-      { icon: 'list', label: 'Logs', to: '/activity' },
+      { icon: 'chart', label: 'Analytics', to: '/analytics' },
+      { icon: 'health', label: 'Performance', to: '/performance' },
+      { icon: 'sparkle', label: 'Diagnostics', to: '/diagnostics' },
+      { icon: 'list', label: 'Activity', to: '/activity' },
       { icon: 'bell', label: 'Alerts', to: '/planned/alerts' },
-      { icon: 'health', label: 'Performance', to: '/planned/performance' },
     ],
   },
   {
     eyebrow: 'Settings',
     items: [
-      { icon: 'team', label: 'Team', to: '/planned/team' },
       { icon: 'rocket', label: 'Setup', to: '/setup' },
       { icon: 'integrations', label: 'Integrations', to: '/settings' },
       { icon: 'settings', label: 'Settings', to: '/settings' },
@@ -71,14 +71,33 @@ function NavItem({ icon, label, active, to }: NavEntry) {
   );
 }
 
+const isPlanned = (to?: string): boolean => Boolean(to?.startsWith('/planned/'));
+
+/** Collapsed, dimmed disclosure for not-yet-built destinations (keeps the live nav clean). */
+function SoonDisclosure({ items }: { items: NavEntry[] }) {
+  return (
+    <details className="group mt-1.5">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 pb-1 pt-4 text-label font-medium uppercase tracking-wider text-text3 hover:text-text2 [&::-webkit-details-marker]:hidden">
+        <Icon name="chevronDown" size={12} className="-rotate-90 transition-transform duration-150 ease-soft group-open:rotate-0" />
+        Soon ({items.length})
+      </summary>
+      <div className="flex flex-col gap-0.5 opacity-55">
+        {items.map((item) => (
+          <NavItem key={item.label} {...item} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function SidebarB() {
   const location = useLocation();
-  // Static copy — honest placeholder card per DATA_MAP ("not wired yet" > fake feature).
-  const proPlan = { title: 'Pro Plan', body: 'Unlimited access', cta: 'Upgrade' };
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => !isPlanned(it.to)) }));
+  const planned = GROUPS.flatMap((g) => g.items).filter((it) => isPlanned(it.to));
   return (
     <aside className="flex w-[200px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
       <nav className="flex flex-1 flex-col gap-0.5">
-        {GROUPS.map((group, gi) => (
+        {groups.map((group, gi) => (
           <div key={group.eyebrow ?? gi} className="flex flex-col gap-0.5">
             {group.eyebrow ? (
               <p className="px-3 pb-1 pt-4 text-label font-medium uppercase tracking-wider text-text3">
@@ -94,23 +113,8 @@ export function SidebarB() {
             ))}
           </div>
         ))}
+        {planned.length > 0 ? <SoonDisclosure items={planned} /> : null}
       </nav>
-
-      {/* Pro Plan — static v1 placeholder ("not wired yet" > fake feature) */}
-      <Card className="mt-4 border-primary/25 bg-primary/10 p-3.5">
-        <div className="flex items-center gap-2.5">
-          <IconTile icon="sparkle" tone="violet" size="sm" />
-          <div className="leading-tight">
-            <p className="text-body font-semibold text-text1">{proPlan.title}</p>
-            <p className="text-label text-text2">{proPlan.body}</p>
-          </div>
-        </div>
-        <Link to="/planned/billing" className="mt-3 block">
-          <Button size="sm" className="w-full">
-            {proPlan.cta}
-          </Button>
-        </Link>
-      </Card>
     </aside>
   );
 }

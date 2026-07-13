@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   AgentTile,
   Button,
+  EmptyState,
   Icon,
   PillTabs,
   SectionHeader,
@@ -71,7 +72,7 @@ export function MainColumn() {
       {/* header row — copy is a single-shot draft (convention 6) */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-title font-semibold text-text1">Welcome back, Isac! 👋</h1>
+          <h1 className="text-title font-semibold text-text1">Welcome back 👋</h1>
           <p className="mt-1 text-body text-text2">
             Here's what's happening with your projects today.
           </p>
@@ -94,10 +95,10 @@ export function MainColumn() {
               </button>
             ))}
           </div>
-          <Link to="/planned/new-project">
+          <Link to="/repositories?add=1">
             <Button>
               <Icon name="plus" size={14} />
-              New
+              Add project
             </Button>
           </Link>
         </div>
@@ -113,7 +114,7 @@ export function MainColumn() {
           iconTone="violet"
         />
         <StatCard
-          label="Active Agents"
+          label="AI Agents"
           value={String(agentsTotal)}
           sub={`${running.length} running`}
           subDotTone="success"
@@ -183,36 +184,90 @@ export function MainColumn() {
           </div>
         </div>
 
-        <div className={cx('mt-4 grid gap-4', GRID_COLS[layout])}>
-          {visible.map((r) => (
-            <RepoCard key={r.id} repo={r} />
-          ))}
-        </div>
-
-        <Link
-          to="/repositories"
-          className="mt-4 block w-full rounded-card border bg-card py-2.5 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
-        >
-          View all repositories →
-        </Link>
+        {repos.length === 0 ? (
+          <FirstRunCard />
+        ) : visible.length === 0 ? (
+          <div className="mt-4 rounded-card border bg-card">
+            <EmptyState icon="repos" title={`No ${tab} yet`} hint="Nothing in this category — switch tabs to see your other projects." />
+          </div>
+        ) : (
+          <>
+            <div className={cx('mt-4 grid gap-4', GRID_COLS[layout])}>
+              {visible.map((r) => (
+                <RepoCard key={r.id} repo={r} />
+              ))}
+            </div>
+            <Link
+              to="/repositories"
+              className="mt-4 block w-full rounded-card border bg-card py-2.5 text-center text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
+            >
+              View all repositories →
+            </Link>
+          </>
+        )}
       </div>
 
       {/* running agents — live runner processes only */}
       <div className="mt-8">
         <SectionHeader title="Running Agents" action="View all agents" actionTo="/agents" />
-        <div className="mt-4 grid grid-cols-5 gap-3">
-          {running.map((a) => (
-            <AgentTile
-              key={a.id}
-              icon={a.icon as IconName}
-              name={a.name}
-              statusLine={a.statusLine}
-              pct={a.pct}
-              tone={a.tone as Tone}
-            />
-          ))}
-        </div>
+        {running.length > 0 ? (
+          <div className="mt-4 grid grid-cols-5 gap-3">
+            {running.map((a) => (
+              <AgentTile
+                key={a.id}
+                icon={a.icon as IconName}
+                name={a.name}
+                statusLine={a.statusLine}
+                pct={a.pct}
+                tone={a.tone as Tone}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-card border bg-card">
+            <EmptyState icon="agents" title="No agents running right now" hint="Dispatch a task from the command box or a project page to put an agent to work." />
+          </div>
+        )}
       </div>
     </main>
+  );
+}
+
+/**
+ * First-run onboarding — shown only when there are genuinely zero repos (server online but
+ * no projects scanned yet). Honest: it never masks real data, and points at the ONE real
+ * step (PROJECT_DIRS). Copy is a single-shot draft for Isac to edit (convention 6).
+ */
+function FirstRunCard() {
+  return (
+    <div className="mt-4 flex flex-col items-center gap-4 rounded-card border bg-card px-6 py-12 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-tile bg-primary/15 text-primary">
+        <Icon name="repos" size={22} />
+      </span>
+      <div>
+        <p className="text-section font-semibold text-text1">Let's bring in your projects</p>
+        <p className="mx-auto mt-1 max-w-[52ch] text-body text-text2">
+          Connect GitHub to see your repos instantly, or point us at a local folder. Then AI Control Center
+          tracks their builds, agents, and deployments right here.
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Link to="/settings">
+          <Button>
+            <Icon name="github" size={14} />
+            Connect GitHub
+          </Button>
+        </Link>
+        <Link to="/repositories?add=1">
+          <Button variant="ghost">
+            <Icon name="plus" size={14} />
+            Add a local folder
+          </Button>
+        </Link>
+      </div>
+      <p className="max-w-[52ch] text-label text-text3">
+        GitHub pulls your repos in under a minute — no restart. A local folder is scanned live on this machine.
+      </p>
+    </div>
   );
 }

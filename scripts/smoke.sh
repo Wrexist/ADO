@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 OUT="${1:-smoke-shots}"
 
 command -v node >/dev/null 2>&1 || { echo "✗ node not found"; exit 1; }
-[ -f .env ] || { echo "✗ .env missing — copy .env.example and set ACC_TOKEN + VITE_ACC_TOKEN"; exit 1; }
+node scripts/bootstrap-env.mjs # self-provision .env (token) so a fresh clone can smoke with no manual setup
 grep -qE '^ACC_TOKEN=.+' .env || { echo "✗ ACC_TOKEN not set in .env"; exit 1; }
 grep -qE '^VITE_ACC_TOKEN=.+' .env || { echo "✗ VITE_ACC_TOKEN not set in .env (must match ACC_TOKEN)"; exit 1; }
 

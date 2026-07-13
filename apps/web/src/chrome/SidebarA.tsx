@@ -11,7 +11,7 @@ import { sidebarCounts, isNavActive } from '../lib/selectors';
 type NavEntry = { icon: IconName; label: string; count?: number; active?: boolean; to?: string };
 type NavGroup = { eyebrow?: string; items: NavEntry[] };
 
-const buildGroups = (counts: { repositories: number; games: number; agents: number }): NavGroup[] => [
+const buildGroups = (counts: { repositories: number; games: number; agents: number; diagnostics: number }): NavGroup[] => [
   { items: [{ icon: 'overview', label: 'Overview', to: '/command' }] },
   {
     eyebrow: 'Workspace',
@@ -34,13 +34,15 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
       { icon: 'games', label: 'Game Builder', to: '/planned/game-builder' },
       { icon: 'wand', label: 'UI Generator', to: '/planned/ui-generator' },
       { icon: 'database', label: 'Database', to: '/planned/database' },
-      { icon: 'chart', label: 'Analytics', to: '/planned/analytics' },
+      { icon: 'chart', label: 'Analytics', to: '/analytics' },
     ],
   },
   {
     eyebrow: 'Deploy & Release',
     items: [
       { icon: 'rocket', label: 'Deployments', to: '/deployments' },
+      { icon: 'health', label: 'Performance', to: '/performance' },
+      { icon: 'sparkle', label: 'Diagnostics', count: counts.diagnostics || undefined, to: '/diagnostics' },
       { icon: 'pipeline', label: 'CI/CD Pipelines', to: '/planned/cicd-pipelines' },
       { icon: 'releases', label: 'Releases', to: '/deployments' },
     ],
@@ -50,8 +52,6 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
     items: [
       { icon: 'rocket', label: 'Setup', to: '/setup' },
       { icon: 'settings', label: 'Workspace Settings', to: '/settings' },
-      { icon: 'team', label: 'Team', to: '/planned/team' },
-      { icon: 'billing', label: 'Billing', to: '/planned/billing' },
     ],
   },
 ];
@@ -75,16 +75,40 @@ function NavItem({ icon, label, count, active, to }: NavEntry) {
   );
 }
 
+const isPlanned = (to?: string): boolean => Boolean(to?.startsWith('/planned/'));
+
+/** Collapsed, dimmed disclosure for not-yet-built (/planned/*) destinations. Honest: they
+ *  still open their "not wired yet" page — they're just out of the way of what works today. */
+function SoonDisclosure({ items }: { items: NavEntry[] }) {
+  return (
+    <details className="group mt-2">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 pb-1 pt-5 text-label font-medium uppercase tracking-wider text-text3 hover:text-text2 [&::-webkit-details-marker]:hidden">
+        <Icon name="chevronDown" size={12} className="-rotate-90 transition-transform duration-150 ease-soft group-open:rotate-0" />
+        Soon ({items.length})
+      </summary>
+      <div className="flex flex-col gap-0.5 opacity-55">
+        {items.map((item) => (
+          <NavItem key={item.label} {...item} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function SidebarA() {
   // Select the stable state reference; derive OUTSIDE the selector (a derived object
   // inside the selector would change identity every call → infinite re-render).
   const state = useBus((s) => s.state);
   const location = useLocation();
   const path = location.pathname;
-  const groups = buildGroups(sidebarCounts(state)).map((g) => ({
+  const raw = buildGroups({ ...sidebarCounts(state), diagnostics: state.incidents.length });
+  // Real destinations stay in their groups; unbuilt (/planned/*) items collapse into one
+  // dimmed "Soon" disclosure so the working surface stands out.
+  const groups = raw.map((g) => ({
     ...g,
-    items: g.items.map((it) => ({ ...it, active: isNavActive(it.to, path) || it.active })),
+    items: g.items.filter((it) => !isPlanned(it.to)).map((it) => ({ ...it, active: isNavActive(it.to, path) || it.active })),
   }));
+  const planned = raw.flatMap((g) => g.items).filter((it) => isPlanned(it.to));
   return (
     <aside className="flex w-[224px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
       <nav className="flex flex-1 flex-col gap-0.5">
@@ -100,6 +124,7 @@ export function SidebarA() {
             ))}
           </div>
         ))}
+        {planned.length > 0 ? <SoonDisclosure items={planned} /> : null}
       </nav>
 
       {/* user card */}

@@ -29,10 +29,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node 20
+      - name: Set up Node 20.12 (engines floor)
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # engines floor; catch accidental use of newer-only APIs
+          node-version: '20.12' # test the exact declared floor — catches use of APIs newer than 20.12 (e.g. process.loadEnvFile needs 20.12)
           cache: npm
 
       - name: Install (clean, from lockfile)

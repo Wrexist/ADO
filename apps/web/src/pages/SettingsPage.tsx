@@ -87,7 +87,7 @@ function ConnectorCard({
             {c.wired ? (
               <Chip tone="success" size="sm">Active</Chip>
             ) : (
-              <Chip size="sm">Saved · wiring soon</Chip>
+              <Chip size="sm">Preview</Chip>
             )}
           </div>
           <p className="mt-0.5 text-label text-text2">{c.blurb}</p>
@@ -117,7 +117,7 @@ function ConnectorCard({
           className="h-9 min-w-0 flex-1 rounded-tile border-none bg-elevated px-3 font-mono text-body text-text1 placeholder:font-sans placeholder:text-text3 focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
         <Button size="sm" onClick={() => void save()} disabled={busy || !value.trim()}>
-          {connected ? 'Update' : 'Connect'}
+          {connected ? 'Update' : c.wired ? 'Connect' : 'Save key'}
         </Button>
         {connected ? (
           <Button size="sm" variant="ghost" onClick={() => void disconnect()} disabled={busy}>
@@ -205,33 +205,64 @@ export function SettingsPage() {
           </Card>
         ) : null}
 
-        <div className="mt-8 flex flex-col gap-10">
-          {CONNECTOR_GROUPS.map((group) => {
-            const q = query.trim().toLowerCase();
-            const items = (byGroup.get(group.id) ?? []).filter(
-              (c) => !q || c.name.toLowerCase().includes(q) || c.id.includes(q) || c.blurb.toLowerCase().includes(q),
-            );
-            if (items.length === 0) return null;
-            return (
-              <section key={group.id}>
+        {(() => {
+          const q = query.trim().toLowerCase();
+          const match = (c: Connector) =>
+            !q || c.name.toLowerCase().includes(q) || c.id.includes(q) || c.blurb.toLowerCase().includes(q);
+          const card = (c: Connector) => (
+            <ConnectorCard
+              key={c.id}
+              c={c}
+              status={statuses[c.id]}
+              onChanged={(s) => setStatuses((prev) => ({ ...prev, [c.id]: s }))}
+            />
+          );
+          const active = CONNECTORS.filter((c) => c.wired && match(c));
+          const previewCount = CONNECTORS.filter((c) => !c.wired && match(c)).length;
+          return (
+            <>
+              {/* Active — wired connectors that do real work the moment you save. */}
+              <section className="mt-8">
                 <div className="mb-3">
-                  <h2 className="text-section font-semibold text-text1">{group.title}</h2>
-                  <p className="text-label text-text3">{group.blurb}</p>
+                  <h2 className="text-section font-semibold text-text1">Active integrations</h2>
+                  <p className="text-label text-text3">Live now — connecting these does real work in the dashboard.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {items.map((c) => (
-                    <ConnectorCard
-                      key={c.id}
-                      c={c}
-                      status={statuses[c.id]}
-                      onChanged={(s) => setStatuses((prev) => ({ ...prev, [c.id]: s }))}
-                    />
-                  ))}
-                </div>
+                {active.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">{active.map(card)}</div>
+                ) : (
+                  <p className="text-label text-text3">No active integrations match “{query}”.</p>
+                )}
               </section>
-            );
-          })}
-        </div>
+
+              {/* Everything else — save a key now; it activates in a later release. Collapsed so
+                  the working set stands out; auto-opens while searching so results aren't hidden. */}
+              {previewCount > 0 ? (
+                <details className="group mt-8" open={q.length > 0}>
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-section font-semibold text-text1 [&::-webkit-details-marker]:hidden">
+                    <Icon name="chevronDown" size={16} className="-rotate-90 text-text3 transition-transform duration-150 ease-soft group-open:rotate-0" />
+                    More integrations ({previewCount})
+                    <span className="text-label font-normal text-text3">· save a key now, activates in a later release</span>
+                  </summary>
+                  <div className="mt-4 flex flex-col gap-10">
+                    {CONNECTOR_GROUPS.map((group) => {
+                      const items = (byGroup.get(group.id) ?? []).filter((c) => !c.wired && match(c));
+                      if (items.length === 0) return null;
+                      return (
+                        <section key={group.id}>
+                          <div className="mb-3">
+                            <h3 className="text-body font-semibold text-text1">{group.title}</h3>
+                            <p className="text-label text-text3">{group.blurb}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">{items.map(card)}</div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                </details>
+              ) : null}
+            </>
+          );
+        })()}
 
         {!loaded ? <p className="mt-6 text-body text-text3">Loading connections…</p> : null}
     </PageShell>

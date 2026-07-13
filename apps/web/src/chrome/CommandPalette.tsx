@@ -51,6 +51,21 @@ export function CommandPalette() {
   }, [open]);
 
   const items = useMemo<Item[]>(() => {
+    // Actions come first — the palette should DO, not just navigate. Each opens the real
+    // surface where the action happens (add-project panel, dispatch box, automation form),
+    // so nothing mutates without the normal confirm step.
+    const actions: Item[] = [
+      { id: 'a:add', label: 'Add a project', sub: 'Action', icon: 'plus', to: '/repositories?add=1' },
+      { id: 'a:automation', label: 'New automation', sub: 'Action', icon: 'pipeline', to: '/automations?new=1' },
+      { id: 'a:github', label: 'Connect GitHub', sub: 'Action', icon: 'github', to: '/settings' },
+      ...Object.values(state.repos).map((r) => ({
+        id: `a:dispatch:${r.id}`,
+        label: `Dispatch an agent to ${r.name}`,
+        sub: 'Action',
+        icon: 'agents' as IconName,
+        to: `/repositories/${r.id}`,
+      })),
+    ];
     const pages: Item[] = [
       { id: 'p:command', label: 'Command dashboard', sub: 'Page', icon: 'overview', to: '/command' },
       { id: 'p:ops', label: 'Ops dashboard', sub: 'Page', icon: 'grid', to: '/ops' },
@@ -61,6 +76,7 @@ export function CommandPalette() {
       { id: 'p:prompts', label: 'Prompt Library', sub: 'Page', icon: 'chat', to: '/prompts' },
       { id: 'p:workflows', label: 'Workflows', sub: 'Page', icon: 'workflow', to: '/workflows' },
       { id: 'p:automations', label: 'Automations', sub: 'Page', icon: 'pipeline', to: '/automations' },
+      { id: 'p:diagnostics', label: 'Diagnostics · Self-healing', sub: 'Page', icon: 'sparkle', to: '/diagnostics' },
       { id: 'p:setup', label: 'Setup · Install requirements', sub: 'Page', icon: 'rocket', to: '/setup' },
       { id: 'p:settings', label: 'Settings · Connections', sub: 'Page', icon: 'settings', to: '/settings' },
     ];
@@ -85,7 +101,7 @@ export function CommandPalette() {
       icon: 'chat',
       to: '/prompts',
     }));
-    return [...pages, ...repos, ...agents, ...prompts];
+    return [...actions, ...pages, ...repos, ...agents, ...prompts];
   }, [state.repos, state.agents]);
 
   const query = q.trim().toLowerCase();

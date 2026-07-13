@@ -76,11 +76,11 @@ export const REQUIREMENTS: Requirement[] = [
   // ── Core runtime ────────────────────────────────────────────────────────────
   R({
     id: 'node',
-    name: 'Node.js 20+',
+    name: 'Node.js 20.12+',
     category: 'runtime',
     required: true,
     blurb: 'JavaScript runtime.',
-    why: 'Runs the dashboard server and builds the web app. The whole monorepo targets Node 20+.',
+    why: 'Runs the dashboard server and builds the web app. The monorepo targets Node 20.12+ (built-in .env loader).',
     detect: { via: 'command', command: 'node', args: ['--version'], versionRe: 'v?(\\d+\\.\\d+\\.\\d+)' },
     install: { via: 'manual' },
     docsUrl: 'https://nodejs.org/en/download',

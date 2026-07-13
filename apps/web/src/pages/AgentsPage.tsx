@@ -55,7 +55,7 @@ export function AgentsPage() {
               <Icon name="pipeline" size={15} className="shrink-0 text-text3" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-body font-medium text-text1">{b.jobLabel}</p>
-                <p className="truncate text-label text-text3">{b.repo} · {b.branch}</p>
+                <p className="truncate text-label text-text3">{state.repos[b.repo]?.name ?? b.repo} · {b.branch}</p>
               </div>
               <Chip tone={BUILD_TONE[b.state]} size="sm">{b.state}</Chip>
               <span className="w-16 shrink-0 text-right text-label tabular-nums text-text3">

@@ -56,7 +56,6 @@ export function TopBarB() {
           </kbd>
         </button>
         <BarIcon icon="bell" label="Notifications" to="/activity" />
-        <BarIcon icon="chat" label="Messages" to="/planned/messages" />
         <Link
           to="/settings"
           aria-label="Settings"

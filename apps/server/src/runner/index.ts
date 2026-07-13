@@ -29,6 +29,8 @@ interface RunnerOpts {
 }
 
 const DEFAULTS = { maxConcurrent: 3, turnCap: 20, timeoutMs: 15 * 60_000 };
+/** How many recent agent ids to keep on a repo for the avatar stack (newest first). */
+const REPO_AGENT_CAP = 5;
 
 export class Runner {
   private active = 0;
@@ -226,13 +228,19 @@ export class Runner {
 
     this.emitBuild(runId, input, ok ? 'success' : 'failed', startedMs);
     this.emitActivity(`act:${runId}:end`, input.repoId, ok ? `Task completed: ${input.task}` : `Task failed: ${input.task}`, ok ? 'success' : 'danger', ok ? 'check' : 'bell');
-    // Tag the repo with the agent that touched it (avatar stack) via enrichment.
+    // Tag the repo with the agent IDS that touched it (avatar stack) via enrichment.
+    // Must be runIds, not the display name: state.agents is keyed by agentId (===runId),
+    // so the project page's `state.agents[aid]` and the avatar stack only resolve for a
+    // runId. The human-readable label lives on the agent record itself. repo.enriched
+    // replaces `agents`, so union with the prior ids (newest first, deduped, capped).
+    const prevAgents = this.bus.snapshot().state.repos[input.repoId]?.agents ?? [];
+    const agents = [runId, ...prevAgents.filter((a) => a !== runId)].slice(0, REPO_AGENT_CAP);
     this.bus.publish({
       id: `agent-touch:${input.repoId}:${runId}`,
       type: 'repo.enriched',
       ts: new Date().toISOString(),
       source: { kind: 'runner', ref: runId },
-      payload: { repoId: input.repoId, patch: { agents: [this.agentName(input)] } },
+      payload: { repoId: input.repoId, patch: { agents } },
     });
   }
 

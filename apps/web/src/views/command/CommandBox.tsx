@@ -3,6 +3,16 @@ import type { CommandResponse } from '@ado/shared';
 import { Button, Icon } from '../../kit';
 import { confirmIntent, runCommand } from '../../lib/command';
 
+/** Human labels for the raw intent enum — no snake_case in the UI. */
+const INTENT_LABEL: Record<string, string> = {
+  status_query: 'Status',
+  summarize_activity: 'Recent activity',
+  run_gate: 'Gate status',
+  create_task: 'Create task',
+  dispatch_task: 'Dispatch a task',
+  unknown: 'Not understood',
+};
+
 /**
  * The working command center input (Phase 4). NL → intent: read intents answer inline;
  * mutating intents show a preview with a Confirm button — nothing acts without it.
@@ -93,8 +103,12 @@ export function CommandBox({
       {resp ? (
         <div className="rounded-tile bg-elevated p-3">
           <div className="mb-1 flex items-center gap-2 text-label text-text3">
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 font-mono text-primary">{resp.intent.type}</span>
-            <span>· {resp.intent.parsedBy} · {Math.round(resp.intent.confidence * 100)}%</span>
+            <span
+              className="rounded-full bg-primary/15 px-2 py-0.5 text-primary"
+              title={`Parsed by ${resp.intent.parsedBy} · ${Math.round(resp.intent.confidence * 100)}% confidence`}
+            >
+              {INTENT_LABEL[resp.intent.type] ?? resp.intent.type}
+            </span>
           </div>
           <p className="whitespace-pre-wrap text-body text-text2">{resp.message}</p>
           {resp.confirm ? (

@@ -27,15 +27,38 @@ export function RightRail() {
   const activity = activityRecent(state, 6);
   const status = systemStatusRows(state);
   const [focusCmd, setFocusCmd] = useState(0);
+  const [seed, setSeed] = useState<{ text: string; n: number }>();
+
+  // Suggestion chips teach the box what it can actually do (the 5 real intents), with a
+  // live repo name when one exists. Clicking prefills (never auto-runs) the box.
+  const firstRepo = Object.values(state.repos)[0]?.id;
+  const suggestions = [
+    'status',
+    'summarize recent activity',
+    ...(firstRepo ? [`gate status of ${firstRepo}`] : []),
+  ];
+  const suggest = (text: string) => setSeed((s) => ({ text, n: (s?.n ?? 0) + 1 }));
 
   return (
     <aside className="flex w-[360px] shrink-0 flex-col gap-4 p-6 pl-0">
       {/* AI Command Center — natural language → intent → action (Phase 4) */}
       <Card className="p-5">
         <h2 className="text-section font-semibold text-text1">AI Command Center</h2>
-        <p className="mt-0.5 text-body text-text2">Ask anything. AI will handle it.</p>
+        <p className="mt-0.5 text-body text-text2">Ask about status, or create and dispatch a task.</p>
         <div className="mt-4">
-          <CommandBox placeholder="What do you want to build or fix?" focusSignal={focusCmd} />
+          <CommandBox placeholder="e.g. status · fix the flaky test in …" seed={seed} focusSignal={focusCmd} />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => suggest(s)}
+              className="rounded-full border bg-elevated px-2.5 py-1 text-label text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
+            >
+              {s}
+            </button>
+          ))}
         </div>
       </Card>
 
@@ -87,11 +110,11 @@ export function RightRail() {
           <IconTile icon="sparkle" tone="violet" size="sm" />
           <div>
             <h2 className="text-body font-semibold text-text1">Need help?</h2>
-            <p className="text-label text-text2">AI Assistant is ready to help you</p>
+            <p className="text-label text-text2">Jump to the command box and ask</p>
           </div>
         </div>
         <Button className="mt-4 w-full" onClick={() => setFocusCmd((n) => n + 1)}>
-          Open AI Assistant
+          Ask the command center
         </Button>
       </Card>
     </aside>

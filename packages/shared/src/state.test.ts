@@ -144,4 +144,52 @@ describe('bus reducer (shared by server snapshot + web deltas)', () => {
     });
     expect(reduce(s, legacy).activity[0].repoId).toBeUndefined();
   });
+
+  it('reports incidents newest-first, deduped by id, and attaches a diagnosis on incident.diagnosed', () => {
+    const report = (id: string, t: string) => parseEvent({
+      id: `ir-${id}-${t}`, ts: t, source: { kind: 'app', ref: id }, type: 'incident.reported',
+      payload: { incident: { id, ts: t, source: 'server', kind: 'route-error', message: `boom ${id}`, status: 'open' } },
+    });
+    let s = reduce(emptyState(), report('i1', '2026-07-09T07:00:00.000Z'));
+    s = reduce(s, report('i2', '2026-07-09T07:30:00.000Z'));
+    expect(s.incidents.map((i) => i.id)).toEqual(['i2', 'i1']); // newest first
+    expect(s.incidents.every((i) => i.status === 'open')).toBe(true);
+
+    // diagnose i1 → merged onto the right record, status flips, others untouched
+    s = reduce(s, parseEvent({
+      id: 'id-1', ts, source: { kind: 'app', ref: 'i1' }, type: 'incident.diagnosed',
+      payload: {
+        incidentId: 'i1',
+        diagnosis: { summary: 's', rootCause: 'rc', severity: 'high', suggestedFix: 'fix', prevention: 'prev', confidence: 0.9, diagnosedBy: 'claude' },
+      },
+    }));
+    const i1 = s.incidents.find((i) => i.id === 'i1');
+    expect(i1?.status).toBe('diagnosed');
+    expect(i1?.diagnosis?.severity).toBe('high');
+    expect(s.incidents.find((i) => i.id === 'i2')?.diagnosis).toBeUndefined(); // only the target changed
+
+    // a diagnosis for an unknown/evicted incident is a no-op (dropped honestly, never faked)
+    const before = s.incidents.length;
+    s = reduce(s, parseEvent({
+      id: 'id-2', ts, source: { kind: 'app', ref: 'ghost' }, type: 'incident.diagnosed',
+      payload: {
+        incidentId: 'ghost',
+        diagnosis: { summary: 's', rootCause: 'rc', severity: 'low', suggestedFix: 'f', prevention: 'p', confidence: 0.5, diagnosedBy: 'heuristic' },
+      },
+    }));
+    expect(s.incidents.length).toBe(before);
+  });
+
+  it('caps the incidents ring at 50 (newest kept)', () => {
+    let s: BusState = emptyState();
+    for (let i = 0; i < 60; i++) {
+      s = reduce(s, parseEvent({
+        id: `ir-${i}`, ts, source: { kind: 'app', ref: `i${i}` }, type: 'incident.reported',
+        payload: { incident: { id: `i${i}`, ts, source: 'web', kind: 'react-render', message: `e${i}`, status: 'open' } },
+      }));
+    }
+    expect(s.incidents.length).toBe(50);
+    expect(s.incidents[0].id).toBe('i59'); // newest is first
+    expect(s.incidents.some((i) => i.id === 'i0')).toBe(false); // oldest evicted
+  });
 });

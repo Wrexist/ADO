@@ -9,10 +9,8 @@ chmod +x .claude/hooks/*.sh run.sh scripts/*.sh 2>/dev/null || true
 echo "▶ validating .claude/settings.json + .mcp.json"
 node -e 'for (const f of [".claude/settings.json", ".mcp.json"]) JSON.parse(require("fs").readFileSync(f, "utf8")); console.log("  ✓ valid JSON")'
 
-if [ ! -f .env ] && [ -f .env.example ]; then
-  cp .env.example .env
-  echo "▶ created .env from .env.example — fill in ACC_TOKEN (openssl rand -hex 24) + VITE_ACC_TOKEN"
-fi
+echo "▶ ensuring .env (auto-generates a local ACC_TOKEN + matching VITE_ACC_TOKEN if missing)"
+node scripts/bootstrap-env.mjs
 
 if command -v npm >/dev/null 2>&1; then
   echo "▶ npm install"

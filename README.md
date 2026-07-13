@@ -66,22 +66,23 @@ Current state is always in [`TASK.md`](./TASK.md); phase gates are in [`.claude/
 ## Quickstart
 
 ```bash
-# 1. Install (npm workspaces)
+# 1. Install, then run — that's it (http://localhost:5173)
 npm install
-
-# 2. Configure secrets (never commit .env)
-cp .env.example .env
-#   ACC_TOKEN         — openssl rand -hex 24  (REQUIRED; the server refuses to boot without it)
-#   VITE_ACC_TOKEN    — set to the SAME value as ACC_TOKEN
-#   GITHUB_TOKEN      — PAT with repo + actions:read   (optional; GitHub sync stays off until set)
-#   ANTHROPIC_API_KEY — intent parser + analyzer only  (optional)
-#   PROJECT_DIRS      — comma-separated dirs containing your repos to scan
-
-# 3. Verify the toolchain is green (typecheck · lint · test · build)
-npm run verify
-
-# 4. Run web + server (http://localhost:5173)
 npm run dev
+```
+
+`npm run dev` auto-generates `.env` on first run with a fresh local `ACC_TOKEN` (and a
+matching `VITE_ACC_TOKEN`), so the server boots and the dashboard is live with zero setup.
+Then open **Setup** in the app, or add your repos to `.env`:
+
+```bash
+#   PROJECT_DIRS      — comma-separated dirs containing your repos to scan (then restart)
+#   GITHUB_TOKEN      — PAT with repo + actions:read   (optional; GitHub sync stays off until set)
+#   ANTHROPIC_API_KEY — LLM command parser + analyzer  (optional; heuristic parser used until set)
+# The auto-generated ACC_TOKEN / VITE_ACC_TOKEN already match — leave them as-is. Regenerate
+# any time with:  node scripts/bootstrap-env.mjs  (never overwrites an existing token)
+
+npm run verify   # optional: typecheck · lint · test · build
 ```
 
 **Just want to see it?** `npm run start -w @ado/server -- --demo` seeds a deterministic
@@ -131,9 +132,9 @@ The repo ships a Claude Code operating harness so any session (human or agent) s
 - **`MEMORY.md`** — cross-session shift log (alongside `TASK.md` + `LEARNINGS.md`).
 - **`run.sh`** — one headless `claude -p` pass + verify · **`install.sh`** — bootstrap the harness in a checkout.
 
-Bootstrap: `bash install.sh` (chmod hooks, validate config, create `.env`, `npm install`).
+Bootstrap: `bash install.sh` (chmod hooks, validate config, auto-generate `.env` with a local token, `npm install`).
 
-**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so a change can't merge red. It runs on the Node 20 floor with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
+**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so a change can't merge red. It runs on the Node 20.12 floor with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
 
 ---
 
