@@ -237,9 +237,25 @@ function GitRow({ repoId }: { repoId: string }) {
             <span className="font-mono text-label text-text3">{git.github.owner}/{git.github.repo}</span>
             <span className="ml-auto flex items-center gap-2">
               {git.openPr ? (
-                <a href={git.openPr.url} target="_blank" rel="noreferrer" title={git.openPr.title} className="inline-flex h-8 items-center gap-1.5 rounded-tile bg-primary px-3 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
-                  <Icon name="branch" size={13} /> Open PR #{git.openPr.number} ↗
-                </a>
+                <>
+                  {git.openPr.checks ? (
+                    <Chip
+                      size="sm"
+                      dot
+                      tone={git.openPr.checks === 'passing' ? 'success' : git.openPr.checks === 'failing' ? 'danger' : 'info'}
+                    >
+                      {git.openPr.checks === 'passing' ? 'checks passing' : git.openPr.checks === 'failing' ? 'checks failing' : 'checks running'}
+                    </Chip>
+                  ) : null}
+                  {git.openPr.mergeable === false ? (
+                    <Chip size="sm" dot tone="danger">conflicts</Chip>
+                  ) : git.openPr.mergeable === true ? (
+                    <Chip size="sm" dot tone="success">mergeable</Chip>
+                  ) : null}
+                  <a href={git.openPr.url} target="_blank" rel="noreferrer" title={git.openPr.title} className="inline-flex h-8 items-center gap-1.5 rounded-tile bg-primary px-3 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
+                    <Icon name="branch" size={13} /> Open PR #{git.openPr.number} ↗
+                  </a>
+                </>
               ) : (
                 <a href={git.github.newPrUrl} target="_blank" rel="noreferrer" className={a}>
                   <Icon name="plus" size={13} /> New PR on {git.branch} ↗

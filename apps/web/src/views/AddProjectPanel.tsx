@@ -3,6 +3,12 @@ import { Button, Card, Icon, cx } from '../kit';
 import { addProject, listProjects, removeProject } from '../lib/projects';
 import { cloneFromGithub } from '../lib/projectSettings';
 
+/** Last two path segments — enough to tell tracked folders apart in the picker. */
+const shortDir = (d: string): string => {
+  const parts = d.split('/').filter(Boolean);
+  return parts.length > 2 ? `…/${parts.slice(-2).join('/')}` : d;
+};
+
 /**
  * Add a project folder to scan — no .env editing, no restart. The server persists the dir
  * and rescans live, so repos stream into the dashboard over SSE. Honest: it reports the real
@@ -13,11 +19,14 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
   const [ghRepo, setGhRepo] = useState('');
+  const [ghDir, setGhDir] = useState(''); // '' = server default (first tracked folder)
   const [cloneBusy, setCloneBusy] = useState(false);
   const [cloneMsg, setCloneMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
   const [dirs, setDirs] = useState<string[]>([]);
   const [envDirs, setEnvDirs] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Store-managed dirs first (matches the server's default-destination order), env dirs after.
+  const allDirs = [...dirs, ...envDirs.filter((d) => !dirs.includes(d))];
 
   const refresh = () => {
     void listProjects()
@@ -66,7 +75,7 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
     setCloneBusy(true);
     setCloneMsg(null);
     try {
-      const { dir } = await cloneFromGithub(repo);
+      const { dir } = await cloneFromGithub(repo, ghDir || undefined);
       setGhRepo('');
       setCloneMsg({ tone: 'ok', text: `Cloned to ${dir} — scanning now, it'll appear below.` });
       refresh();
@@ -131,6 +140,21 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
             aria-label="GitHub repository"
             className="h-9 flex-1 rounded-tile border bg-elevated px-3 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
           />
+          {allDirs.length > 1 ? (
+            <select
+              value={ghDir}
+              onChange={(e) => setGhDir(e.target.value)}
+              aria-label="Clone into folder"
+              title="Which tracked folder to clone into"
+              className="h-9 max-w-[220px] rounded-tile border bg-elevated px-2 font-mono text-label text-text2 focus:border-primary/50 focus:outline-none"
+            >
+              {allDirs.map((d) => (
+                <option key={d} value={d === allDirs[0] ? '' : d}>
+                  {shortDir(d)}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <Button onClick={() => void submitClone()} disabled={cloneBusy || !ghRepo.trim()}>
             {cloneBusy ? 'Cloning…' : 'Clone & scan'}
           </Button>

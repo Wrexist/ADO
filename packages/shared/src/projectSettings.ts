@@ -71,8 +71,15 @@ export interface ProjectGitInfo {
   remoteUrl: string | null;
   /** Present only when origin is a github.com remote. */
   github: { owner: string; repo: string; webUrl: string; newPrUrl: string } | null;
-  /** The open PR for the current branch, when it could actually be checked. */
-  openPr: { number: number; title: string; url: string } | null;
+  /** The open PR for the current branch, when it could actually be checked. mergeable/checks
+   *  are null when GitHub hasn't computed them or the token can't see them (honest unknown). */
+  openPr: {
+    number: number;
+    title: string;
+    url: string;
+    mergeable: boolean | null;
+    checks: 'passing' | 'failing' | 'pending' | null;
+  } | null;
   /**
    * Why openPr is (or isn't) trustworthy — honest provenance, never a silent null:
    * checked = GitHub was asked · no-token = connect GitHub to check · not-github = no

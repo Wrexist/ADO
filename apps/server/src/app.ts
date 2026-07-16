@@ -737,11 +737,20 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const cloner = new GithubCloner();
   app.post('/api/projects/github', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
-    const input = ((req.body ?? {}) as { repo?: string }).repo;
-    if (!input || !input.trim()) return reply.code(400).send({ error: 'repo is required — owner/repo or a github.com URL' });
-    const ref = parseGithubRepo(input);
+    const body = (req.body ?? {}) as { repo?: string; dir?: string };
+    if (!body.repo || !body.repo.trim()) return reply.code(400).send({ error: 'repo is required — owner/repo or a github.com URL' });
+    const ref = parseGithubRepo(body.repo);
     if (!ref) return reply.code(400).send({ error: 'not a GitHub repository — use owner/repo or a github.com URL' });
-    const parent = projectDirs.list()[0] ?? env.projectDirs[0];
+    // Destination: a caller-chosen TRACKED folder (the picker), else the first tracked one.
+    // Only already-tracked folders are valid targets — never an arbitrary client path.
+    let parent = projectDirs.list()[0] ?? env.projectDirs[0];
+    if (body.dir && body.dir.trim()) {
+      const chosen = expandHome(body.dir);
+      if (!allProjectDirs().includes(chosen)) {
+        return reply.code(400).send({ error: 'destination must be one of the tracked project folders' });
+      }
+      parent = chosen;
+    }
     if (!parent) return reply.code(400).send({ error: 'add a projects folder first (Repositories → Add a project folder), then clone into it' });
     try {
       const dir = await cloner.clone(parent, ref, connections.resolve('github'));

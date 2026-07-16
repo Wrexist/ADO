@@ -30,6 +30,10 @@ export interface GhPr {
   number: number;
   title: string;
   url: string;
+  /** GitHub's computed mergeability — null while computing / not visible (honest unknown). */
+  mergeable: boolean | null;
+  /** Aggregated check-run state for the PR head — null when there are no checks / not visible. */
+  checks: 'passing' | 'failing' | 'pending' | null;
 }
 
 export interface GitHubClient {

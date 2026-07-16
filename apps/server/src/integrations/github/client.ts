@@ -83,7 +83,36 @@ export class OctokitClient implements GitHubClient {
     );
     const pr = data[0];
     if (!pr) return null;
-    return { number: pr.number, title: pr.title ?? '', url: pr.html_url ?? `https://github.com/${owner}/${name}/pull/${pr.number}` };
+
+    // Enrich with live status. Both are best-effort: a token without the scope, or GitHub
+    // still computing mergeability, degrades to null — an honest unknown, never a guess.
+    // (Deliberately NOT ETag-cached: mergeable/checks must reflect now, not a cached poll.)
+    let mergeable: boolean | null = null;
+    try {
+      const full = await this.octokit.pulls.get({ owner, repo: name, pull_number: pr.number });
+      mergeable = full.data.mergeable ?? null;
+    } catch {
+      /* not visible → unknown */
+    }
+    let checks: GhPr['checks'] = null;
+    try {
+      const runs = await this.octokit.checks.listForRef({ owner, repo: name, ref: pr.head.sha, per_page: 50 });
+      const all = runs.data.check_runs ?? [];
+      if (all.length > 0) {
+        if (all.some((r) => r.status !== 'completed')) checks = 'pending';
+        else if (all.some((r) => r.conclusion === 'failure' || r.conclusion === 'timed_out' || r.conclusion === 'cancelled')) checks = 'failing';
+        else checks = 'passing';
+      }
+    } catch {
+      /* no checks scope / none configured → unknown */
+    }
+    return {
+      number: pr.number,
+      title: pr.title ?? '',
+      url: pr.html_url ?? `https://github.com/${owner}/${name}/pull/${pr.number}`,
+      mergeable,
+      checks,
+    };
   }
 
   async latestRun(owner: string, name: string): Promise<GhRun | null> {

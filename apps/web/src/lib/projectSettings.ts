@@ -31,12 +31,13 @@ export async function fetchProjectGit(repoId: string): Promise<ProjectGitInfo> {
   return (await res.json()) as ProjectGitInfo;
 }
 
-/** Clone owner/repo (or a github.com URL) into the tracked projects folder and rescan. */
-export async function cloneFromGithub(repo: string): Promise<{ dir: string; repos: number }> {
+/** Clone owner/repo (or a github.com URL) into a tracked projects folder and rescan.
+ *  `dir` (optional) picks WHICH tracked folder — the server rejects untracked paths. */
+export async function cloneFromGithub(repo: string, dir?: string): Promise<{ dir: string; repos: number }> {
   const res = await fetch(`${SERVER_URL}/api/projects/github`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ repo }),
+    body: JSON.stringify({ repo, dir }),
   });
   if (!res.ok) throw new Error(await bodyError(res, `clone failed (${res.status})`));
   return (await res.json()) as { dir: string; repos: number };

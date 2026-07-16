@@ -122,7 +122,7 @@ describe('project settings + git endpoints', () => {
     root = mkdtempSync(join(tmpdir(), 'acc-feat-'));
     makeGitRepo(root, 'linked-repo', 'https://github.com/wrexist/linked-repo.git');
     makeGitRepo(root, 'local-repo');
-    srv = await buildServer(ENV, { startSystem: false, spawner: fakeSpawner(), githubClient: new FakeGh({ number: 7, title: 'Fix waves', url: 'https://github.com/wrexist/linked-repo/pull/7' }) });
+    srv = await buildServer(ENV, { startSystem: false, spawner: fakeSpawner(), githubClient: new FakeGh({ number: 7, title: 'Fix waves', url: 'https://github.com/wrexist/linked-repo/pull/7', mergeable: true, checks: 'passing' }) });
     // scan the folder so both repos are allow-listed
     await srv.app.inject({ method: 'POST', url: '/api/projects', headers: AUTH, payload: { dir: root } });
     // an unscanned repo that exists only in bus state (like a demo/github-only repo)
@@ -182,7 +182,13 @@ describe('project settings + git endpoints', () => {
     expect(info.github.webUrl).toBe('https://github.com/wrexist/linked-repo');
     expect(info.github.newPrUrl).toContain('/compare/main?expand=1');
     expect(info.prState).toBe('checked');
-    expect(info.openPr).toMatchObject({ number: 7, title: 'Fix waves' });
+    expect(info.openPr).toMatchObject({ number: 7, title: 'Fix waves', mergeable: true, checks: 'passing' });
+  });
+
+  it('github clone: a chosen destination must be a TRACKED folder (never an arbitrary path)', async () => {
+    const res = await srv.app.inject({ method: 'POST', url: '/api/projects/github', headers: AUTH, payload: { repo: 'wrexist/some-repo', dir: '/tmp/not-tracked-anywhere' } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/tracked project folders/);
   });
 
   it('git info: honest states — no remote → not-github; unscanned → 404', async () => {
