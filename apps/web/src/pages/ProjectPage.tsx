@@ -11,6 +11,7 @@ import { dispatchPrompt } from '../lib/prompts';
 import { fetchAutomations, runAutomation } from '../lib/automations';
 import { pollReview, startReview } from '../lib/review';
 import { fetchProjectGit, fetchProjectSettings, setProjectFeature } from '../lib/projectSettings';
+import { TestFlightCard } from '../views/TestFlightCard';
 
 const BUILD_TONE: Record<BuildState, Tone> = { running: 'info', queued: 'muted', success: 'success', failed: 'danger' };
 const triggerLabel = (a: Automation): string =>
@@ -451,6 +452,8 @@ export function ProjectPage() {
               </p>
             )}
           </Card>
+
+          <TestFlightCard repoId={repo.id} />
 
           <Card className="p-5">
             <h2 className="text-section font-semibold text-text1">Deployments</h2>

@@ -79,6 +79,15 @@ export function CommandPalette() {
         icon: 'settings' as IconName,
         to: `/repositories/${r.id}?settings=1`,
       })),
+      ...Object.values(state.repos)
+        .filter((r) => r.category === 'app')
+        .map((r) => ({
+          id: `a:testflight:${r.id}`,
+          label: `TestFlight deploy for ${r.name}`,
+          sub: 'Action',
+          icon: 'rocket' as IconName,
+          to: `/repositories/${r.id}`,
+        })),
     ];
     const pages: Item[] = [
       { id: 'p:command', label: 'Command dashboard', sub: 'Page', icon: 'overview', to: '/command' },

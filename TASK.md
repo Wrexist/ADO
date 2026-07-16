@@ -6,6 +6,28 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## TestFlight deploy round (2026-07-16d) — saved, reusable, version-per-deploy
+- [x] **Shared** (`@ado/shared/testflight`): `TestFlightProfileInput` zod (name · repoId · scheme ·
+  bundleId · teamId · configuration · testNotes · credentialsNote — a POINTER, never key material) +
+  derived stored type; `DeployVersion` (validated per deploy — never stored in the template);
+  `TestFlightAutofill` with per-file provenance; `renderTestFlightTask` (config fenced as DATA,
+  steps demand verified upload, "do not claim a deploy that did not happen").
+- [x] **Server**: `probeIos` — read-only auto-fill from the repo's real files (pbxproj bundle id/
+  versions/team with $(…)-ref + test-target filtering, shared schemes, fastlane Appfile, Info.plist
+  fallback; honest detected:false for non-iOS repos). `TestFlightProfileStore` (JSON, markDeployed
+  records runId + version label). Endpoints (token-gated): profiles CRUD (?repo=), 
+  `/api/projects/:id/testflight/autofill`, `/api/testflight/profiles/:id/deploy` — validates the
+  per-deploy version, renders the task, dispatches through the RUNNER (cwd allow-list + per-project
+  Agent-dispatch switch apply automatically). 11 new tests incl. the agents-off 403.
+- [x] **Web**: TestFlight card on the project page — saved templates (facts + last deploy),
+  **Deploy…** expands version/build inputs pre-filled from the live probe (build auto-bumped when
+  numeric), **New template** form auto-filled from the project, provenance line, honest non-iOS /
+  not-scanned states. ⌘K "TestFlight deploy for <app>" actions. Demo seeds one Bloom template.
+- [x] **verify green** — typecheck ×3 · lint · **197 tests** · build; zero console errors on
+  `/repositories/bloom` · `/command` · `/ops` at 1536px. Screenshots sent.
+
+---
+
 ## Follow-ups + full-app audit round (2026-07-16c)
 - [x] **Follow-ups shipped**: clone **destination picker** (shown when >1 tracked folder; server
   accepts only already-tracked folders as targets); **live PR status** on the Open PR button

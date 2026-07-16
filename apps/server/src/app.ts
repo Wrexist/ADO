@@ -45,7 +45,18 @@ import { IncidentReporter } from './incidents/reporter';
 import { AutoReviewStore } from './autoreview/store';
 import { ClaudeReviewer } from './autoreview/reviewer';
 import { AutoReviewEngine } from './autoreview/engine';
-import { Intent, ProjectSettingsPatch, type AutoReview, type AutoReviewSettings, type ProjectGitInfo } from '@ado/shared';
+import { TestFlightProfileStore } from './testflight/store';
+import { probeIos } from './testflight/autofill';
+import {
+  DeployVersion,
+  Intent,
+  ProjectSettingsPatch,
+  formatVersion,
+  renderTestFlightTask,
+  type AutoReview,
+  type AutoReviewSettings,
+  type ProjectGitInfo,
+} from '@ado/shared';
 
 export interface AccServer {
   app: FastifyInstance;
@@ -402,6 +413,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // Deep review: opt-in `claude ultrareview` (cloud multi-agent) per project, streamed.
   const reviewRunner = new ReviewRunner(cwdFor, (msg) => app.log.info(msg));
 
+  // TestFlight deploy templates — saved per repo; deploying dispatches a REAL agent run.
+  const testflightPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-testflight-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'testflight.json');
+  const testflight = new TestFlightProfileStore(testflightPath);
+
   // Per-repo automations: saved prompts/recipes that run on command, on a schedule, or on a
   // real CI event. Running = a real dispatched agent (same runner as /api/dispatch).
   const automationsPath =
@@ -419,6 +437,21 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     seed('dynasty-manager', 'steam-release-checklist', { on: 'manual' });
     seed('bloom', 'fix-failed-build', { on: 'event', event: 'build.failed' });
     seed('atlas', 'weekly-changelog', { on: 'schedule', every: 'week' });
+  }
+  // Demo world: one saved TestFlight template (Bloom is the demo's iOS app) so the card
+  // on /repositories/bloom is self-documenting.
+  if (env.demo && testflight.list().length === 0) {
+    const p = testflight.upsert({
+      repoId: 'bloom',
+      name: 'Bloom · App Store',
+      scheme: 'Bloom',
+      bundleId: 'com.wrexist.bloom',
+      teamId: 'AB12CD34EF',
+      configuration: 'Release',
+      testNotes: 'Try the new skin-scan flow end to end; check camera permissions on first launch.',
+      credentialsNote: 'ASC API key in ~/.appstoreconnect (key id in .env ASC_KEY_ID)',
+    });
+    testflight.markDeployed(p.id, 'demo-run-tf1', '1.4.1 (57)', new Date(Date.parse('2026-07-08T16:20:00.000Z')).toISOString());
   }
   const automationEngine = new AutomationEngine(
     automations,
@@ -791,6 +824,55 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       projectSettings.set(id, feature, enabled);
     }
     return { features: featureMap(id) };
+  });
+
+  // TestFlight — templates CRUD, per-repo auto-fill, and the confirmed deploy dispatch.
+  // Deploy goes through the runner, so the cwd allow-list and the per-project "Agent
+  // dispatch" switch apply exactly like every other agent run.
+  app.get('/api/testflight/profiles', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const repo = (req.query as { repo?: string }).repo;
+    return { profiles: repo ? testflight.listForRepo(repo) : testflight.list() };
+  });
+  app.post('/api/testflight/profiles', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    try {
+      return { profile: testflight.upsert(req.body ?? {}) };
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+  app.delete('/api/testflight/profiles/:id', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!testflight.remove((req.params as { id: string }).id)) return reply.code(404).send({ error: 'unknown template' });
+    return { ok: true };
+  });
+  app.get('/api/projects/:id/testflight/autofill', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const cwd = cwdFor((req.params as { id: string }).id);
+    if (!cwd) return reply.code(404).send({ error: 'this project is not scanned locally' });
+    return { autofill: probeIos(cwd) };
+  });
+  app.post('/api/testflight/profiles/:id/deploy', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const profile = testflight.get((req.params as { id: string }).id);
+    if (!profile) return reply.code(404).send({ error: 'unknown template' });
+    const body = (req.body ?? {}) as { marketingVersion?: string; buildNumber?: string; model?: string };
+    const version = DeployVersion.safeParse({ marketingVersion: body.marketingVersion, buildNumber: body.buildNumber });
+    if (!version.success) {
+      return reply.code(400).send({ error: version.error.issues[0]?.message ?? 'a valid version and build number are required' });
+    }
+    try {
+      const { runId } = runner.dispatch({
+        repoId: profile.repoId,
+        task: renderTestFlightTask(profile, version.data),
+        model: body.model ?? profile.model,
+      });
+      testflight.markDeployed(profile.id, runId, formatVersion(version.data), new Date().toISOString());
+      return { runId, version: formatVersion(version.data) };
+    } catch (err) {
+      return reply.code(403).send({ error: (err as Error).message });
+    }
   });
 
   // Git link facts for the project page's GitHub buttons: branch, remote, "new PR" compare

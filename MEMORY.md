@@ -465,6 +465,23 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-16d · Claude · TestFlight deploy templates
+- shipped: saved, named, reusable **TestFlight deploy templates** per project. Stable facts live in
+  the template (scheme/bundleId/team/config/notes/credentials-POINTER); the **version+build is
+  entered on every deploy**, pre-filled from the repo's REAL Xcode files by a read-only probe
+  (pbxproj most-frequent literals with $(…)-ref + test-target filtering, shared schemes, Appfile,
+  Info.plist fallback — per-file provenance, detected:false for non-iOS). Deploy = renderTestFlightTask
+  (config fenced as data, verified-upload-or-report-failure) dispatched through the RUNNER, so the
+  cwd allow-list and per-project Agent-dispatch switch gate it for free; markDeployed records
+  runId + "1.5.0 (59)". UI card on the project page + ⌘K actions + demo seed.
+- verify green (197 tests) · zero console errors ×3 routes.
+- next / watch-outs: the probe reads the FIRST *.xcodeproj found (root/ios/one-level) — multi-app
+  monorepos may want a picker later. suggestNextBuild only bumps plain integers (honest no-guess
+  for dotted builds). A future "deploy succeeded" deploy.recorded event should come from parsing
+  the RUN's verified output, never from dispatch time.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …
