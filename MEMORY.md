@@ -482,6 +482,21 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-16e · Claude · TestFlight next steps (verified deploy events)
+- shipped: multi-app Xcode picker (probe returns apps[] with per-project facts; bundle-matched
+  prefill), TestFlight quick-deploy section on /deployments (ProfileRow reused), and the honest
+  self-updating deploy feed: rendered deploy tasks end with a marker protocol; the adapter captures
+  the run's final text; runner.onRunDone (guarded — a throwing hook can't break a run) feeds a
+  watcher that publishes deploy.recorded ONLY from a verified, bundle-matched TESTFLIGHT_UPLOADED/
+  TESTFLIGHT_FAILED marker. No marker or a contradictory report records nothing.
+- verify green (204 tests) · zero console errors ×4 routes.
+- next / watch-outs: the marker protocol is v1 of a general "verified outcome" pattern — the same
+  onRunDone + marker approach can later verify automation outcomes (e.g. release checklists). If
+  Claude CLI's stream-json `result` field shape drifts, the adapter degrades resultText to null and
+  deploys simply stop auto-recording (honest) — watch for that after CLI upgrades.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

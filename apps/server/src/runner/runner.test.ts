@@ -15,6 +15,13 @@ describe('stream-json adapter (council B5)', () => {
     expect(done[0]).toMatchObject({ kind: 'done', ok: true, tokensIn: 100, tokensOut: 50, turns: 3 });
   });
 
+  it('captures the final result text (capped) for outcome-marker consumers', () => {
+    const done = parseStreamLine('{"type":"result","subtype":"success","result":"Done.\\nTESTFLIGHT_UPLOADED com.x.y 1.0 (2)"}');
+    expect(done[0]).toMatchObject({ kind: 'done', resultText: expect.stringContaining('TESTFLIGHT_UPLOADED com.x.y 1.0 (2)') });
+    // non-string result → null, never a guess
+    expect(parseStreamLine('{"type":"result","result":42}')[0]).toMatchObject({ kind: 'done', resultText: null });
+  });
+
   it('degrades unknown/garbled lines to opaque — never throws', () => {
     expect(parseStreamLine('{"type":"quantum_flux_v9"}')).toEqual([{ kind: 'opaque' }]);
     expect(parseStreamLine('not json at all')).toEqual([{ kind: 'opaque' }]);
@@ -124,6 +131,35 @@ describe('runner (Prompts 3.1–3.2)', () => {
     await drain();
     expect(db.select().from(runs).where(eq(runs.id, runId)).get()!.status).toBe('failed');
     expect(bus.snapshot().state.builds[runId]?.state).toBe('failed');
+    sqlite.close();
+  });
+
+  it('onRunDone fires once with the final text on success, and with null text on a failed spawn', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    const calls: Array<{ runId: string; ok: boolean; resultText: string | null }> = [];
+    const stream = [
+      '{"type":"system","subtype":"init"}',
+      '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":1,"output_tokens":1},"result":"TESTFLIGHT_UPLOADED com.a.b 1.0 (2)"}',
+    ];
+    const runner = new Runner(bus, db, fakeSpawner(stream), {
+      cwdFor,
+      onRunDone: (runId, info) => calls.push({ runId, ...info }),
+    });
+    const { runId } = runner.dispatch({ repoId: 'sentinel', task: 'deploy' });
+    await drain();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ runId, ok: true, resultText: expect.stringContaining('TESTFLIGHT_UPLOADED') });
+
+    // a throwing hook never breaks the runner
+    const runner2 = new Runner(bus, db, fakeSpawner(stream), {
+      cwdFor,
+      onRunDone: () => { throw new Error('hook boom'); },
+    });
+    const r2 = runner2.dispatch({ repoId: 'sentinel', task: 'x' });
+    await drain();
+    const row = db.select().from(runs).where(eq(runs.id, r2.runId)).get()!;
+    expect(row.status).toBe('done'); // hook throw swallowed
     sqlite.close();
   });
 

@@ -6,6 +6,25 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## TestFlight next-steps round (2026-07-16e) — picker · Deployments surfacing · verified deploy events
+- [x] **Multi-app monorepos**: `probeIos` now returns EVERY Xcode project found (`apps: IosAppFacts[]`,
+  per-project facts + provenance); the project-page card gains an Xcode-project picker (>1 app) that
+  drives the new-template prefill; per-template version prefill matches by bundle id (`factsForBundle`).
+- [x] **Deployments page**: new "TestFlight templates" section — every saved template across projects,
+  with repo chip + the same fresh-version Deploy flow (ProfileRow reused; renders only when templates
+  exist). Per-repo live autofill fetched best-effort.
+- [x] **Verified `deploy.recorded`**: the rendered deploy task now ends with a reporting protocol —
+  `TESTFLIGHT_UPLOADED <bundleId> <version> (<build>)` on VERIFIED delivery or `TESTFLIGHT_FAILED <step>`.
+  The stream adapter captures the run's final text (`resultText`, capped); the runner gained a guarded
+  `onRunDone` hook; the TestFlight watcher records a REAL deploy.recorded (env testflight, ok true/false)
+  ONLY from a parsed, bundle-matched marker — no marker / ambiguous both-markers / bundle mismatch /
+  non-deploy run → nothing recorded (honest unknown). The Deployments feed updates itself.
+- [x] **verify green** — typecheck ×3 · lint · **204 tests** (+7: multi-app probe, marker parse,
+  watcher record/refuse matrix, adapter resultText, onRunDone incl. throwing-hook guard) · build;
+  zero console errors on `/deployments` · `/repositories/bloom` · `/command` · `/ops`.
+
+---
+
 ## TestFlight deploy round (2026-07-16d) — saved, reusable, version-per-deploy
 - [x] **Shared** (`@ado/shared/testflight`): `TestFlightProfileInput` zod (name · repoId · scheme ·
   bundleId · teamId · configuration · testNotes · credentialsNote — a POINTER, never key material) +

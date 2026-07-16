@@ -8,8 +8,10 @@ async function bodyError(res: Response, fallback: string): Promise<string> {
   return ((await res.json().catch(() => ({}))) as { error?: string }).error ?? fallback;
 }
 
-export async function fetchTestFlightProfiles(repoId: string): Promise<TestFlightProfile[]> {
-  const res = await fetch(`${SERVER_URL}/api/testflight/profiles?repo=${encodeURIComponent(repoId)}`, { headers: headers() });
+/** Templates for one repo, or ALL templates when repoId is omitted (the Deployments page). */
+export async function fetchTestFlightProfiles(repoId?: string): Promise<TestFlightProfile[]> {
+  const q = repoId ? `?repo=${encodeURIComponent(repoId)}` : '';
+  const res = await fetch(`${SERVER_URL}/api/testflight/profiles${q}`, { headers: headers() });
   if (!res.ok) throw new Error(await bodyError(res, `templates: ${res.status}`));
   return ((await res.json()) as { profiles: TestFlightProfile[] }).profiles;
 }

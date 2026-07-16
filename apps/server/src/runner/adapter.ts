@@ -12,8 +12,11 @@ export type AgentUpdate =
   | { kind: 'started' }
   | { kind: 'tool'; name: string }
   | { kind: 'progress'; text: string }
-  | { kind: 'done'; ok: boolean; tokensIn: number | null; tokensOut: number | null; turns: number | null }
+  | { kind: 'done'; ok: boolean; tokensIn: number | null; tokensOut: number | null; turns: number | null; resultText: string | null }
   | { kind: 'opaque' };
+
+/** Cap on the captured final text — enough for outcome markers + a summary, never unbounded. */
+const RESULT_TEXT_CAP = 4000;
 
 interface Line {
   type?: unknown;
@@ -22,6 +25,7 @@ interface Line {
   usage?: { input_tokens?: number; output_tokens?: number };
   num_turns?: number;
   is_error?: boolean;
+  result?: unknown;
 }
 
 /** Parse one JSONL line into zero or more normalized updates. Never throws. */
@@ -66,6 +70,9 @@ export function parseStreamLine(raw: string): AgentUpdate[] {
           tokensIn: typeof obj.usage?.input_tokens === 'number' ? obj.usage.input_tokens : null,
           tokensOut: typeof obj.usage?.output_tokens === 'number' ? obj.usage.output_tokens : null,
           turns: typeof obj.num_turns === 'number' ? obj.num_turns : null,
+          // The agent's final message — consumers parse it for verified-outcome markers
+          // (e.g. TestFlight). Absent/non-string → null, never a guess.
+          resultText: typeof obj.result === 'string' ? obj.result.slice(0, RESULT_TEXT_CAP) : null,
         },
       ];
 

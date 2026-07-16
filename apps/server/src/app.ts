@@ -47,6 +47,7 @@ import { ClaudeReviewer } from './autoreview/reviewer';
 import { AutoReviewEngine } from './autoreview/engine';
 import { TestFlightProfileStore } from './testflight/store';
 import { probeIos } from './testflight/autofill';
+import { testflightRunDone } from './testflight/watch';
 import {
   DeployVersion,
   Intent,
@@ -339,6 +340,14 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       : join(dirname(env.dbPath), 'project-settings.json');
   const projectSettings = new ProjectSettingsStore(projectSettingsPath);
 
+  // TestFlight deploy templates — saved per repo; deploying dispatches a REAL agent run.
+  // Constructed before the runner so its outcome watcher can ride the runner's onRunDone.
+  const testflightPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-testflight-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'testflight.json');
+  const testflight = new TestFlightProfileStore(testflightPath);
+
   let scanner: Scanner | null = null;
   const rebuildScanner = async (): Promise<void> => {
     const before = scanner?.repoIds() ?? [];
@@ -393,7 +402,14 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
   // Runner: dispatch headless agents. The per-project "Agent dispatch" switch is enforced
   // HERE (the one choke point) so every path — command box, prompts, automations, fixes —
-  // honors it.
+  // honors it. onRunDone feeds the TestFlight watcher: a finished deploy run becomes a
+  // deploy.recorded event ONLY when its final text carries a verified, bundle-matched marker.
+  const onTestflightRunDone = testflightRunDone({
+    bus,
+    store: testflight,
+    repoName: (id) => bus.snapshot().state.repos[id]?.name ?? id,
+    log: (msg) => app.log.info(msg),
+  });
   const runner = new Runner(
     bus,
     db,
@@ -404,6 +420,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         projectSettings.isEnabled(repoId, 'agents')
           ? null
           : `agent dispatch is turned off for '${repoId}' — enable it in the project's Settings`,
+      onRunDone: onTestflightRunDone,
     },
     (msg) => app.log.info(msg),
   );
@@ -412,13 +429,6 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
   // Deep review: opt-in `claude ultrareview` (cloud multi-agent) per project, streamed.
   const reviewRunner = new ReviewRunner(cwdFor, (msg) => app.log.info(msg));
-
-  // TestFlight deploy templates — saved per repo; deploying dispatches a REAL agent run.
-  const testflightPath =
-    env.dbPath === ':memory:'
-      ? join(tmpdir(), `acc-testflight-${process.pid}.json`)
-      : join(dirname(env.dbPath), 'testflight.json');
-  const testflight = new TestFlightProfileStore(testflightPath);
 
   // Per-repo automations: saved prompts/recipes that run on command, on a schedule, or on a
   // real CI event. Running = a real dispatched agent (same runner as /api/dispatch).

@@ -55,10 +55,10 @@ export const DeployVersion = z.object({
 });
 export type DeployVersion = z.infer<typeof DeployVersion>;
 
-/** What the read-only repo probe could auto-fill — with honest provenance per field. */
-export interface TestFlightAutofill {
-  /** True when an Xcode project/workspace was actually found in the repo. */
-  detected: boolean;
+/** One Xcode project's auto-fill facts — a multi-app monorepo yields several of these. */
+export interface IosAppFacts {
+  /** Repo-relative project path — the picker label ("ios/Bloom.xcodeproj"). */
+  project: string;
   bundleId?: string;
   teamId?: string;
   marketingVersion?: string;
@@ -67,6 +67,23 @@ export interface TestFlightAutofill {
   schemes: string[];
   /** Which real files informed the values ("ios/App.xcodeproj/project.pbxproj", "fastlane/Appfile"). */
   sources: string[];
+}
+
+/** What the read-only repo probe could auto-fill — every Xcode project found, with provenance. */
+export interface TestFlightAutofill {
+  /** True when at least one Xcode project was actually found in the repo. */
+  detected: boolean;
+  apps: IosAppFacts[];
+}
+
+/** The facts to prefill for a template: match by bundle id when known, else the first app. */
+export function factsForBundle(autofill: TestFlightAutofill | null, bundleId?: string): IosAppFacts | null {
+  if (!autofill || autofill.apps.length === 0) return null;
+  if (bundleId) {
+    const hit = autofill.apps.find((a) => a.bundleId === bundleId);
+    if (hit) return hit;
+  }
+  return autofill.apps[0];
 }
 
 /**
@@ -99,8 +116,39 @@ export function renderTestFlightTask(profile: TestFlightProfile, version: Deploy
     '   NEVER print, echo, or commit key material.',
     '4. Verify: only report success if the upload tool confirmed the build was delivered.',
     '   If anything fails, report the exact failing step and error — do not claim a deploy that did not happen.',
+    '',
+    'Reporting protocol (the dashboard parses your FINAL message for exactly one of these lines):',
+    `- On VERIFIED delivery only: ${TF_MARKER_UPLOADED} ${profile.bundleId} ${version.marketingVersion} (${version.buildNumber})`,
+    `- On any failure: ${TF_MARKER_FAILED} <failing step — short reason>`,
+    'Never print the success line unless the upload tool itself confirmed delivery.',
   ];
   return lines.filter(Boolean).join('\n');
+}
+
+// —— verified-outcome markers ————————————————————————————————————————————————
+// The deploy agent's final message must end with one of these lines; the server records a
+// real deploy.recorded event ONLY from a parsed, bundle-matched marker — a finished run
+// without a marker records nothing (honest unknown, convention 1).
+
+export const TF_MARKER_UPLOADED = 'TESTFLIGHT_UPLOADED';
+export const TF_MARKER_FAILED = 'TESTFLIGHT_FAILED';
+
+export type DeployMarker =
+  | { status: 'uploaded'; bundleId: string; marketingVersion: string; buildNumber: string }
+  | { status: 'failed'; step: string };
+
+/**
+ * Parse the run's final text for the deploy outcome. Conservative on purpose: BOTH markers
+ * present (or neither) → null — an ambiguous report never becomes a deploy record.
+ */
+export function parseDeployMarker(text: string | null | undefined): DeployMarker | null {
+  if (!text) return null;
+  const uploaded = text.match(new RegExp(`${TF_MARKER_UPLOADED}\\s+(\\S+)\\s+(\\d+(?:\\.\\d+){0,3})\\s+\\((\\d+(?:\\.\\d+){0,2})\\)`));
+  const failed = text.match(new RegExp(`${TF_MARKER_FAILED}\\s+([^\\n]{1,160})`));
+  if (uploaded && failed) return null; // contradictory → record nothing
+  if (uploaded) return { status: 'uploaded', bundleId: uploaded[1], marketingVersion: uploaded[2], buildNumber: uploaded[3] };
+  if (failed) return { status: 'failed', step: failed[1].trim() };
+  return null;
 }
 
 /** "1.4.2 (58)" — the display form used for lastVersion. */

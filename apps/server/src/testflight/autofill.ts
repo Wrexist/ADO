@@ -11,7 +11,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import type { TestFlightAutofill } from '@ado/shared';
+import type { IosAppFacts, TestFlightAutofill } from '@ado/shared';
 
 const IGNORE = new Set(['node_modules', '.git', 'dist', 'build', 'DerivedData', 'Pods', '.vite']);
 const MAX_PBXPROJ_BYTES = 4 * 1024 * 1024;
@@ -26,17 +26,19 @@ function dirsIn(root: string): string[] {
   }
 }
 
-/** Find the first *.xcodeproj (repo root, ./ios, or one level down) — bounded, no deep walk. */
-function findXcodeproj(cwd: string): string | null {
+/** Find ALL *.xcodeproj dirs (repo root, ./ios, or one level down) — bounded, no deep walk.
+ *  A multi-app monorepo yields several; the UI offers a picker. */
+function findXcodeprojs(cwd: string): string[] {
   const roots = [cwd, join(cwd, 'ios'), ...dirsIn(cwd).map((d) => join(cwd, d))];
+  const found = new Set<string>();
   for (const root of roots) {
     for (const name of dirsIn(root)) {
       if (name.endsWith('.xcodeproj') && existsSync(join(root, name, 'project.pbxproj'))) {
-        return join(root, name);
+        found.add(join(root, name));
       }
     }
   }
-  return null;
+  return [...found].sort();
 }
 
 function read(path: string, cap = MAX_PBXPROJ_BYTES): string | null {
@@ -105,41 +107,45 @@ function plistVersions(xcodeproj: string, cwd: string): { marketing?: string; bu
   return {};
 }
 
-/** The probe. Never throws; a non-iOS repo returns { detected: false, schemes: [], sources: [] }. */
-export function probeIos(cwd: string): TestFlightAutofill {
-  const xcodeproj = findXcodeproj(cwd);
-  if (!xcodeproj) return { detected: false, schemes: [], sources: [] };
-
+/** Facts for one Xcode project. Appfile facts (repo-level) fill gaps for every app. */
+function appFacts(cwd: string, xcodeproj: string, appfile: ReturnType<typeof appfileFacts>): IosAppFacts {
   const sources: string[] = [];
-  const out: TestFlightAutofill = { detected: true, schemes: [], sources };
+  const facts: IosAppFacts = { project: relative(cwd, xcodeproj), schemes: [], sources };
 
   const pbxPath = join(xcodeproj, 'project.pbxproj');
   const pbx = read(pbxPath);
   if (pbx) {
     sources.push(relative(cwd, pbxPath));
-    out.bundleId = pbxValue(pbx, 'PRODUCT_BUNDLE_IDENTIFIER', { skipTests: true });
-    out.teamId = pbxValue(pbx, 'DEVELOPMENT_TEAM');
-    out.marketingVersion = pbxValue(pbx, 'MARKETING_VERSION');
-    out.buildNumber = pbxValue(pbx, 'CURRENT_PROJECT_VERSION');
+    facts.bundleId = pbxValue(pbx, 'PRODUCT_BUNDLE_IDENTIFIER', { skipTests: true });
+    facts.teamId = pbxValue(pbx, 'DEVELOPMENT_TEAM');
+    facts.marketingVersion = pbxValue(pbx, 'MARKETING_VERSION');
+    facts.buildNumber = pbxValue(pbx, 'CURRENT_PROJECT_VERSION');
   }
 
-  out.schemes = sharedSchemes(xcodeproj);
-  if (out.schemes.length > 0) sources.push(relative(cwd, join(xcodeproj, 'xcshareddata', 'xcschemes')));
+  facts.schemes = sharedSchemes(xcodeproj);
+  if (facts.schemes.length > 0) sources.push(relative(cwd, join(xcodeproj, 'xcshareddata', 'xcschemes')));
 
-  const appfile = appfileFacts(cwd);
-  if (appfile.source) {
+  if (appfile.source && (!facts.bundleId || !facts.teamId)) {
     sources.push(appfile.source);
-    out.bundleId = out.bundleId ?? appfile.bundleId;
-    out.teamId = out.teamId ?? appfile.teamId;
+    facts.bundleId = facts.bundleId ?? appfile.bundleId;
+    facts.teamId = facts.teamId ?? appfile.teamId;
   }
 
-  if (!out.marketingVersion || !out.buildNumber) {
+  if (!facts.marketingVersion || !facts.buildNumber) {
     const plist = plistVersions(xcodeproj, cwd);
     if (plist.source) {
       sources.push(plist.source);
-      out.marketingVersion = out.marketingVersion ?? plist.marketing;
-      out.buildNumber = out.buildNumber ?? plist.build;
+      facts.marketingVersion = facts.marketingVersion ?? plist.marketing;
+      facts.buildNumber = facts.buildNumber ?? plist.build;
     }
   }
-  return out;
+  return facts;
+}
+
+/** The probe. Never throws; a non-iOS repo returns { detected: false, apps: [] }. */
+export function probeIos(cwd: string): TestFlightAutofill {
+  const projects = findXcodeprojs(cwd);
+  if (projects.length === 0) return { detected: false, apps: [] };
+  const appfile = appfileFacts(cwd);
+  return { detected: true, apps: projects.map((p) => appFacts(cwd, p, appfile)) };
 }

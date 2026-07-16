@@ -32,6 +32,13 @@ interface RunnerOpts {
    * automations, incident/review fixes — honors the switch through this one choke point.
    */
   blockedReason?: (repoId: string) => string | null;
+  /**
+   * Called once when a run finishes (success or failure) with the agent's final text (null
+   * when the stream carried none). Consumers parse it for verified-outcome markers — e.g.
+   * the TestFlight watcher records a deploy only from a marker. Guarded: a throwing hook
+   * never breaks the runner.
+   */
+  onRunDone?: (runId: string, info: { repoId: string; ok: boolean; resultText: string | null }) => void;
 }
 
 const DEFAULTS = { maxConcurrent: 3, turnCap: 20, timeoutMs: 15 * 60_000 };
@@ -43,7 +50,7 @@ export class Runner {
   private seq = 0; // guarantees unique run ids even for same-millisecond dispatches
   private queue: Array<{ id: string; input: DispatchInput }> = [];
   private handles = new Map<string, SpawnHandle>();
-  private opts: Required<Omit<RunnerOpts, 'cwdFor' | 'blockedReason'>> & Pick<RunnerOpts, 'cwdFor' | 'blockedReason'>;
+  private opts: Required<Omit<RunnerOpts, 'cwdFor' | 'blockedReason' | 'onRunDone'>> & Pick<RunnerOpts, 'cwdFor' | 'blockedReason' | 'onRunDone'>;
 
   constructor(
     private bus: Bus,
@@ -134,6 +141,7 @@ export class Runner {
         payload: { agent: { id: runId, name: this.agentName(input), icon: 'code', tone: 'danger', kind: 'runner', status: 'failed', statusLine: 'Failed', pct: null } },
       });
     } catch { /* best effort */ }
+    try { this.opts.onRunDone?.(runId, { repoId: input.repoId, ok: false, resultText: null }); } catch { /* hook must never break the runner */ }
   }
 
   private async run(runId: string, input: DispatchInput, cwd: string): Promise<void> {
@@ -161,6 +169,7 @@ export class Runner {
     let turns = 0;
     let tokensIn: number | null = null;
     let tokensOut: number | null = null;
+    let resultText: string | null = null;
     let opaque = false;
     let statusLine = 'Starting…';
 
@@ -206,6 +215,7 @@ export class Runner {
             tokensIn = u.tokensIn;
             tokensOut = u.tokensOut;
             turns = u.turns ?? turns;
+            resultText = u.resultText;
           }
         }
       }
@@ -250,6 +260,8 @@ export class Runner {
       source: { kind: 'runner', ref: runId },
       payload: { repoId: input.repoId, patch: { agents } },
     });
+
+    try { this.opts.onRunDone?.(runId, { repoId: input.repoId, ok, resultText }); } catch { /* hook must never break the runner */ }
   }
 
   private agentName(input: DispatchInput): string {
