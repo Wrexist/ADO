@@ -16,6 +16,8 @@ import { registerSecurity, sseAuthorized, tokenMatches } from './security';
 import { ConnectionsStore } from './connections/store';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
+import { ProjectSettingsStore } from './projects/settings';
+import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
 import { Scanner } from './scanner';
 import { GitHubSync } from './integrations/github/sync';
@@ -43,7 +45,7 @@ import { IncidentReporter } from './incidents/reporter';
 import { AutoReviewStore } from './autoreview/store';
 import { ClaudeReviewer } from './autoreview/reviewer';
 import { AutoReviewEngine } from './autoreview/engine';
-import { Intent, type AutoReview, type AutoReviewSettings } from '@ado/shared';
+import { Intent, ProjectSettingsPatch, type AutoReview, type AutoReviewSettings, type ProjectGitInfo } from '@ado/shared';
 
 export interface AccServer {
   app: FastifyInstance;
@@ -318,6 +320,14 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const projectDirs = new ProjectDirsStore(projectDirsPath);
   const allProjectDirs = (): string[] => Array.from(new Set([...env.projectDirs, ...projectDirs.list()]));
 
+  // Per-project feature switches (Settings on each project page). Stored as deltas from the
+  // PROJECT_FEATURES catalog defaults; consulted at each feature's choke point below.
+  const projectSettingsPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-projset-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'project-settings.json');
+  const projectSettings = new ProjectSettingsStore(projectSettingsPath);
+
   let scanner: Scanner | null = null;
   const rebuildScanner = async (): Promise<void> => {
     const before = scanner?.repoIds() ?? [];
@@ -370,12 +380,20 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const cwdFor = (id: string): string | null =>
     scanner ? scanner.cwdFor(id) : bus.snapshot().state.repos[id] ? `/repos/${id}` : null;
 
-  // Runner: dispatch headless agents.
+  // Runner: dispatch headless agents. The per-project "Agent dispatch" switch is enforced
+  // HERE (the one choke point) so every path — command box, prompts, automations, fixes —
+  // honors it.
   const runner = new Runner(
     bus,
     db,
     deps.spawner ?? new ClaudeSpawner(),
-    { cwdFor },
+    {
+      cwdFor,
+      blockedReason: (repoId) =>
+        projectSettings.isEnabled(repoId, 'agents')
+          ? null
+          : `agent dispatch is turned off for '${repoId}' — enable it in the project's Settings`,
+    },
     (msg) => app.log.info(msg),
   );
   const orphans = runner.reconcileOrphans();
@@ -406,6 +424,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     automations,
     (repoId, task, model) => runner.dispatch({ repoId, task, model }),
     (msg) => app.log.info(msg),
+    () => Date.now(),
+    (repoId) => projectSettings.isEnabled(repoId, 'automations'),
   );
 
   // Outbound notifications to connected Slack/Discord webhooks (real CI failures + deploys).
@@ -430,7 +450,9 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     reviewer,
     cwdFor,
     repoName: (id) => bus.snapshot().state.repos[id]?.name ?? id,
-    notify: (label, verdict, counts) => notifier.reviewNeedsAttention(label, verdict, counts),
+    notify: (repoId, label, verdict, counts) => {
+      if (projectSettings.isEnabled(repoId, 'notifications')) notifier.reviewNeedsAttention(label, verdict, counts);
+    },
     log: (msg) => app.log.info(msg),
   });
 
@@ -446,13 +468,18 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         const { build } = e.payload;
         if (build.state === 'failed') {
           automationEngine.onBuildEvent(build.repo, 'build.failed');
-          notifier.buildFailed(bus.snapshot().state.repos[build.repo]?.name ?? build.repo, build.jobLabel);
+          if (projectSettings.isEnabled(build.repo, 'notifications')) {
+            notifier.buildFailed(bus.snapshot().state.repos[build.repo]?.name ?? build.repo, build.jobLabel);
+          }
         } else if (build.state === 'success') {
           automationEngine.onBuildEvent(build.repo, 'build.success');
         }
       } else if (e.type === 'deploy.recorded') {
         const { deployment } = e.payload;
-        notifier.deployRecorded(deployment.name, deployment.env, deployment.ok);
+        // Untagged deployments (no repoId) aren't repo-scoped — the global webhook still fires.
+        if (!deployment.repoId || projectSettings.isEnabled(deployment.repoId, 'notifications')) {
+          notifier.deployRecorded(deployment.name, deployment.env, deployment.ok);
+        }
       }
     });
   }
@@ -703,6 +730,99 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (raw && raw.trim()) projectDirs.remove(expandHome(raw));
     await rebuildScanner();
     return { dirs: projectDirs.list() };
+  });
+
+  // Clone a repo from GitHub straight into the tracked projects folder, then rescan live.
+  // The clone URL is always the clean https URL; a connected token rides in env only.
+  const cloner = new GithubCloner();
+  app.post('/api/projects/github', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const input = ((req.body ?? {}) as { repo?: string }).repo;
+    if (!input || !input.trim()) return reply.code(400).send({ error: 'repo is required — owner/repo or a github.com URL' });
+    const ref = parseGithubRepo(input);
+    if (!ref) return reply.code(400).send({ error: 'not a GitHub repository — use owner/repo or a github.com URL' });
+    const parent = projectDirs.list()[0] ?? env.projectDirs[0];
+    if (!parent) return reply.code(400).send({ error: 'add a projects folder first (Repositories → Add a project folder), then clone into it' });
+    try {
+      const dir = await cloner.clone(parent, ref, connections.resolve('github'));
+      await rebuildScanner(); // the clone lands inside a tracked folder → repos stream in live
+      return { dir, repos: Object.keys(bus.snapshot().state.repos).length };
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+
+  // Per-project settings — the feature switches behind each project's Settings button.
+  // Auto-Review delegates to its own store via the engine (single source of truth + baseline
+  // seeding); everything else lives in the project-settings store.
+  const featureMap = (repoId: string) => ({
+    ...projectSettings.map(repoId),
+    autoReview: autoReviewStore.settings(repoId).enabled,
+  });
+  app.get('/api/projects/:id/settings', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    if (!bus.snapshot().state.repos[id]) return reply.code(404).send({ error: 'unknown project' });
+    return { features: featureMap(id) };
+  });
+  app.post('/api/projects/:id/settings', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    if (!bus.snapshot().state.repos[id]) return reply.code(404).send({ error: 'unknown project' });
+    const parsed = ProjectSettingsPatch.safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'feature (id) and enabled (boolean) are required' });
+    const { feature, enabled } = parsed.data;
+    if (feature === 'autoReview') {
+      try {
+        await autoReview.setEnabled(id, enabled);
+      } catch (err) {
+        return reply.code(403).send({ error: (err as Error).message });
+      }
+    } else {
+      projectSettings.set(id, feature, enabled);
+    }
+    return { features: featureMap(id) };
+  });
+
+  // Git link facts for the project page's GitHub buttons: branch, remote, "new PR" compare
+  // URL, and — when GitHub is connected — the open PR for the current branch. Honest
+  // prState provenance instead of a silent null.
+  let ghMemo: { token: string; client: GitHubClient } | null = null;
+  const ghClient = (): GitHubClient | null => {
+    if (deps.githubClient) return deps.githubClient;
+    const token = connections.resolve('github');
+    if (!token) return null;
+    if (!ghMemo || ghMemo.token !== token) ghMemo = { token, client: new OctokitClient(token) };
+    return ghMemo.client;
+  };
+  app.get('/api/projects/:id/git', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    const cwd = cwdFor(id);
+    if (!cwd) return reply.code(404).send({ error: 'this project is not scanned locally' });
+    const link = await readGitLink(cwd);
+    const info: ProjectGitInfo = { branch: link.branch, remoteUrl: link.remoteUrl, github: null, openPr: null, prState: 'not-github' };
+    if (link.github) {
+      const webUrl = `https://github.com/${link.github.owner}/${link.github.repo}`;
+      info.github = {
+        owner: link.github.owner,
+        repo: link.github.repo,
+        webUrl,
+        newPrUrl: `${webUrl}/compare/${encodeURIComponent(link.branch)}?expand=1`,
+      };
+      const client = ghClient();
+      if (!client) {
+        info.prState = 'no-token';
+      } else {
+        try {
+          info.openPr = await client.openPrForBranch(link.github.owner, link.github.repo, link.branch);
+          info.prState = 'checked';
+        } catch {
+          info.prState = 'error';
+        }
+      }
+    }
+    return info;
   });
 
   // Setup page: probe the machine for required tools/keys/config and one-click install the

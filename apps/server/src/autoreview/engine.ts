@@ -30,8 +30,9 @@ export interface EngineDeps {
   cwdFor: (repoId: string) => string | null;
   /** Display name for prompts/notifications; falls back to the id. */
   repoName?: (repoId: string) => string;
-  /** Called when a finished review needs attention (verdict !== clean). */
-  notify?: (repoLabel: string, verdict: 'attention' | 'block', counts: { major: number; critical: number }) => void;
+  /** Called when a finished review needs attention (verdict !== clean). repoId lets the
+   *  caller honor the per-project notifications switch. */
+  notify?: (repoId: string, repoLabel: string, verdict: 'attention' | 'block', counts: { major: number; critical: number }) => void;
   log?: (msg: string) => void;
   now?: () => number;
   /** Injectable for tests. */
@@ -151,7 +152,7 @@ export class AutoReviewEngine {
       if (out.verdict !== 'clean' && this.deps.notify) {
         const major = out.findings.filter((f) => f.severity === 'major').length;
         const critical = out.findings.filter((f) => f.severity === 'critical').length;
-        this.deps.notify(repoName, out.verdict, { major, critical });
+        this.deps.notify(review.repoId, repoName, out.verdict, { major, critical });
       }
       this.deps.log(`autoreview: ${review.repoId} ${out.verdict} (${out.findings.length} finding(s)) for ${collected.refLabel}`);
     } catch (err) {

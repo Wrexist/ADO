@@ -17,6 +17,9 @@ export class AutomationEngine {
     private dispatch: DispatchFn,
     private log: (msg: string) => void = () => {},
     private now: () => number = () => Date.now(),
+    /** Per-project switch (project settings → "Automations"). Manual runNow ignores it —
+     *  a deliberate click outranks the background switch; schedules/events honor it. */
+    private isRepoEnabled: (repoId: string) => boolean = () => true,
   ) {}
 
   /** Run one automation now (manual). Returns the runId, or throws (unknown / not dispatchable). */
@@ -50,6 +53,7 @@ export class AutomationEngine {
 
   /** A real CI/scan build event arrived for a repo (caller must exclude runner-origin builds). */
   onBuildEvent(repoId: string, eventName: 'build.failed' | 'build.success'): void {
+    if (!this.isRepoEnabled(repoId)) return; // project switch off → background triggers sleep
     for (const a of this.store.listForRepo(repoId)) {
       if (a.enabled && eventMatches(a.trigger, eventName)) this.tryFire(a);
     }
@@ -60,6 +64,7 @@ export class AutomationEngine {
     const nowMs = this.now();
     for (const a of this.store.list()) {
       if (!a.enabled) continue;
+      if (!this.isRepoEnabled(a.repoId)) continue; // project switch off → skip quietly
       const last = a.lastRunTs ? Date.parse(a.lastRunTs) : NaN;
       if (isScheduleDue(a.trigger, Number.isFinite(last) ? last : null, nowMs)) this.tryFire(a);
     }

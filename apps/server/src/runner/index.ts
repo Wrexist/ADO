@@ -26,6 +26,12 @@ interface RunnerOpts {
   timeoutMs?: number;
   /** repoId → absolute cwd (the allow-list; a dispatch outside it is rejected). */
   cwdFor: (repoId: string) => string | null;
+  /**
+   * Per-project switch (project settings → "Agent dispatch"). Returning a string blocks the
+   * dispatch with that reason. Checked FIRST so every dispatch path — command box, prompts,
+   * automations, incident/review fixes — honors the switch through this one choke point.
+   */
+  blockedReason?: (repoId: string) => string | null;
 }
 
 const DEFAULTS = { maxConcurrent: 3, turnCap: 20, timeoutMs: 15 * 60_000 };
@@ -37,7 +43,7 @@ export class Runner {
   private seq = 0; // guarantees unique run ids even for same-millisecond dispatches
   private queue: Array<{ id: string; input: DispatchInput }> = [];
   private handles = new Map<string, SpawnHandle>();
-  private opts: Required<Omit<RunnerOpts, 'cwdFor'>> & Pick<RunnerOpts, 'cwdFor'>;
+  private opts: Required<Omit<RunnerOpts, 'cwdFor' | 'blockedReason'>> & Pick<RunnerOpts, 'cwdFor' | 'blockedReason'>;
 
   constructor(
     private bus: Bus,
@@ -66,8 +72,10 @@ export class Runner {
     return orphans.length;
   }
 
-  /** Accept a dispatch. Returns the runId, or throws if the cwd isn't allow-listed. */
+  /** Accept a dispatch. Returns the runId, or throws if blocked/not allow-listed. */
   dispatch(input: DispatchInput): { runId: string } {
+    const blocked = this.opts.blockedReason?.(input.repoId);
+    if (blocked) throw new Error(blocked);
     const cwd = this.opts.cwdFor(input.repoId);
     if (!cwd) throw new Error(`repo '${input.repoId}' is not in the scanner allow-list`);
 

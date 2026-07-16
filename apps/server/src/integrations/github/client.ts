@@ -4,7 +4,7 @@
  * so an unchanged poll returns 304 and costs no rate limit (DATA_MAP / council S5).
  */
 import { Octokit } from '@octokit/rest';
-import type { GhRelease, GhRepo, GhRun, GitHubClient } from './types';
+import type { GhPr, GhRelease, GhRepo, GhRun, GitHubClient } from './types';
 
 interface CacheEntry {
   etag: string | undefined;
@@ -68,6 +68,22 @@ export class OctokitClient implements GitHubClient {
       }),
     );
     return data.length;
+  }
+
+  async openPrForBranch(owner: string, name: string, branch: string): Promise<GhPr | null> {
+    const data = await this.cond(`prbr:${owner}/${name}:${branch}`, (etag) =>
+      this.octokit.pulls.list({
+        owner,
+        repo: name,
+        state: 'open',
+        head: `${owner}:${branch}`,
+        per_page: 1,
+        headers: etag ? { 'if-none-match': etag } : {},
+      }),
+    );
+    const pr = data[0];
+    if (!pr) return null;
+    return { number: pr.number, title: pr.title ?? '', url: pr.html_url ?? `https://github.com/${owner}/${name}/pull/${pr.number}` };
   }
 
   async latestRun(owner: string, name: string): Promise<GhRun | null> {

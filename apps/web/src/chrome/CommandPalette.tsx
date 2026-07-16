@@ -72,6 +72,13 @@ export function CommandPalette() {
         icon: 'check' as IconName,
         to: '/reviews',
       })),
+      ...Object.values(state.repos).map((r) => ({
+        id: `a:settings:${r.id}`,
+        label: `Project settings for ${r.name}`,
+        sub: 'Action',
+        icon: 'settings' as IconName,
+        to: `/repositories/${r.id}?settings=1`,
+      })),
     ];
     const pages: Item[] = [
       { id: 'p:command', label: 'Command dashboard', sub: 'Page', icon: 'overview', to: '/command' },

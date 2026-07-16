@@ -428,6 +428,25 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-16b · Claude · Per-project settings + GitHub flow
+- shipped: **Settings on every project** — four stored switches (agents · autoReview · automations ·
+  notifications) from a shared PROJECT_FEATURES catalog, each enforced at its REAL choke point:
+  agents at Runner.dispatch (one gate covers command box/prompts/automations/fixes), automations in
+  the engine (background only — manual click outranks), notifications at the notifier call sites,
+  autoReview delegated to its own store (no second source of truth). "Add a feature" = one catalog
+  row + one isEnabled consult. Plus the **GitHub flow**: clone-from-GitHub in the Add panel
+  (parseGithubRepo + GithubCloner — token only in env extraheader, never argv/.git/config;
+  GIT_TERMINAL_PROMPT=0), and a project-page GitHub row (View on GitHub · New PR compare link ·
+  live "Open PR #n" via openPrForBranch on the ETag-cached client) with honest prState provenance.
+  ⌘K settings actions; ?settings=1 deep-link.
+- verify green (typecheck ×3 · lint · **185 tests** · build); zero console errors ×4 routes.
+- next / watch-outs: openPrForBranch assumes same-owner branches (forks won't match — honest null).
+  The clone flow uses the FIRST tracked projects folder as destination; if multi-folder targeting is
+  ever wanted, add a picker. `git config --get remote.origin.url` (not `remote get-url`) is the
+  rewrite-immune way to read the real origin — container insteadOf rewrites bit us in tests.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

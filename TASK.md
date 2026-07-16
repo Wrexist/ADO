@@ -6,6 +6,38 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Project settings + GitHub flow round (2026-07-16b) — per-project control, polished
+Every project gets a **Settings** button with stored feature switches, and the GitHub flow is
+one-click end to end (get a repo in · open a PR · jump to the open PR).
+- [x] **Shared** (`@ado/shared/projectSettings`): `PROJECT_FEATURES` catalog (agents · autoReview ·
+  automations · notifications, each with name/blurb/default) — adding a future feature = one catalog
+  row + one `isEnabled` consult; `ProjectSettingsPatch` zod; `ProjectGitInfo` (branch · remote ·
+  github ref · newPrUrl · openPr + honest `prState` provenance).
+- [x] **Server — switches enforced at real choke points**: `ProjectSettingsStore` (delta-over-default
+  JSON). `agents` → Runner `blockedReason` (ONE choke point: command box, prompts, automations,
+  incident/review fixes all honor it); `automations` → engine predicate (background triggers sleep;
+  a deliberate manual run still works); `notifications` → gated at the notifier call sites (builds,
+  deploys, review pings; untagged deploys still fire); `autoReview` → delegates to the AutoReview
+  engine/store (single source of truth + baseline seeding). Endpoints: GET/POST
+  `/api/projects/:id/settings` (token-gated, zod-validated, 404 unknown).
+- [x] **Get a project from GitHub**: `parseGithubRepo` (owner/repo · https · ssh, path/shell-trick
+  rejects) + `GithubCloner` — clean https URL in argv, token ONLY via env (`GIT_CONFIG_*`
+  extraheader, never in argv/.git/config/errors), `GIT_TERMINAL_PROMPT=0` (never hangs), refuses an
+  existing dest, token-free failure copy. `POST /api/projects/github` clones into the tracked
+  projects folder → live rescan. UI: Repositories → Add panel gains "…or get it from GitHub".
+- [x] **PR flow**: `GET /api/projects/:id/git` reads the CONFIGURED remote (`git config`, immune to
+  machine-level insteadOf rewrites), parses the GitHub ref, builds the compare-page `newPrUrl`, and
+  — with GitHub connected — fetches the current branch's open PR (`openPrForBranch` added to the
+  GitHubClient adapter, ETag-cached). Project page header: **Open PR #n ↗** (primary, when live) or
+  **New PR ↗** + **View on GitHub ↗**, with honest no-remote / connect-GitHub states.
+- [x] **Web**: ProjectPage Settings gear (auto-open via `?settings=1`) + settings card (per-row save,
+  honest errors); ⌘K "Project settings for <repo>" actions; AddProjectPanel clone block.
+- [x] **verify green** — typecheck ×3 · lint clean · **185 tests** (+14: settings store, parser,
+  cloner env-safety, endpoints, gating) · build; zero console errors on `/command` · `/ops` ·
+  `/repositories/sentinel?settings=1` · `/repositories?add=1` at 1536px. Screenshots sent to Isac.
+
+---
+
 ## Auto-Review round (2026-07-16) — structured AI code review, safe by construction
 Every new commit on an enabled project gets a real, structured AI code review; nothing is ever
 fabricated and nothing is ever auto-applied.

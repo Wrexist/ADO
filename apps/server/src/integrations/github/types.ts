@@ -26,10 +26,18 @@ export interface GhRelease {
   publishedAt: string | null;
 }
 
+export interface GhPr {
+  number: number;
+  title: string;
+  url: string;
+}
+
 export interface GitHubClient {
   /** The authenticated user's repos (owner ∩ scanner defines the portfolio). */
   listRepos(): Promise<GhRepo[]>;
   openPrCount(owner: string, name: string): Promise<number>;
+  /** The open PR whose head is `owner:branch`, or null when there is none. */
+  openPrForBranch(owner: string, name: string, branch: string): Promise<GhPr | null>;
   latestRun(owner: string, name: string): Promise<GhRun | null>;
   listReleases(owner: string, name: string): Promise<GhRelease[]>;
 }

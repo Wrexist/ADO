@@ -284,18 +284,18 @@ describe('AutoReviewEngine (safe orchestration)', () => {
     t.cleanup();
   });
 
-  it('notifies only on non-clean verdicts', async () => {
-    const pings: Array<{ verdict: string }> = [];
+  it('notifies only on non-clean verdicts (with the repoId for per-project gating)', async () => {
+    const pings: Array<{ repoId: string; verdict: string }> = [];
     const t = makeEngine({
       reviewer: {
         hasKey: () => true,
         review: async () => ({ summary: 's', verdict: 'block', findings: [{ severity: 'critical', category: 'security', file: 'a', title: 't', detail: 'd', suggestion: 'x' }], model: 'm' }),
       },
-      notify: (_label, verdict) => pings.push({ verdict }),
+      notify: (repoId, _label, verdict) => pings.push({ repoId, verdict }),
     });
     t.engine.runNow('sentinel', 'manual');
     await t.drain();
-    expect(pings).toEqual([{ verdict: 'block' }]);
+    expect(pings).toEqual([{ repoId: 'sentinel', verdict: 'block' }]);
     t.cleanup();
   });
 });
