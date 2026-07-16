@@ -180,6 +180,35 @@ describe('bus reducer (shared by server snapshot + web deltas)', () => {
     expect(s.incidents.length).toBe(before);
   });
 
+  it('upserts auto-reviews by id (running → done replaces, newest first, capped at 30)', () => {
+    const mk = (id: string, status: string, over: Record<string, unknown> = {}) => parseEvent({
+      id: `arv-${id}-${status}`, ts, source: { kind: 'app', ref: id }, type: 'autoreview.updated',
+      payload: {
+        review: {
+          id, repoId: 'sentinel', ts, trigger: 'manual', ref: 'abc1234', refLabel: 'abc1234 · fix',
+          model: 'claude', status, findings: [], ...over,
+        },
+      },
+    });
+    let s = reduce(emptyState(), mk('r1', 'running'));
+    expect(s.autoReviews[0].status).toBe('running');
+
+    // done replaces the running row (same id) — no duplicate, verdict + findings attached
+    s = reduce(s, mk('r1', 'done', {
+      verdict: 'attention',
+      summary: 'one real issue',
+      findings: [{ severity: 'major', category: 'correctness', file: 'src/a.ts', line: 12, title: 't', detail: 'd', suggestion: 's' }],
+    }));
+    expect(s.autoReviews).toHaveLength(1);
+    expect(s.autoReviews[0].verdict).toBe('attention');
+    expect(s.autoReviews[0].findings[0].file).toBe('src/a.ts');
+
+    // a newer review lands first; the ring is capped at 30
+    for (let i = 0; i < 35; i++) s = reduce(s, mk(`r-${i}`, 'done', { verdict: 'clean' }));
+    expect(s.autoReviews.length).toBe(30);
+    expect(s.autoReviews[0].id).toBe('r-34');
+  });
+
   it('caps the incidents ring at 50 (newest kept)', () => {
     let s: BusState = emptyState();
     for (let i = 0; i < 60; i++) {

@@ -3,6 +3,7 @@ export * from './tokens';
 export * from './events';
 export * from './state';
 export * from './incidents';
+export * from './autoreview';
 export * from './connectors';
 export * from './requirements';
 export * from './workflows';

@@ -37,6 +37,7 @@ const GROUPS: NavGroup[] = [
     eyebrow: 'Monitoring',
     items: [
       { icon: 'chart', label: 'Analytics', to: '/analytics' },
+      { icon: 'check', label: 'Reviews', to: '/reviews' },
       { icon: 'health', label: 'Performance', to: '/performance' },
       { icon: 'sparkle', label: 'Diagnostics', to: '/diagnostics' },
       { icon: 'list', label: 'Activity', to: '/activity' },

@@ -10,6 +10,7 @@
  * so the pipeline is exercised end-to-end before real sources exist.
  */
 import { z } from 'zod';
+import { AutoReview } from './autoreview';
 import { Diagnosis, Incident } from './incidents';
 import {
   Agent,
@@ -147,6 +148,13 @@ export const IncidentDiagnosedEvent = z.object({
   payload: z.object({ incidentId: z.string(), diagnosis: Diagnosis }),
 });
 
+/** An auto-review lifecycle update (running → done/failed) — upserted by review id. */
+export const AutoReviewUpdatedEvent = z.object({
+  ...base,
+  type: z.literal('autoreview.updated'),
+  payload: z.object({ review: AutoReview }),
+});
+
 /** The discriminated union all consumers switch on. */
 export const AccEvent = z.discriminatedUnion('type', [
   RepoUpsertedEvent,
@@ -164,6 +172,7 @@ export const AccEvent = z.discriminatedUnion('type', [
   AppOpenedEvent,
   IncidentReportedEvent,
   IncidentDiagnosedEvent,
+  AutoReviewUpdatedEvent,
 ]);
 export type AccEvent = z.infer<typeof AccEvent>;
 export type AccEventType = AccEvent['type'];

@@ -7,6 +7,7 @@
  * no drift.
  */
 import { z } from 'zod';
+import { AutoReview } from './autoreview';
 import { Diagnosis, Incident, IncidentRecord } from './incidents';
 
 // —— enums ————————————————————————————————————————————————————————————————————
@@ -167,6 +168,7 @@ const DEPLOYMENT_CAP = 50;
 const BUILD_CAP = 100; // evict oldest TERMINAL builds past this; live builds are never dropped
 const STAT_HISTORY_CAP = 60; // ~2 months of daily stat snapshots per key (for trend deltas)
 const INCIDENT_CAP = 50; // newest-first ring of self-diagnosis incidents
+const AUTOREVIEW_CAP = 30; // newest-first ring of auto-review results
 
 /** One day's stored value of a headline stat — the source for "↑2 this week" deltas. */
 export const StatPoint = z.object({ day: z.string(), value: z.number() });
@@ -183,6 +185,7 @@ export const BusState = z.object({
   tokens: TokensState.nullable(),
   statHistory: z.record(z.string(), z.array(StatPoint)), // key → daily points, oldest first
   incidents: z.array(IncidentRecord), // newest first, capped — self-diagnosis feed
+  autoReviews: z.array(AutoReview), // newest first, capped — structured AI code reviews
 });
 export type BusState = z.infer<typeof BusState>;
 
@@ -198,6 +201,7 @@ export function emptyState(): BusState {
     tokens: null,
     statHistory: {},
     incidents: [],
+    autoReviews: [],
   };
 }
 
@@ -317,6 +321,16 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
         INCIDENT_CAP,
       );
       return { ...state, incidents };
+    }
+    case 'autoreview.updated': {
+      // Upsert by review id: the running row is replaced by its done/failed row (same id),
+      // and the freshest update moves to the front. Bounded ring, like incidents.
+      const { review } = p as { review: AutoReview };
+      const autoReviews = [review, ...state.autoReviews.filter((r) => r.id !== review.id)].slice(
+        0,
+        AUTOREVIEW_CAP,
+      );
+      return { ...state, autoReviews };
     }
     case 'incident.diagnosed': {
       // Attach the diagnosis to its incident and flip it to 'diagnosed'. If the incident was

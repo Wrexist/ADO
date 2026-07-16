@@ -50,6 +50,9 @@ export class Bus {
     // row per tick, all sharing source_ref = runId. Keep only the latest per run so a dispatch
     // doesn't accrete dozens of superseded rows that replay on every boot.
     removed += del(sql`DELETE FROM events WHERE type = 'agent.upserted' AND seq NOT IN (SELECT MAX(seq) FROM events WHERE type = 'agent.upserted' GROUP BY source_ref)`);
+    // autoreview.updated: running → done/failed share source_ref = review id; only the latest
+    // lifecycle row folds into state, so superseded ones are pure replay cost.
+    removed += del(sql`DELETE FROM events WHERE type = 'autoreview.updated' AND seq NOT IN (SELECT MAX(seq) FROM events WHERE type = 'autoreview.updated' GROUP BY source_ref)`);
     removed += del(sql`DELETE FROM events WHERE type = 'tokens.rollup' AND seq NOT IN (SELECT MAX(seq) FROM events WHERE type = 'tokens.rollup')`);
     removed += del(sql`DELETE FROM events WHERE type = 'stats.snapshot' AND seq NOT IN (SELECT MAX(seq) FROM events WHERE type = 'stats.snapshot' GROUP BY json_extract(payload, '$.day'))`);
     if (removed > 0) log(`bus: compacted ${removed} superseded event row(s)`);

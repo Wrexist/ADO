@@ -406,6 +406,28 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-16 · Claude · Auto-Review (structured AI code review, safe by construction)
+- shipped: opt-in per-repo **Auto-Review** — every new commit on an enabled project gets a real,
+  structured AI code review; manual "Review now" too. Pipeline: `differ` (READ-ONLY execFile git,
+  allow-listed cwd, lockfile/dist exclusions, 90K cap with explicit truncation, dirty tree →
+  uncommitted vs HEAD, clean → last commit patch) → `ClaudeReviewer` (forced strict tool call on
+  the top model, zod both ends, **no heuristic fallback** — no key = honest "connect a key", never
+  invented findings; anti-hallucination drop of paths not in the diff) → `AutoReviewEngine`
+  (single-flight per repo, enable seeds the baseline sha so old commits are never surprise-reviewed,
+  10-min commit poll on the catch-up scheduler + per-repo throttle, every failure = honest failed
+  row) → `autoreview.updated` events (upsert-by-id reducer, cap 30, compaction) → `/reviews` page
+  (verdict/severity chips, file:line, fix text, per-finding **confirmed Dispatch fix** via the
+  runner) + both sidebars (+attention badge) + ⌘K + Slack/Discord ping on non-clean verdicts +
+  demo seed. PR #2 (self-healing) merged earlier; branch restarted from main for this work.
+- verify green (typecheck ×3 · lint 0 warnings · **171 tests** (+20 autoreview, +1 reducer) · build);
+  zero console errors on /command · /ops · /reviews at 1536px.
+- next / watch-outs: commit detection is a 10-min poll (scanner only watches ops.yml/TASK.md) — if
+  faster feel is wanted, subscribe the engine to scanner repo.upserted as a fast path. Working-tree
+  reviews don't see untracked files (documented in the error copy). Each review is one top-model
+  call (bounded by single-flight + throttle + diff cap); if volume grows, consider a triage tier.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

@@ -6,6 +6,39 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Auto-Review round (2026-07-16) — structured AI code review, safe by construction
+Every new commit on an enabled project gets a real, structured AI code review; nothing is ever
+fabricated and nothing is ever auto-applied.
+- [x] **Shared contracts** (`@ado/shared/autoreview`, leaf module): `ReviewFinding` (severity ·
+  category · file:line · title/detail/suggestion) / `AutoReview` (trigger · ref/refLabel · model
+  provenance · status · verdict clean/attention/block · stats) + `autoreview.updated` event with
+  upsert-by-id reducer (`state.autoReviews`, newest-first, cap 30) + compaction (latest lifecycle
+  row per review id). Reducer tests.
+- [x] **Server — safety-first pipeline**: `differ.ts` (READ-ONLY `execFile` git, no shell, cwd only
+  from the scanner allow-list; lockfile/dist exclusions; 90K-char cap with an explicit truncation
+  marker; dirty tree → uncommitted changes, clean tree → last commit; honest errors for no-commits/
+  untracked-only). `ClaudeReviewer` — forced **strict** tool call on the top model, zod-validated,
+  **NO heuristic fallback** (a heuristic "review" would fabricate findings — conv. 1): no key →
+  typed error → honest failed/skip; **anti-hallucination guard** drops findings whose file isn't in
+  the diff. `AutoReviewEngine` — single-flight per repo, enable **seeds the baseline sha** (never
+  surprise-reviews old commits), 10-min commit poll via the catch-up scheduler with a per-repo
+  min-interval throttle, no-key auto runs skip silently (no failed-row spam), every failure lands as
+  an honest `failed` row. 20 server tests (real temp git repos, fake fetch, lifecycle/throttle).
+- [x] **Endpoints** (token-gated): `GET /api/autoreview` (settings + honest `hasKey`),
+  `POST /api/autoreview/:repoId` (toggle), `POST /api/autoreview/:repoId/run` (manual),
+  `POST /api/reviews/:id/fix` (**confirmed** per-finding fix dispatch through the runner allow-list
+  — same "nothing acts without confirm" rule as incidents).
+- [x] **Web — `/reviews`**: per-project enable/Review-now strip, honest no-key banner ("nothing here
+  is simulated"), review cards with verdict/severity/category chips, file:line, fix suggestion, and
+  per-finding **Dispatch fix**. Nav in both sidebars (View A badge = reviews needing attention) +
+  ⌘K page & per-repo actions. `--demo` seeds one attention + one clean review (self-documenting).
+- [x] **Notifications**: non-clean verdicts ping connected Slack/Discord (`reviewNeedsAttention`,
+  deduped) — clean reviews stay quiet.
+- [x] **verify green** (typecheck ×3 · lint **0 warnings** · **171 tests** · build); zero console
+  errors on `/command` · `/ops` · `/reviews` at 1536px. Screenshots sent to Isac.
+
+---
+
 ## Self-healing round (2026-07-13) — "if it breaks, fix itself"
 Built an honest realization of the ask: the app degrades gracefully instead of breaking, uses the
 Anthropic key to explain WHY each failure happened, and offers a **confirmed** one-click fix. Auto-

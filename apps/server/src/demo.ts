@@ -171,6 +171,62 @@ export function seedDemo(bus: Bus): void {
     },
   );
 
+  // auto-reviews → the /reviews feed. Two finished examples (one with findings, one clean)
+  // so the page is self-documenting in the demo world; real mode only ever shows reviews the
+  // real model produced. Reported exactly as the engine publishes them (upsert by id).
+  const rvTs = (minAgo: number) => new Date(new Date(MOCK_NOW).getTime() - minAgo * 60_000).toISOString();
+  const seedReview = (review: Record<string, unknown> & { id: string }, minAgo: number) =>
+    pub(`autoreview:${review.id}:done`, 'autoreview.updated', rvTs(minAgo), {
+      review: { ts: rvTs(minAgo), model: 'claude-opus-4-8', status: 'done', trigger: 'commit', ...review },
+    });
+  seedReview(
+    {
+      id: 'demo-rv-1',
+      repoId: 'sentinel',
+      ref: '9c41b7d2f3a8e6905b1c4d7e8f2a3b4c5d6e7f80',
+      refLabel: '9c41b7d · wave spawner: scale difficulty per sector',
+      verdict: 'attention',
+      summary:
+        'Adds per-sector difficulty scaling to the wave spawner. The scaling math is sound, but the sector index can go one past the config table and the new branch has no test.',
+      stats: { files: 3, additions: 84, deletions: 12 },
+      findings: [
+        {
+          severity: 'major',
+          category: 'correctness',
+          file: 'src/game/waves.ts',
+          line: 118,
+          title: 'Sector index can exceed the difficulty table',
+          detail: 'sectorFor() clamps to MAX_SECTOR, but the new lookup uses sector + 1 for the "next sector preview", which reads past the table on the last sector and yields undefined scaling.',
+          suggestion: 'Clamp the preview index too: DIFFICULTY[Math.min(sector + 1, MAX_SECTOR)] — and return the current sector’s row as the honest fallback.',
+        },
+        {
+          severity: 'minor',
+          category: 'testing',
+          file: 'src/game/waves.test.ts',
+          line: undefined,
+          title: 'No test for the last-sector boundary',
+          detail: 'The new scaling branch is untested exactly at the boundary where it can break (final sector).',
+          suggestion: 'Add a case asserting the preview scaling at MAX_SECTOR equals the final row instead of undefined.',
+        },
+      ],
+    },
+    18,
+  );
+  seedReview(
+    {
+      id: 'demo-rv-2',
+      repoId: 'atlas',
+      trigger: 'manual',
+      ref: 'working-tree',
+      refLabel: 'uncommitted changes on main',
+      verdict: 'clean',
+      summary: 'Copy edits and a token-only color tweak on the landing page. No behavior change; nothing to flag.',
+      stats: { files: 2, additions: 9, deletions: 7 },
+      findings: [],
+    },
+    95,
+  );
+
   // stat history → the "↑N this week" deltas render in the baseline world (real mode
   // accrues these live via the daily stats-snapshot job). One point per day for a week;
   // oldest-in-window is the delta baseline, so repos read +2 and deployments +1 vs today.
