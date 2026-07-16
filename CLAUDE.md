@@ -26,7 +26,7 @@ Run `/verify` before reporting any task done. Run `/gate` for phase status; phas
 8. **Runner safety:** spawned `claude -p` processes get an explicit turn cap and cwd allow-list; the learn/ analyzer has read-only access to logs
 
 ## Reference docs in repo
-`MASTER_PLAN.md` · `DESIGN_SPEC.md` · `DATA_MAP.md` · `SELF_LEARNING.md` · `PROMPTS.md` · `design/reference/view-a.png`, `view-b.png`
+`docs/MASTER_PLAN.md` · `docs/DESIGN_SPEC.md` · `docs/DATA_MAP.md` · `docs/SELF_LEARNING.md` · `docs/PROMPTS.md` · `design/reference/view-a.png`, `view-b.png`
 
 ## Claude Code harness (`.claude/`)
 `settings.json` (permission allow/deny + hooks) · `hooks/` pre/post/stop reflexes (guard secret/data edits + dangerous shell, fail-open; log tool calls; nudge the finish ritual) · `agents/verifier.md` (independent verifier — runs the gate + audits honesty conventions) · `skills/` 9 tracks (agent-llm, debug, security, frontend, testing, refactor, docs, data, git-ops) · `workflows/` orchestration recipes (understand · ship-feature · review · audit · harden · verify-gate — multi-agent fan-out with adversarial verify; opt-in, see `.claude/workflows/README.md`) · root `.mcp.json` · `MEMORY.md` (cross-session shift log) · `run.sh` (headless loop + verify) · `install.sh` (bootstrap). Run `bash install.sh` after a fresh clone. CI mirrors the local gate in `.github/workflows/ci.yml` (verify on every PR + main push).

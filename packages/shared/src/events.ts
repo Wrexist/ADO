@@ -175,7 +175,6 @@ export const AccEvent = z.discriminatedUnion('type', [
   AutoReviewUpdatedEvent,
 ]);
 export type AccEvent = z.infer<typeof AccEvent>;
-export type AccEventType = AccEvent['type'];
 
 /** Parse an unknown payload from the bus/SSE into a typed event (throws on mismatch). */
 export function parseEvent(input: unknown): AccEvent {

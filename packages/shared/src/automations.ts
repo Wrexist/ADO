@@ -38,20 +38,15 @@ export const AutomationInput = z.object({
 });
 export type AutomationInputT = z.infer<typeof AutomationInput>;
 
-/** Stored shape returned to the client. */
-export interface Automation {
+/** Stored shape returned to the client — the input contract plus server-owned fields.
+ *  Derived from the zod schema (convention 2), so the field set and the source.kind enum
+ *  can never drift from AutomationInput. */
+export type Automation = Omit<AutomationInputT, 'id'> & {
   id: string;
-  repoId: string;
-  name: string;
-  task: string;
-  model?: string;
-  trigger: AutomationTrigger;
-  enabled: boolean;
-  source?: { kind: 'prompt' | 'workflow' | 'custom'; ref?: string };
   createdTs: string;
   lastRunTs: string | null;
   lastRunId: string | null;
-}
+};
 
 /** Is a scheduled automation due to run again? */
 export function isScheduleDue(trigger: AutomationTrigger, lastRunMs: number | null, nowMs: number): boolean {

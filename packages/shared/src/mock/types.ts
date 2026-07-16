@@ -6,14 +6,15 @@
  * these types converge with the contracts in ../events.ts).
  */
 
-export type Tone = 'violet' | 'success' | 'warning' | 'info' | 'danger' | 'pink';
+// Primitive enums are single-sourced from the canonical zod schemas in ../state
+// (convention 2 — no parallel hand-maintained copies; the old local Tone had already
+// drifted by missing 'muted'). Only fixture-specific composite shapes live here.
+import type { CiState, DeployEnv, Language, RepoCategory, RepoStatus, ServiceState, Tone } from '../state';
+
+export type { DeployEnv, Language, RepoCategory, RepoStatus, ServiceState, Tone };
+/** Fixture-era alias kept for existing consumers — the canonical name is CiState. */
+export type ProgressState = CiState;
 export type Trend = 'up' | 'down';
-export type RepoCategory = 'game' | 'app' | 'web' | 'api' | 'library' | 'service';
-export type RepoStatus = 'active' | 'testing' | 'blocked' | 'archived';
-export type ProgressState = 'success' | 'running' | 'queued' | 'failed';
-export type ServiceState = 'operational' | 'degraded' | 'down';
-export type Language = 'typescript' | 'swift' | 'liquid' | 'python';
-export type DeployEnv = 'production' | 'testflight' | 'staging';
 
 /**
  * The frozen fixture clock. All fixture timestamps are literals relative to this instant —

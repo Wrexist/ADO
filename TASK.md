@@ -6,6 +6,31 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Follow-ups + full-app audit round (2026-07-16c)
+- [x] **Follow-ups shipped**: clone **destination picker** (shown when >1 tracked folder; server
+  accepts only already-tracked folders as targets); **live PR status** on the Open PR button
+  (aggregated check-runs passing/failing/running + mergeable/conflicts chips, honest nulls);
+  **settings gear on every repo card** (deep-links `?settings=1`).
+- [x] **Whole-app audit** (Fable 5 orchestrating, 10× Opus 4.8 agents: 4-area sweep → adversarial
+  verify per finding → consolidate): **0 critical / 0 high**. 5 confirmed findings — 1 medium,
+  4 low. Fixed this round:
+  - mock/types.ts hand-copied enums (Tone had already drifted — missing 'muted') → primitive enums
+    now imported/re-exported from the canonical zod schemas in state.ts (conv. 2).
+  - `Automation` interface re-stated the AutomationInput zod shape (incl. a parallel source.kind
+    union) → now derived via `Omit<z.infer<…>,'id'> & {server fields}` (conv. 2).
+  - Dead export `AccEventType` removed (events.ts).
+  - CLAUDE.md reference-doc paths corrected to `docs/…` (matched reality/README).
+- [ ] **Audit finding #1 (medium) — awaiting Isac's sign-off** (the permission layer rightly refuses
+  self-modification): the `.env.*` deny globs in `.claude/settings.json` + the hook regex in
+  `.claude/hooks/pre-tool-use.sh` also block the committed non-secret `.env.example` template, so
+  agents can't read or maintain it. Proposed fix (two layers, land together): replace the blanket
+  `.env.*` deny with `.env.local` + `.env.*.local`, and exempt `.example/.sample/.template`
+  suffixes in both hook regexes.
+- [x] **verify green** — typecheck ×3 · lint · **186 tests** · build; zero console errors on
+  `/command` (now with per-card settings gear) + `/ops` at 1536px. Screenshots sent.
+
+---
+
 ## Project settings + GitHub flow round (2026-07-16b) — per-project control, polished
 Every project gets a **Settings** button with stored feature switches, and the GitHub flow is
 one-click end to end (get a repo in · open a PR · jump to the open PR).
