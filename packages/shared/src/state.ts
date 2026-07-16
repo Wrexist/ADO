@@ -259,8 +259,11 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
       return { ...state, builds };
     }
     case 'deploy.recorded': {
+      // Newest-first BY TIMESTAMP (not arrival): replays and out-of-order seeds must render
+      // in time order. Sort before the cap so the cap drops the truly oldest.
       const { deployment } = p as { deployment: Deployment };
       const deployments = [deployment, ...state.deployments.filter((d) => d.id !== deployment.id)]
+        .sort((a, b) => b.ts.localeCompare(a.ts))
         .slice(0, DEPLOYMENT_CAP);
       return { ...state, deployments };
     }
@@ -275,8 +278,11 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
       return { ...state, agents };
     }
     case 'activity.appended': {
+      // Newest-first BY TIMESTAMP (not arrival) — same rationale as deploy.recorded.
       const { item } = p as { item: ActivityItem };
-      const activity = [item, ...state.activity.filter((a) => a.id !== item.id)].slice(0, ACTIVITY_CAP);
+      const activity = [item, ...state.activity.filter((a) => a.id !== item.id)]
+        .sort((a, b) => b.ts.localeCompare(a.ts))
+        .slice(0, ACTIVITY_CAP);
       return { ...state, activity };
     }
     case 'system.sample': {

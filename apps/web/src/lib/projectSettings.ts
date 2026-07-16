@@ -1,5 +1,5 @@
 /** Client for per-project settings, git link info (PR buttons), and clone-from-GitHub. */
-import type { ProjectFeatureId, ProjectFeatureMap, ProjectGitInfo } from '@ado/shared';
+import { ProjectGitInfo, type ProjectFeatureId, type ProjectFeatureMap } from '@ado/shared';
 import { ACC_TOKEN, SERVER_URL } from './config';
 
 const headers = () => ({ 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN });
@@ -28,7 +28,7 @@ export async function setProjectFeature(repoId: string, feature: ProjectFeatureI
 export async function fetchProjectGit(repoId: string): Promise<ProjectGitInfo> {
   const res = await fetch(`${SERVER_URL}/api/projects/${encodeURIComponent(repoId)}/git`, { headers: headers() });
   if (!res.ok) throw new Error(await bodyError(res, `git info: ${res.status}`));
-  return (await res.json()) as ProjectGitInfo;
+  return ProjectGitInfo.parse(await res.json()); // validated at the boundary (convention 2)
 }
 
 /** Clone owner/repo (or a github.com URL) into a tracked projects folder and rescan.

@@ -53,6 +53,27 @@ describe('bus reducer (shared by server snapshot + web deltas)', () => {
     expect(s.activity.map((a) => a.id)).toEqual(['a', 'b']);
   });
 
+  it('orders activity + deployments by TIMESTAMP, not arrival (out-of-order seeds/replays)', () => {
+    let s = emptyState();
+    const act = (id: string, t: string) => parseEvent({
+      id: `evt-${id}`, ts: t, source: src, type: 'activity.appended',
+      payload: { item: { id, icon: 'check', tone: 'success', title: id, detail: 'd', ts: t } },
+    });
+    // arrival: new, OLD, mid → must render new, mid, OLD
+    s = reduce(s, act('new', '2026-07-09T09:00:00.000Z'));
+    s = reduce(s, act('old', '2026-07-01T09:00:00.000Z'));
+    s = reduce(s, act('mid', '2026-07-05T09:00:00.000Z'));
+    expect(s.activity.map((a) => a.id)).toEqual(['new', 'mid', 'old']);
+
+    const dep = (id: string, t: string) => parseEvent({
+      id: `dep-${id}`, ts: t, source: src, type: 'deploy.recorded',
+      payload: { deployment: { id, name: id, env: 'staging', ts: t, ok: true } },
+    });
+    s = reduce(s, dep('d-new', '2026-07-09T09:00:00.000Z'));
+    s = reduce(s, dep('d-old', '2026-07-01T09:00:00.000Z'));
+    expect(s.deployments.map((d) => d.id)).toEqual(['d-new', 'd-old']);
+  });
+
   it('ignores unknown event types without crashing (forward compatibility)', () => {
     const s = emptyState();
     const out = reduce(s, { type: 'future.event', ts, payload: {} });

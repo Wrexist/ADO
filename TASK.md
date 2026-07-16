@@ -6,6 +6,28 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Polish + audit round (2026-07-16f) — everything reviewed, everything confirmed fixed
+- [x] **Visual sweep**: all 16 pages captured + reviewed at 1536px, ZERO console errors app-wide.
+  Two real defects found and fixed: **feeds rendered in arrival order, not time order** (activity +
+  deployments now sort by ts in the shared reducer — every consumer inherits; +1 reducer test) and
+  **Analytics zero-count bars drew a 4% colored stub** (now empty at 0 — no fabricated-looking bar).
+- [x] **Convention audit** (Fable 5 orchestrating, 8× Opus 4.8: sweep → adversarial verify →
+  consolidate): **0 critical / 0 high**; 2 medium + 1 low confirmed.
+  - **M2 fixed** — REST payloads were plain TS interfaces as-cast by the web (conv. 2 gap). The
+    three carrying nullable/external fields are now zod contracts parsed at the boundary:
+    `ProjectGitInfo`, `ProbeResult`/`InstallRun`, `ReviewRun` (schemas in shared, `.parse()` in
+    lib/projectSettings·setup·review). Remaining low-risk payloads (WorkflowMeta, ConnectionStatus,
+    TestFlightAutofill, AutoReviewSettings, Automation) noted for backfill.
+  - **L1 fixed** — tailwind.config.ts now IMPORTS tokens.ts (pure-data relative import; loader
+    stays dependency-free): every hex/radius/font-size exists in exactly one place (conv. 3).
+  - **M1 still open — Isac's sign-off required**: `.env.*` deny globs + hook regex block the
+    committed `.env.example` template (same finding as 16c; the permission layer correctly refuses
+    my self-modification). Proposed two-layer fix unchanged, documented in round 16c above.
+- [x] **verify green** — typecheck ×3 · lint · **205 tests** · build; zero console errors on
+  `/activity` · `/analytics` · `/command` · `/ops` after the fixes. Screenshots sent.
+
+---
+
 ## TestFlight next-steps round (2026-07-16e) — picker · Deployments surfacing · verified deploy events
 - [x] **Multi-app monorepos**: `probeIos` now returns EVERY Xcode project found (`apps: IosAppFacts[]`,
   per-project facts + provenance); the project-page card gains an Xcode-project picker (>1 app) that

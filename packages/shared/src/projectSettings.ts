@@ -65,25 +65,32 @@ export type ProjectFeatureMap = Record<ProjectFeatureId, boolean>;
 
 // —— GitHub link info (project page: View on GitHub · New PR · Open PR #n) ————————————
 
-export interface ProjectGitInfo {
-  branch: string;
+// Zod contract (convention 2): the web client PARSES this payload at the boundary instead
+// of as-casting — a drifted field fails loudly, never renders as undefined/garbage.
+export const ProjectGitInfo = z.object({
+  branch: z.string(),
   /** origin URL as configured, or null when the repo has no remote. */
-  remoteUrl: string | null;
+  remoteUrl: z.string().nullable(),
   /** Present only when origin is a github.com remote. */
-  github: { owner: string; repo: string; webUrl: string; newPrUrl: string } | null;
+  github: z
+    .object({ owner: z.string(), repo: z.string(), webUrl: z.string(), newPrUrl: z.string() })
+    .nullable(),
   /** The open PR for the current branch, when it could actually be checked. mergeable/checks
    *  are null when GitHub hasn't computed them or the token can't see them (honest unknown). */
-  openPr: {
-    number: number;
-    title: string;
-    url: string;
-    mergeable: boolean | null;
-    checks: 'passing' | 'failing' | 'pending' | null;
-  } | null;
+  openPr: z
+    .object({
+      number: z.number().int(),
+      title: z.string(),
+      url: z.string(),
+      mergeable: z.boolean().nullable(),
+      checks: z.enum(['passing', 'failing', 'pending']).nullable(),
+    })
+    .nullable(),
   /**
    * Why openPr is (or isn't) trustworthy — honest provenance, never a silent null:
    * checked = GitHub was asked · no-token = connect GitHub to check · not-github = no
    * github.com remote · error = the check failed.
    */
-  prState: 'checked' | 'no-token' | 'not-github' | 'error';
-}
+  prState: z.enum(['checked', 'no-token', 'not-github', 'error']),
+});
+export type ProjectGitInfo = z.infer<typeof ProjectGitInfo>;

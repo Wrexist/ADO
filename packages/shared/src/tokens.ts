@@ -1,11 +1,10 @@
 /**
  * Design tokens — the single TypeScript source of truth for the look of both views.
  * Values are transcribed 1:1 from docs/DESIGN_SPEC.md §tokens. The Tailwind theme
- * (apps/web/tailwind.config.ts) mirrors these same values so components use named
- * utilities, never raw hex (see CLAUDE.md convention 3).
+ * (apps/web/tailwind.config.ts) IMPORTS this file, so a hex exists in exactly one place
+ * and components use named utilities, never raw hex (CLAUDE.md convention 3).
  *
- * Rule: change a color here AND in the Tailwind config, or add a codegen step (Phase 1)
- * that derives the Tailwind theme from this file.
+ * Keep this module pure data (no imports) — the Tailwind config loader depends on that.
  */
 
 export const tokens = {

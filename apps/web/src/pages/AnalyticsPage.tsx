@@ -22,7 +22,7 @@ function Bar({ label, count, max, tone = 'bg-primary' }: { label: string; count:
     <div className="flex items-center gap-3">
       <span className="w-24 shrink-0 truncate text-label text-text2">{label}</span>
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-elevated">
-        <div className={cx('h-full rounded-full', tone)} style={{ width: max > 0 ? `${Math.max(4, (100 * count) / max)}%` : '0%' }} />
+        <div className={cx('h-full rounded-full', tone)} style={{ width: count > 0 && max > 0 ? `${Math.max(4, (100 * count) / max)}%` : '0%' }} />
       </div>
       <span className="w-8 shrink-0 text-right text-label tabular-nums text-text3">{count}</span>
     </div>

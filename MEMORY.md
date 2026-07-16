@@ -497,6 +497,20 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-16f · Claude · whole-app polish + second audit
+- shipped: reviewed ALL 16 pages visually (zero console errors) → fixed the 2 real defects
+  (reducer now orders activity+deployments by ts, not arrival; Analytics zero-count bars render
+  empty, not a 4% stub). Second opus-agent audit: 0 critical/high. Fixed M2 (ProjectGitInfo/
+  ProbeResult/InstallRun/ReviewRun → zod schemas, web clients .parse() at the boundary) and L1
+  (tailwind.config.ts imports tokens.ts — hex in one place; tokens.ts must stay pure-data).
+- M1 (.env.example blocked by deny globs + hook regex) remains OPEN pending Isac — permission
+  layer refuses agent self-modification, correctly. Apply manually or explicitly instruct it.
+- Zod backfill still pending for the low-risk REST payloads: WorkflowMeta, ConnectionStatus,
+  TestFlightAutofill, AutoReviewSettings, Automation.
+- verify green (205 tests).
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …
