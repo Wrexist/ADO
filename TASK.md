@@ -6,6 +6,33 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Palette runs + run analytics (2026-07-17c) — the run log reaches ⌘K and Analytics
+- [x] **⌘K Recent runs**: the palette fetches the latest 8 runs when it opens (REST, not bus;
+  a fetch failure just omits the group) — entries read "task · Run · repo · status · age" and
+  deep-link `/agents?run=<id>`.
+- [x] **Deep links that land**: the auto-open effect re-arms per target id (picking run B from
+  the palette while run A is open works) and scrolls the expanded row into view
+  (`scroll-mt-4`, reduced-motion honored). Verified end-to-end with a Playwright pass:
+  palette search → Enter → expanded row with meta, honest pre-boot timeline notice, final
+  report (TESTFLIGHT_UPLOADED marker), Dispatch again.
+- [x] **`GET /api/runs/stats`** (token-gated, `?days=` 1–90, default 7): exact sums over stored
+  rows — totals, byStatus, tokens in/out, total duration, `runsWithoutUsage` (runs whose stream
+  carried no usage COUNT as unknown, never estimated), byRepo/byModel top-8. Registered before
+  `/:id`; shared `RunStats` contract; endpoint test asserts exact sums + the 401.
+  **Deliberately no dollar figure**: price tables drift → a computed cost would be a fabricated
+  number (conv. 1). Tokens/durations are stored facts.
+- [x] **Analytics · "Agent runs · last 7 days"**: Run outcomes, Run volume (runs · total agent
+  time · exact tokens, + honest no-usage line when >0), Tokens by project (repo names), Tokens
+  by model. Honest loading/error/empty states.
+- [x] **Demo world runs**: 3 seeded runs (sentinel fix · bloom TestFlight ship whose id matches
+  the template's `lastDeployRunId` · a failed ops run) — Run history, the palette group, and
+  the Analytics section all demonstrate themselves in --demo; timelines honestly report
+  'unavailable' (they predate the boot). smoke.sh now also sweeps /agents + /analytics.
+- [x] **verify green — 210 tests**, zero console errors on /command · /ops · /agents · /analytics
+  (+ the palette/deep-link Playwright pass).
+
+---
+
 ## Run Control follow-ups (2026-07-17b) — reachable from everywhere + zod debt paid
 - [x] **Per-project run history**: `RunHistory` takes `repoId` (server-side `?repo=` filter);
   ProjectPage ends with the project's own slice of the run log (full width — task text and

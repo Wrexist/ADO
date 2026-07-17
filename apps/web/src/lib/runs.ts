@@ -1,5 +1,5 @@
 /** Client for the run log + live run control — zod-parsed at the boundary (convention 2). */
-import { AgentRun, RunDetail } from '@ado/shared';
+import { AgentRun, RunDetail, RunStats } from '@ado/shared';
 import { ACC_TOKEN, SERVER_URL } from './config';
 
 const headers = () => ({ 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN });
@@ -23,6 +23,13 @@ export async function fetchRunDetail(id: string): Promise<RunDetail> {
   const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}`, { headers: headers() });
   if (!res.ok) throw new Error(await bodyError(res, `run: ${res.status}`));
   return RunDetail.parse(((await res.json()) as { run: unknown }).run);
+}
+
+/** Window roll-up of the run log — exact sums from stored rows (tokens, outcomes, duration). */
+export async function fetchRunStats(days = 7): Promise<RunStats> {
+  const res = await fetch(`${SERVER_URL}/api/runs/stats?days=${days}`, { headers: headers() });
+  if (!res.ok) throw new Error(await bodyError(res, `run stats: ${res.status}`));
+  return RunStats.parse(((await res.json()) as { stats: unknown }).stats);
 }
 
 /** Kill a running run / cancel a queued one. Server refuses runs that aren't in flight. */

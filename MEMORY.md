@@ -538,6 +538,20 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-17c · Claude · palette runs + run analytics
+- shipped: ⌘K gained a Recent runs group (fetched per open, deep-links /agents?run=<id>); deep
+  links now re-arm per id and scroll the expanded row into view; GET /api/runs/stats rolls up the
+  window with exact sums (runsWithoutUsage counts unknowns; NO dollar figures — price tables
+  drift, conv. 1); Analytics gained the "Agent runs" section (outcomes · volume · tokens by
+  project/model); --demo seeds 3 runs (bloom's id matches the TestFlight template's
+  lastDeployRunId — the demo world is now internally consistent); smoke sweeps /agents +
+  /analytics. 210 tests green.
+- next / watch-outs: palette runs are fetched per open — if the run log ever gets huge, add a
+  server-side text filter instead of fetching more rows. Stats aggregate in JS over the window's
+  rows (fine at human dispatch volume; move to SQL aggregates only if runs become machine-scale).
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

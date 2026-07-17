@@ -211,4 +211,33 @@ describe('run log + live run control API (persisted history, honest timeline sta
 
     expect((await srv.app.inject({ method: 'GET', url: '/api/runs/never-existed', headers: AUTH })).statusCode).toBe(404);
   });
+
+  it('stats: exact window roll-up (totals, outcomes, tokens by repo/model), token-gated', async () => {
+    // a second finished run with an explicit model — the previous test completed one on 'default'
+    const dis = await srv.app.inject({
+      method: 'POST', url: '/api/dispatch', headers: AUTH,
+      payload: { repoId: 'sentinel', task: 'second run for the roll-up', model: 'sonnet' },
+    });
+    expect(dis.statusCode).toBe(200);
+    await new Promise((r) => setTimeout(r, 30));
+
+    expect((await srv.app.inject({ method: 'GET', url: '/api/runs/stats', headers: HOST_OK })).statusCode).toBe(401);
+
+    const res = await srv.app.inject({ method: 'GET', url: '/api/runs/stats?days=7', headers: AUTH });
+    expect(res.statusCode).toBe(200);
+    const stats = res.json().stats as {
+      byRepo: Array<{ key: string; runs: number; tokensIn: number; tokensOut: number }>;
+      byModel: Array<{ key: string }>;
+    };
+    expect(stats).toMatchObject({
+      windowDays: 7,
+      total: 2,
+      byStatus: { done: 2, failed: 0, running: 0, queued: 0 },
+      tokensIn: 2400, // exact sum of the two fake streams' usage — never an estimate
+      tokensOut: 680,
+      runsWithoutUsage: 0,
+    });
+    expect(stats.byRepo).toEqual([{ key: 'sentinel', runs: 2, tokensIn: 2400, tokensOut: 680 }]);
+    expect(stats.byModel.map((s) => s.key).sort()).toEqual(['default', 'sonnet']);
+  });
 });

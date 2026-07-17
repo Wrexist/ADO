@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
-import type { RepoCategory } from '@ado/shared';
+import { useEffect, useMemo, useState } from 'react';
+import type { RepoCategory, RunStats } from '@ado/shared';
 import { Card, MiniArea, SectionHeader, StatCard, cx } from '../kit';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
 import { activeAgentCount, statDelta, weekDelta } from '../lib/selectors';
 import { ENV_LABEL } from '../views/ops/maps';
-import { approxTokens } from '../lib/time';
+import { approxTokens, durationLabel } from '../lib/time';
+import { fetchRunStats } from '../lib/runs';
 
 const CAT_LABEL: Record<RepoCategory, string> = {
   game: 'Games',
@@ -16,18 +17,21 @@ const CAT_LABEL: Record<RepoCategory, string> = {
   service: 'Services',
 };
 
-/** A labelled proportion bar — count relative to the largest bucket. Tokens only. */
-function Bar({ label, count, max, tone = 'bg-primary' }: { label: string; count: number; max: number; tone?: string }) {
+/** A labelled proportion bar — count relative to the largest bucket. Tokens only.
+ *  `display` overrides the printed number (e.g. "134K" for token sums) without changing the bar math. */
+function Bar({ label, count, max, tone = 'bg-primary', display }: { label: string; count: number; max: number; tone?: string; display?: string }) {
   return (
     <div className="flex items-center gap-3">
       <span className="w-24 shrink-0 truncate text-label text-text2">{label}</span>
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-elevated">
         <div className={cx('h-full rounded-full', tone)} style={{ width: count > 0 && max > 0 ? `${Math.max(4, (100 * count) / max)}%` : '0%' }} />
       </div>
-      <span className="w-8 shrink-0 text-right text-label tabular-nums text-text3">{count}</span>
+      <span className={cx('shrink-0 text-right text-label tabular-nums text-text3', display ? 'w-14' : 'w-8')}>{display ?? count}</span>
     </div>
   );
 }
+
+const fmtTok = (n: number): string => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
 
 /**
  * Analytics — portfolio + delivery numbers DERIVED from stored events (repos, builds,
@@ -39,6 +43,15 @@ export function AnalyticsPage() {
 
   const repos = Object.values(state.repos);
   const builds = Object.values(state.builds);
+
+  // Agent-run roll-up from the persisted run log (REST, not bus) — exact stored sums.
+  const [runStats, setRunStats] = useState<RunStats | null>(null);
+  const [runStatsErr, setRunStatsErr] = useState('');
+  useEffect(() => {
+    fetchRunStats(7)
+      .then(setRunStats)
+      .catch((e) => setRunStatsErr((e as Error).message));
+  }, []);
 
   const byCategory = useMemo(() => {
     const m = new Map<RepoCategory, number>();
@@ -152,6 +165,81 @@ export function AnalyticsPage() {
           )}
         </Card>
       </div>
+
+      {/* agent runs — the persisted run log, exact sums (no dollar figures: price tables
+          drift, so a computed cost would be a fabricated number) */}
+      <SectionHeader title={`Agent runs · last ${runStats?.windowDays ?? 7} days`} className="mt-8" />
+      {runStats === null ? (
+        <Card className="mt-3 p-5">
+          <p className="text-label text-text3">{runStatsErr ? `Run stats unavailable — ${runStatsErr}` : 'Loading…'}</p>
+        </Card>
+      ) : runStats.total === 0 ? (
+        <Card className="mt-3 p-5">
+          <p className="text-label text-text3">No agent runs in this window — dispatch one and the roll-up populates.</p>
+        </Card>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <Card className="p-5">
+            <SectionHeader title="Run outcomes" />
+            <div className="mt-4 flex flex-col gap-2.5">
+              {(() => {
+                const m = Math.max(1, ...Object.values(runStats.byStatus));
+                return (
+                  <>
+                    <Bar label="Done" count={runStats.byStatus.done} max={m} tone="bg-success" />
+                    <Bar label="Failed" count={runStats.byStatus.failed} max={m} tone="bg-danger" />
+                    <Bar label="Running" count={runStats.byStatus.running} max={m} tone="bg-info" />
+                    <Bar label="Queued" count={runStats.byStatus.queued} max={m} tone="bg-warning" />
+                  </>
+                );
+              })()}
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <SectionHeader title="Run volume" />
+            <div className="mt-4 flex flex-col gap-1.5 text-body text-text2">
+              <p><span className="font-semibold text-text1">{runStats.total}</span> runs · <span className="font-semibold text-text1">{durationLabel(Math.round(runStats.totalDurationMs / 1000))}</span> total agent time</p>
+              <p>
+                <span className="font-semibold text-text1">{fmtTok(runStats.tokensIn)}</span> tokens in · <span className="font-semibold text-text1">{fmtTok(runStats.tokensOut)}</span> out
+              </p>
+              {runStats.runsWithoutUsage > 0 ? (
+                <p className="text-label text-text3">{runStats.runsWithoutUsage} run{runStats.runsWithoutUsage === 1 ? '' : 's'} reported no usage data (counted, not estimated).</p>
+              ) : null}
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <SectionHeader title="Tokens by project" />
+            <div className="mt-4 flex flex-col gap-2.5">
+              {(() => {
+                const max = Math.max(1, ...runStats.byRepo.map((s) => s.tokensIn + s.tokensOut));
+                return runStats.byRepo.map((s) => (
+                  <Bar
+                    key={s.key}
+                    label={state.repos[s.key]?.name ?? s.key}
+                    count={s.tokensIn + s.tokensOut}
+                    max={max}
+                    display={fmtTok(s.tokensIn + s.tokensOut)}
+                  />
+                ));
+              })()}
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <SectionHeader title="Tokens by model" />
+            <div className="mt-4 flex flex-col gap-2.5">
+              {(() => {
+                const max = Math.max(1, ...runStats.byModel.map((s) => s.tokensIn + s.tokensOut));
+                return runStats.byModel.map((s) => (
+                  <Bar key={s.key} label={s.key} count={s.tokensIn + s.tokensOut} max={max} display={fmtTok(s.tokensIn + s.tokensOut)} tone="bg-info" />
+                ));
+              })()}
+            </div>
+          </Card>
+        </div>
+      )}
     </PageShell>
   );
 }

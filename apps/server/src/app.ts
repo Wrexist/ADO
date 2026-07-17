@@ -4,7 +4,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { statSync } from 'node:fs';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, gte } from 'drizzle-orm';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
@@ -465,6 +465,38 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     });
     testflight.markDeployed(p.id, 'demo-run-tf1', '1.4.1 (57)', new Date(Date.parse('2026-07-08T16:20:00.000Z')).toISOString());
   }
+  // Demo world: a few finished runs so Run history / palette / analytics are self-documenting.
+  // Timestamps are relative to boot (inside the stats window); the live timeline is honestly
+  // 'unavailable' for them — they predate this server session, exactly like real old runs.
+  if (env.demo) {
+    const ago = (mins: number) => new Date(Date.now() - mins * 60_000).toISOString();
+    db.insert(runs)
+      .values([
+        {
+          id: 'demo-run-sentinel-1', repoId: 'sentinel', model: 'default', status: 'done',
+          task: 'Fix the flaky wave-spawner test and re-run the suite.',
+          startedTs: ago(150), endedTs: ago(146), durationMs: 4 * 60_000,
+          tokensIn: 48_200, tokensOut: 9_100, turns: 14, exitCode: 0, note: null,
+          resultText: 'Root cause: the spawner test seeded RNG from wall-clock. Pinned the seed, reran vitest — 88/88 green.',
+        },
+        {
+          id: 'demo-run-tf1', repoId: 'bloom', model: 'default', status: 'done',
+          task: 'Ship Bloom 1.4.1 (57) to TestFlight (archive, upload, submit test notes).',
+          startedTs: ago(90), endedTs: ago(71), durationMs: 19 * 60_000,
+          tokensIn: 112_400, tokensOut: 21_800, turns: 31, exitCode: 0, note: null,
+          resultText: 'Archived Bloom.xcodeproj (Release) and uploaded.\nTESTFLIGHT_UPLOADED com.wrexist.bloom 1.4.1 (57)',
+        },
+        {
+          id: 'demo-run-ops-1', repoId: 'wrexist-ops', model: 'sonnet', status: 'failed',
+          task: 'Tighten the Friday sweeper: dedupe overlapping cron entries.',
+          startedTs: ago(30), endedTs: ago(28), durationMs: 2 * 60_000,
+          tokensIn: 8_900, tokensOut: 1_400, turns: 5, exitCode: 1, note: null,
+          resultText: 'Blocked: two sweeper configs disagree on ownership of cleanup.yml — needs a human call before I dedupe.',
+        },
+      ])
+      .onConflictDoNothing()
+      .run();
+  }
   const automationEngine = new AutomationEngine(
     automations,
     (repoId, task, model) => runner.dispatch({ repoId, task, model }),
@@ -564,6 +596,47 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     const base = db.select().from(runs).orderBy(desc(runs.startedTs)).limit(limit);
     const rows = q.repo ? base.where(eq(runs.repoId, q.repo)).all() : base.all();
     return { runs: rows.map(runRow) };
+  });
+  // Roll-up over the window — exact sums of stored per-run usage, never estimates. Runs whose
+  // stream carried no usage data are COUNTED (runsWithoutUsage) instead of silently guessed,
+  // and there is deliberately no dollar figure (price tables drift → fabricated number, conv. 1).
+  app.get('/api/runs/stats', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const days = Math.min(90, Math.max(1, Number((req.query as { days?: string }).days) || 7));
+    const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
+    const rows = db.select().from(runs).where(gte(runs.startedTs, cutoff)).all();
+
+    const byStatus = { queued: 0, running: 0, done: 0, failed: 0 };
+    const slice = () => ({ runs: 0, tokensIn: 0, tokensOut: 0 });
+    const byRepo = new Map<string, ReturnType<typeof slice>>();
+    const byModel = new Map<string, ReturnType<typeof slice>>();
+    let tokensIn = 0, tokensOut = 0, totalDurationMs = 0, runsWithoutUsage = 0;
+    for (const r of rows) {
+      if (r.status in byStatus) byStatus[r.status as keyof typeof byStatus] += 1;
+      if (r.tokensIn == null && r.tokensOut == null) runsWithoutUsage += 1;
+      tokensIn += r.tokensIn ?? 0;
+      tokensOut += r.tokensOut ?? 0;
+      totalDurationMs += r.durationMs ?? 0;
+      for (const [map, key] of [[byRepo, r.repoId], [byModel, r.model]] as const) {
+        const s = map.get(key) ?? slice();
+        s.runs += 1;
+        s.tokensIn += r.tokensIn ?? 0;
+        s.tokensOut += r.tokensOut ?? 0;
+        map.set(key, s);
+      }
+    }
+    const top = (m: Map<string, ReturnType<typeof slice>>) =>
+      [...m.entries()]
+        .map(([key, s]) => ({ key, ...s }))
+        .sort((a, b) => b.tokensIn + b.tokensOut - (a.tokensIn + a.tokensOut) || b.runs - a.runs)
+        .slice(0, 8);
+    return {
+      stats: {
+        windowDays: days, total: rows.length, byStatus,
+        tokensIn, tokensOut, totalDurationMs, runsWithoutUsage,
+        byRepo: top(byRepo), byModel: top(byModel),
+      },
+    };
   });
   app.get('/api/runs/:id', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;

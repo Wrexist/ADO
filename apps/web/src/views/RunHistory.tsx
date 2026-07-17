@@ -167,7 +167,7 @@ export function RunHistory({ repoId }: { repoId?: string }) {
   const [err, setErr] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const [params] = useSearchParams();
-  const autoOpened = useRef(false);
+  const autoOpened = useRef<string | null>(null);
 
   const refresh = () => {
     fetchRuns(repoId, 30)
@@ -182,12 +182,19 @@ export function RunHistory({ repoId }: { repoId?: string }) {
   };
   useEffect(refresh, [repoId]);
 
-  // Deep link (?run=<id>): expand that run on first load — only if it's actually in the list.
+  // Deep link (?run=<id>): expand that run and bring it into view — only if it's actually in
+  // the list. Re-arms when the target id changes (e.g. picking another run from the palette).
   useEffect(() => {
     const want = params.get('run');
-    if (!autoOpened.current && want && rows?.some((r) => r.id === want)) {
-      autoOpened.current = true;
+    if (want && autoOpened.current !== want && rows?.some((r) => r.id === want)) {
+      autoOpened.current = want;
       setOpenId(want);
+      setTimeout(() => {
+        document.getElementById(`run-${want}`)?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'start',
+        });
+      }, 60);
     }
   }, [rows, params]);
 
@@ -202,7 +209,7 @@ export function RunHistory({ repoId }: { repoId?: string }) {
       ) : (
         <div className="flex flex-col divide-y divide-white/[0.05]">
           {rows.map((r) => (
-            <div key={r.id} className="px-3 py-3">
+            <div key={r.id} id={`run-${r.id}`} className="scroll-mt-4 px-3 py-3">
               <button
                 type="button"
                 onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}

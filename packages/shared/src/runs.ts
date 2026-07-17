@@ -54,3 +54,36 @@ export const RunDetail = AgentRun.extend({
   resultText: z.string().nullable(),
 });
 export type RunDetail = z.infer<typeof RunDetail>;
+
+/** One aggregation bucket (a repo or a model) — exact sums over stored rows, never estimates. */
+export const RunStatsSlice = z.object({
+  key: z.string(),
+  runs: z.number().int().nonnegative(),
+  tokensIn: z.number().int().nonnegative(),
+  tokensOut: z.number().int().nonnegative(),
+});
+export type RunStatsSlice = z.infer<typeof RunStatsSlice>;
+
+/**
+ * Roll-up of the run log over a window. Tokens are EXACT sums of what the CLI reported per
+ * run — runs whose stream carried no usage data count in `runsWithoutUsage` (and contribute
+ * zero) instead of being guessed. Deliberately no dollar figure: price tables drift, and a
+ * computed cost would be a fabricated number (convention 1).
+ */
+export const RunStats = z.object({
+  windowDays: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+  byStatus: z.object({
+    queued: z.number().int().nonnegative(),
+    running: z.number().int().nonnegative(),
+    done: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+  }),
+  tokensIn: z.number().int().nonnegative(),
+  tokensOut: z.number().int().nonnegative(),
+  totalDurationMs: z.number().int().nonnegative(),
+  runsWithoutUsage: z.number().int().nonnegative(),
+  byRepo: z.array(RunStatsSlice),
+  byModel: z.array(RunStatsSlice),
+});
+export type RunStats = z.infer<typeof RunStats>;
