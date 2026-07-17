@@ -218,6 +218,18 @@ describe('run log + live run control API (persisted history, honest timeline sta
     expect((await srv.app.inject({ method: 'GET', url: '/api/runs', headers: HOST_OK })).statusCode).toBe(401);
   });
 
+  /** Poll to the terminal state with a hard deadline — fixed sleeps flake on slow CI workers. */
+  const waitForFinish = async (runId: string): Promise<void> => {
+    const deadline = Date.now() + 5000;
+    for (;;) {
+      const res = await srv.app.inject({ method: 'GET', url: `/api/runs/${runId}`, headers: AUTH });
+      const status = (res.json().run as { status: string }).status;
+      if (status === 'done' || status === 'failed') return;
+      if (Date.now() > deadline) throw new Error(`run ${runId} still '${status}' after 5s`);
+      await new Promise((r) => setTimeout(r, 20));
+    }
+  };
+
   it('dispatch → history row → detail with ended timeline + final report; kill refuses finished runs', async () => {
     const dis = await srv.app.inject({
       method: 'POST', url: '/api/dispatch', headers: AUTH,
@@ -225,7 +237,7 @@ describe('run log + live run control API (persisted history, honest timeline sta
     });
     expect(dis.statusCode).toBe(200);
     const runId = dis.json().runId as string;
-    await new Promise((r) => setTimeout(r, 30)); // fake spawn finishes near-instantly
+    await waitForFinish(runId);
 
     const list = await srv.app.inject({ method: 'GET', url: '/api/runs?limit=5', headers: AUTH });
     expect(list.statusCode).toBe(200);
@@ -255,7 +267,7 @@ describe('run log + live run control API (persisted history, honest timeline sta
       payload: { repoId: 'sentinel', task: 'second run for the roll-up', model: 'sonnet' },
     });
     expect(dis.statusCode).toBe(200);
-    await new Promise((r) => setTimeout(r, 30));
+    await waitForFinish(dis.json().runId as string);
 
     expect((await srv.app.inject({ method: 'GET', url: '/api/runs/stats', headers: HOST_OK })).statusCode).toBe(401);
 

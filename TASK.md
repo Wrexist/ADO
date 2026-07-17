@@ -6,6 +6,32 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## PR #3 review response (2026-07-17f) — CodeRabbit triage: verify, fix, refute, skip
+- [x] **Verified every finding against the code first** (external review = data, conv. 11).
+  The one "Critical" (triple-declared variable → SyntaxError) was FALSE — single declaration,
+  and 213 green tests would be impossible otherwise; refuted on the PR.
+- [x] **Fixed 20 confirmed findings**: credential redaction in git remote URLs; deploy-marker
+  final-line protocol (echoes/mid-report markers never verify a deploy) + JSON-framed template
+  data (fields can't escape the conv.-11 boundary) + uploaded-marker-with-failed-exit refused;
+  factsForBundle never returns another app's facts; "Last dispatch" honesty label; desktop
+  token via one-shot IPC (never argv), will-navigate lockdown, http(s)-only external opens,
+  validated preload config; release.yml persist-credentials:false + tag/version match gate;
+  JSON stores: ENOENT-only reset, corruption throws, atomic rename, row validation (no more
+  silent wipes; scheduler can't crash on a malformed row); settings store delta-only writes;
+  RepoCard keyboard a11y; RunHistory row refresh on terminal transition; autoReviews sorted by
+  ts; findingIdx integer check; encodeURIComponent(repoId); loadErr cleared per repo; Windows
+  path splitting; bounded pbxproj read; typed demo review seeds; test robustness (poll-till-
+  terminal, ANTHROPIC_API_KEY isolation, mutating-401 coverage).
+- [x] **Skipped with reasons (posted on the PR)**: Zustand-slice migrations for page-local
+  one-shot REST reads (conv. 4 governs SHARED state; the bus is the shared store), per-target
+  pbxproj scoping + runId-keyed deploy attempts + commit-range auto-review (real but heavy —
+  tracked as follow-ups), server-side re-parse of its own typed rows (client boundary already
+  zod-enforced), docstring-coverage threshold (repo convention: comments explain constraints).
+- [x] **verify green — 215 tests** (+ my own hostile-template test initially asserted the wrong
+  property — fixed the TEST, the code was right).
+
+---
+
 ## Desktop distribution (2026-07-17e) — download an installer, click, it runs
 - [x] **Research first** (Isac's ask): compared Electron vs Tauri vs source-install for a
   Node+native-module local server; decision record with sources in **docs/DESKTOP.md**.

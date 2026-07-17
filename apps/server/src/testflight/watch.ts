@@ -32,6 +32,12 @@ export function testflightRunDone(deps: WatchDeps): (runId: string, info: { repo
       log(`testflight: run ${runId} claimed upload for '${marker.bundleId}' but the template is '${profile.bundleId}' — refusing to record`);
       return;
     }
+    // Contradictory evidence: an "uploaded" claim from a run that exited unsuccessfully is
+    // an unknown, not a success — record nothing rather than a green row (conv. 1).
+    if (marker.status === 'uploaded' && !info.ok) {
+      log(`testflight: run ${runId} reported an upload but exited unsuccessfully — refusing to record`);
+      return;
+    }
 
     const ok = marker.status === 'uploaded';
     const ts = new Date().toISOString();

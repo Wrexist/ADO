@@ -3,8 +3,14 @@
  * gitignored JSON file under data/ (same local-first trust model as automations/connections).
  * No secrets live here.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { z } from 'zod';
+import { readJsonStoreRows, writeJsonStore } from '../lib/jsonStore';
+
+const RepoReviewSettingsSchema = z.object({
+  enabled: z.boolean(),
+  lastSha: z.string().nullable(),
+  lastAutoTs: z.string().nullable(),
+});
 
 export interface RepoReviewSettings {
   enabled: boolean;
@@ -21,20 +27,16 @@ export class AutoReviewStore {
   private data: Record<string, RepoReviewSettings> = {};
 
   constructor(private filePath: string) {
-    this.load();
-  }
-
-  private load(): void {
-    try {
-      this.data = JSON.parse(readFileSync(this.filePath, 'utf8')) as Record<string, RepoReviewSettings>;
-    } catch {
-      this.data = {}; // no file yet — fine
-    }
+    // Row-validated load: a malformed row (e.g. {"repo":null}) is dropped instead of
+    // crashing enabledRepoIds() in the scheduler loop; corruption of the FILE throws.
+    this.data = readJsonStoreRows(this.filePath, (row) => {
+      const parsed = RepoReviewSettingsSchema.safeParse(row);
+      return parsed.success ? parsed.data : null;
+    });
   }
 
   private persist(): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+    writeJsonStore(this.filePath, this.data);
   }
 
   settings(repoId: string): RepoReviewSettings {

@@ -32,6 +32,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   const [note, setNote] = useState('');
 
   // Load, then poll every 2s while the run is live so the timeline grows in place.
+  const wasLive = useRef(false);
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -40,6 +41,9 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         const d = await fetchRunDetail(runId);
         if (!alive) return;
         setDetail(d);
+        // Terminal transition: the parent row still says running/queued — refresh it too.
+        if (wasLive.current && d.timelineState !== 'live') onChanged();
+        wasLive.current = d.timelineState === 'live';
         if (d.timelineState === 'live') timer = setTimeout(load, 2000);
       } catch (e) {
         if (alive) setErr((e as Error).message);
@@ -50,7 +54,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       alive = false;
       if (timer) clearTimeout(timer);
     };
-  }, [runId]);
+  }, [runId]); // onChanged is a stable parent callback — deliberately not a dependency
 
   if (err) return <p className="mt-2 text-label text-danger">{err}</p>;
   if (!detail) return <p className="mt-2 text-label text-text3">Loading…</p>;

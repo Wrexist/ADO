@@ -20,6 +20,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # npm lifecycle/build scripts never see the checkout token
 
       - uses: actions/setup-node@v4
         with:
@@ -28,6 +30,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # A v0.2.0 tag with package version 0.1.0 would publish mismatched installer names
+      # and updater manifests — refuse instead of shipping the confusion.
+      - name: Verify tag matches the desktop package version
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          node -e "const v=require('./package.json').version;const t=process.env.GITHUB_REF_NAME.replace(/^v/,'');if(v!==t){console.error('tag '+t+' != package version '+v+' — bump apps/desktop/package.json in the tagged commit');process.exit(1)}"
 
       - name: Build web bundle
         run: npm run build -w @ado/web

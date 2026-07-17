@@ -87,7 +87,7 @@ export function ProfileRow({ profile, facts, repoLabel, onChanged }: {
       </div>
       <p className="mt-1 text-label text-text3">
         {profile.lastDeployTs && profile.lastVersion
-          ? `Last deploy: ${profile.lastVersion} · ${timeAgo(profile.lastDeployTs)}`
+          ? `Last dispatch: ${profile.lastVersion} · ${timeAgo(profile.lastDeployTs)}`
           : 'Never deployed from here.'}
       </p>
 

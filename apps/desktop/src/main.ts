@@ -19,7 +19,7 @@ import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import fixPath from 'fix-path';
 import { buildServer, type AccServer } from '../../server/src/app';
 import { loadEnv } from '../../server/src/env';
@@ -79,6 +79,12 @@ async function start(): Promise<void> {
   server = await buildServer(env);
   await server.app.listen({ port, host: '127.0.0.1' });
 
+  // One-shot sync IPC hands the renderer its config — the token never rides in argv
+  // (process args are readable by other local processes) or in the URL.
+  ipcMain.on('acc:config', (e) => {
+    e.returnValue = { serverUrl: '', accToken };
+  });
+
   const win = new BrowserWindow({
     width: 1536,
     height: 1000,
@@ -90,16 +96,20 @@ async function start(): Promise<void> {
       preload: join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      // The preload reads this — no IPC round-trip, no token in the URL.
-      additionalArguments: [`--acc-config=${JSON.stringify({ serverUrl: '', accToken })}`],
     },
   });
-  // External links open in the real browser, never inside the app shell.
+  const appOrigin = `http://127.0.0.1:${port}`;
+  // The window may only ever show the local app — any other top-level navigation is
+  // blocked, so remote content can never load into a renderer holding the injected config.
+  win.webContents.on('will-navigate', (e, url) => {
+    if (url !== appOrigin && !url.startsWith(`${appOrigin}/`)) e.preventDefault();
+  });
+  // External links open in the real browser — http(s) only, never custom schemes.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
-  await win.loadURL(`http://127.0.0.1:${port}`);
+  await win.loadURL(appOrigin);
 
   if (app.isPackaged) {
     try {

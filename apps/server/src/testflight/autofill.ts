@@ -9,7 +9,7 @@
  * versioned, self-contained adapter with an honest degraded state (convention 12) — fields
  * it can't find are simply absent, never invented.
  */
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { IosAppFacts, TestFlightAutofill } from '@ado/shared';
 
@@ -43,8 +43,9 @@ function findXcodeprojs(cwd: string): string[] {
 
 function read(path: string, cap = MAX_PBXPROJ_BYTES): string | null {
   try {
-    const s = readFileSync(path, 'utf8');
-    return s.length > cap ? s.slice(0, cap) : s;
+    // Check size BEFORE loading — an oversized/garbage file is skipped, not slurped-then-trimmed.
+    if (statSync(path).size > cap) return null;
+    return readFileSync(path, 'utf8');
   } catch {
     return null;
   }

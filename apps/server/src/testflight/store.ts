@@ -3,29 +3,24 @@
  * gitignored JSON file under data/ (same local-first trust model as automations).
  * Holds config only — credentials are pointers, never key material (shared contract).
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { TestFlightProfileInput, type TestFlightProfile } from '@ado/shared';
+import { TestFlightProfile, TestFlightProfileInput } from '@ado/shared';
+import { readJsonStoreRows, writeJsonStore } from '../lib/jsonStore';
 
 export class TestFlightProfileStore {
   private data: Record<string, TestFlightProfile> = {};
 
   constructor(private filePath: string) {
-    this.load();
-  }
-
-  private load(): void {
-    try {
-      this.data = JSON.parse(readFileSync(this.filePath, 'utf8')) as Record<string, TestFlightProfile>;
-    } catch {
-      this.data = {}; // no file yet — fine
-    }
+    // ENOENT = fresh; corruption throws (never silently reset); schema-invalid rows drop
+    // from memory only — the file is untouched until the next real write.
+    this.data = readJsonStoreRows(this.filePath, (row) => {
+      const parsed = TestFlightProfile.safeParse(row);
+      return parsed.success ? parsed.data : null;
+    });
   }
 
   private persist(): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+    writeJsonStore(this.filePath, this.data);
   }
 
   list(): TestFlightProfile[] {

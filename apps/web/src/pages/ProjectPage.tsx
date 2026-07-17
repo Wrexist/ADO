@@ -183,6 +183,7 @@ function ProjectSettingsCard({ repoId }: { repoId: string }) {
   useEffect(() => {
     let alive = true;
     setFeatures(null);
+    setLoadErr(''); // a previous repo's failure must not linger over this repo's settings
     fetchProjectSettings(repoId)
       .then((f) => alive && setFeatures(f))
       .catch((e) => alive && setLoadErr((e as Error).message));

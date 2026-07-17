@@ -783,7 +783,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       return reply.code(400).send({ error: 'this review has no findings to fix' });
     }
     const body = (req.body ?? {}) as { findingIdx?: number; model?: string };
-    if (body.findingIdx != null && (body.findingIdx < 0 || body.findingIdx >= review.findings.length)) {
+    if (body.findingIdx != null && (!Number.isInteger(body.findingIdx) || body.findingIdx < 0 || body.findingIdx >= review.findings.length)) {
       return reply.code(400).send({ error: 'findingIdx out of range' });
     }
     try {

@@ -5,7 +5,7 @@ import { cloneFromGithub } from '../lib/projectSettings';
 
 /** Last two path segments — enough to tell tracked folders apart in the picker. */
 const shortDir = (d: string): string => {
-  const parts = d.split('/').filter(Boolean);
+  const parts = d.split(/[\\/]+/).filter(Boolean); // both separators — Windows desktop builds too
   return parts.length > 2 ? `…/${parts.slice(-2).join('/')}` : d;
 };
 

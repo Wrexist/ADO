@@ -32,6 +32,7 @@ export function RepoCard({ repo }: { repo: Repo }) {
       aria-label={`Open ${repo.name}`}
       onClick={open}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return; // inner buttons keep their native keyboard behavior
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           open();

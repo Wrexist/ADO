@@ -332,10 +332,9 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
       // Upsert by review id: the running row is replaced by its done/failed row (same id),
       // and the freshest update moves to the front. Bounded ring, like incidents.
       const { review } = p as { review: AutoReview };
-      const autoReviews = [review, ...state.autoReviews.filter((r) => r.id !== review.id)].slice(
-        0,
-        AUTOREVIEW_CAP,
-      );
+      const autoReviews = [review, ...state.autoReviews.filter((r) => r.id !== review.id)]
+        .sort((a, b) => b.ts.localeCompare(a.ts)) // newest-first even on out-of-order replay
+        .slice(0, AUTOREVIEW_CAP);
       return { ...state, autoReviews };
     }
     case 'incident.diagnosed': {

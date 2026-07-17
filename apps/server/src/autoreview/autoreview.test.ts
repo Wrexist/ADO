@@ -328,14 +328,21 @@ function seedReview(srv: AccServer, id: string, over: Partial<AutoReview> = {}):
 
 describe('autoreview endpoints', () => {
   let srv: AccServer;
+  let hostKey: string | undefined;
   beforeAll(async () => {
+    // Isolate from the HOST env: a CI runner with a real key must not flip the no-key paths.
+    hostKey = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
     srv = await buildServer(ENV, { startSystem: false, spawner: fakeSpawner() });
     srv.bus.publish({
       id: 'repo:sentinel', type: 'repo.upserted', ts, source: { kind: 'scanner', ref: 'sentinel' },
       payload: { repo: { id: 'sentinel', name: 'Sentinel', category: 'app', status: 'active', description: '', branch: 'main', updatedTs: ts } },
     });
   });
-  afterAll(async () => { await srv.close(); });
+  afterAll(async () => {
+    if (hostKey !== undefined) process.env.ANTHROPIC_API_KEY = hostKey;
+    await srv.close();
+  });
 
   it('refuses everything without the token', async () => {
     expect((await srv.app.inject({ method: 'GET', url: '/api/autoreview', headers: HOST })).statusCode).toBe(401);

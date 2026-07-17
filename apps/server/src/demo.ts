@@ -4,6 +4,7 @@
  * land in 2.2–2.4/3/4). Deterministic and idempotent: stable ids + frozen fixture
  * clock; re-running changes nothing. This is the seed the P3.5 baselines render.
  */
+import type { AutoReview } from '@ado/shared';
 import { MOCK_NOW, MOCK_VIEW_A, MOCK_VIEW_B } from '@ado/shared/mock';
 import type { Bus } from './bus';
 
@@ -175,9 +176,12 @@ export function seedDemo(bus: Bus): void {
   // so the page is self-documenting in the demo world; real mode only ever shows reviews the
   // real model produced. Reported exactly as the engine publishes them (upsert by id).
   const rvTs = (minAgo: number) => new Date(new Date(MOCK_NOW).getTime() - minAgo * 60_000).toISOString();
-  const seedReview = (review: Record<string, unknown> & { id: string }, minAgo: number) =>
+  // Typed against the shared contract (conv. 2); generated metadata is applied AFTER the
+  // spread so a seed can never override ts/model/status (trigger may vary per example).
+  type SeededReview = Omit<AutoReview, 'ts' | 'model' | 'status' | 'trigger'> & { trigger?: AutoReview['trigger'] };
+  const seedReview = ({ trigger, ...review }: SeededReview, minAgo: number) =>
     pub(`autoreview:${review.id}:done`, 'autoreview.updated', rvTs(minAgo), {
-      review: { ts: rvTs(minAgo), model: 'claude-opus-4-8', status: 'done', trigger: 'commit', ...review },
+      review: { ...review, trigger: trigger ?? 'commit', ts: rvTs(minAgo), model: 'claude-opus-4-8', status: 'done' } satisfies AutoReview,
     });
   seedReview(
     {

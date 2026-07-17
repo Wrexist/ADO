@@ -100,11 +100,18 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
   }
 }
 
+/** Drop URL userinfo (`https://user:token@host/…` → `https://host/…`) — a remote configured
+ *  with an embedded credential must never reach the client/DOM (conv. 9/10 spirit). */
+export function redactRemoteUrl(url: string): string {
+  return url.replace(/^(https?:\/\/)[^@/]+@/i, '$1');
+}
+
 /** Branch + origin URL + parsed GitHub ref for a scanned repo dir. Degrades to nulls, never throws.
  *  Reads the CONFIGURED remote (`git config`), not the resolved one (`remote get-url`), so a
  *  machine-level `url.insteadOf` rewrite (mirrors/proxies) doesn't hide the real GitHub origin. */
 export async function readGitLink(cwd: string): Promise<GitLink> {
   const branch = (await git(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'])) ?? 'HEAD';
-  const remoteUrl = await git(cwd, ['config', '--get', 'remote.origin.url']);
+  const raw = await git(cwd, ['config', '--get', 'remote.origin.url']);
+  const remoteUrl = raw ? redactRemoteUrl(raw) : raw;
   return { branch, remoteUrl, github: remoteUrl ? parseGithubRepo(remoteUrl) : null };
 }
