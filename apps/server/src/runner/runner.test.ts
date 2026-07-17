@@ -163,6 +163,60 @@ describe('runner (Prompts 3.1–3.2)', () => {
     sqlite.close();
   });
 
+  it('captures a live timeline, persists resultText, and reports isLive honestly', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    const stream = [
+      '{"type":"system","subtype":"init"}',
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit"}]}}',
+      '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":5,"output_tokens":5},"result":"All done: fixed the test."}',
+    ];
+    const runner = new Runner(bus, db, fakeSpawner(stream), { cwdFor });
+    const { runId } = runner.dispatch({ repoId: 'sentinel', task: 'fix' });
+    await drain();
+    const t = runner.timeline(runId)!;
+    expect(t.map((e) => e.kind)).toEqual(['status', 'status', 'status', 'tool', 'status']); // Queued·Spawned·started·Edit·Completed
+    expect(t.some((e) => e.kind === 'tool' && e.text === 'Edit')).toBe(true);
+    expect(runner.isLive(runId)).toBe(false);
+    expect(runner.timeline('run-from-last-boot')).toBeNull(); // honest absence, not []
+    expect(db.select().from(runs).where(eq(runs.id, runId)).get()!.resultText).toBe('All done: fixed the test.');
+    sqlite.close();
+  });
+
+  it('kill: cancels a QUEUED run and SIGTERMs a RUNNING one (note records why)', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    // a killable "running" spawn: lines block until kill() fires, then the run exits 143
+    let release!: (code: number) => void;
+    const killable: Spawner = {
+      spawn(): SpawnHandle {
+        const done = new Promise<number>((r) => (release = r));
+        async function* gen() { await done; yield* [] as string[]; }
+        return { lines: gen(), done, kill: () => release(143) };
+      },
+    };
+    const runner = new Runner(bus, db, killable, { cwdFor, maxConcurrent: 1 });
+    const a = runner.dispatch({ repoId: 'sentinel', task: 'long job' }); // running (stuck)
+    const b = runner.dispatch({ repoId: 'sentinel', task: 'waiting' }); // queued behind it
+
+    expect(runner.kill(b.runId)).toBe(true); // queued → cancelled, never spawned
+    await drain();
+    const rowB = db.select().from(runs).where(eq(runs.id, b.runId)).get()!;
+    expect(rowB.status).toBe('failed');
+    expect(rowB.note).toContain('cancelled from the dashboard');
+
+    expect(runner.isLive(a.runId)).toBe(true);
+    expect(runner.kill(a.runId)).toBe(true); // running → SIGTERM → exit 143
+    await drain();
+    const rowA = db.select().from(runs).where(eq(runs.id, a.runId)).get()!;
+    expect(rowA.status).toBe('failed');
+    expect(rowA.note).toBe('killed from the dashboard');
+
+    expect(runner.kill(a.runId)).toBe(false); // already finished — nothing in flight
+    expect(runner.kill('never-existed')).toBe(false);
+    sqlite.close();
+  });
+
   it('semaphore queues dispatches beyond maxConcurrent', () => {
     const { db, sqlite } = openDb(':memory:');
     const bus = new Bus(db);

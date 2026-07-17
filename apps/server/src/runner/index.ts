@@ -45,11 +45,25 @@ const DEFAULTS = { maxConcurrent: 3, turnCap: 20, timeoutMs: 15 * 60_000 };
 /** How many recent agent ids to keep on a repo for the avatar stack (newest first). */
 const REPO_AGENT_CAP = 5;
 
+/** Live-timeline ring cap per run — enough to follow a long run, never unbounded. */
+const TIMELINE_CAP = 200;
+
+export interface TimelineEntry {
+  ts: string;
+  kind: 'status' | 'tool' | 'progress';
+  text: string;
+}
+
 export class Runner {
   private active = 0;
   private seq = 0; // guarantees unique run ids even for same-millisecond dispatches
   private queue: Array<{ id: string; input: DispatchInput }> = [];
   private handles = new Map<string, SpawnHandle>();
+  /** In-memory tool-by-tool timelines for runs started THIS boot (live observability).
+   *  Bounded per run and pruned past a global cap; older runs honestly have none. */
+  private timelines = new Map<string, TimelineEntry[]>();
+  /** Runs the user killed from the dashboard — so the exit path records WHY it failed. */
+  private killed = new Set<string>();
   private opts: Required<Omit<RunnerOpts, 'cwdFor' | 'blockedReason' | 'onRunDone'>> & Pick<RunnerOpts, 'cwdFor' | 'blockedReason' | 'onRunDone'>;
 
   constructor(
@@ -79,6 +93,53 @@ export class Runner {
     return orphans.length;
   }
 
+  /** Append to a run's live timeline (bounded ring; prunes the oldest runs' timelines). */
+  private record(runId: string, kind: TimelineEntry['kind'], text: string): void {
+    let t = this.timelines.get(runId);
+    if (!t) {
+      t = [];
+      this.timelines.set(runId, t);
+      // Global bound: keep timelines for the most recent ~50 runs of this boot.
+      if (this.timelines.size > 50) {
+        const oldest = this.timelines.keys().next().value;
+        if (oldest) this.timelines.delete(oldest);
+      }
+    }
+    t.push({ ts: new Date().toISOString(), kind, text });
+    if (t.length > TIMELINE_CAP) t.splice(0, t.length - TIMELINE_CAP);
+  }
+
+  /** The live timeline captured this boot, or null when the run predates it (honest absence). */
+  timeline(runId: string): TimelineEntry[] | null {
+    return this.timelines.get(runId) ?? null;
+  }
+
+  /** Is the run in flight right now (spawned or still queued)? */
+  isLive(runId: string): boolean {
+    return this.handles.has(runId) || this.queue.some((q) => q.id === runId);
+  }
+
+  /**
+   * Kill a running run (SIGTERM — the exit path records it) or cancel a queued one.
+   * Returns false when the run isn't in flight (finished / unknown / predates this boot).
+   */
+  kill(runId: string): boolean {
+    const queuedIdx = this.queue.findIndex((q) => q.id === runId);
+    if (queuedIdx >= 0) {
+      const [q] = this.queue.splice(queuedIdx, 1);
+      this.record(runId, 'status', 'Cancelled before start');
+      this.failRun(q.id, q.input, null, 'cancelled from the dashboard before it started');
+      return true;
+    }
+    const handle = this.handles.get(runId);
+    if (!handle) return false;
+    this.killed.add(runId);
+    this.record(runId, 'status', 'Kill requested from the dashboard');
+    this.log(`runner: ${runId} killed from the dashboard`);
+    handle.kill();
+    return true;
+  }
+
   /** Accept a dispatch. Returns the runId, or throws if blocked/not allow-listed. */
   dispatch(input: DispatchInput): { runId: string } {
     const blocked = this.opts.blockedReason?.(input.repoId);
@@ -95,6 +156,7 @@ export class Runner {
 
     // Reflect as a queued build immediately (backs the Build Queue), then let the
     // semaphore-aware drain start it now or hold it until a slot frees.
+    this.record(runId, 'status', 'Queued');
     this.emitBuild(runId, input, 'queued', null);
     this.queue.push({ id: runId, input });
     this.drainNext();
@@ -182,6 +244,7 @@ export class Runner {
         payload: { agent: { id: agentId, name: this.agentName(input), icon: 'code', tone: 'violet', kind: 'runner', status, statusLine, pct } },
       });
 
+    this.record(runId, 'status', 'Spawned');
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
     this.emitBuild(runId, input, 'running', startedMs);
     upsertAgent('running', 0);
@@ -203,13 +266,16 @@ export class Runner {
             upsertAgent('running', null); // no guessed % — the adapter fallback
           } else if (u.kind === 'started') {
             statusLine = 'Working…';
+            this.record(runId, 'status', 'Agent started');
             upsertAgent('running', pct(turns, this.opts.turnCap, opaque));
           } else if (u.kind === 'tool') {
             turns++;
             statusLine = `Using ${u.name}…`;
+            this.record(runId, 'tool', u.name);
             upsertAgent('running', pct(turns, this.opts.turnCap, opaque));
           } else if (u.kind === 'progress') {
             statusLine = u.text;
+            this.record(runId, 'progress', u.text);
             upsertAgent('running', pct(turns, this.opts.turnCap, opaque));
           } else if (u.kind === 'done') {
             tokensIn = u.tokensIn;
@@ -226,7 +292,9 @@ export class Runner {
 
     const exitCode = await handle.done;
     const ok = exitCode === 0;
-    statusLine = ok ? 'Completed' : 'Failed';
+    const wasKilled = this.killed.delete(runId);
+    statusLine = wasKilled ? 'Killed' : ok ? 'Completed' : 'Failed';
+    this.record(runId, 'status', statusLine);
     upsertAgent(ok ? 'done' : 'failed', ok ? 100 : null);
 
     this.db
@@ -239,7 +307,8 @@ export class Runner {
         tokensOut,
         turns,
         exitCode,
-        note: opaque ? 'opaque stream' : null,
+        note: wasKilled ? 'killed from the dashboard' : opaque ? 'opaque stream' : null,
+        resultText,
       })
       .where(eq(runs.id, runId))
       .run();

@@ -3,6 +3,7 @@ import type { AccServer } from './app';
 import { buildServer } from './app';
 import { Bus } from './bus';
 import { openDb } from './db';
+import type { SpawnHandle, SpawnOpts, Spawner } from './runner/spawner';
 
 const ENV = {
   port: 8787,
@@ -137,5 +138,77 @@ describe('prompt library API (custom entries, token-gated)', () => {
   it('rejects invalid input with 400', async () => {
     const res = await srv.app.inject({ method: 'POST', url: '/api/prompts', headers: AUTH, payload: { title: '', category: 'game', summary: 's', body: 'b' } });
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('run log + live run control API (persisted history, honest timeline states)', () => {
+  let srv: AccServer;
+  const AUTH = { ...HOST_OK, 'x-acc-token': 'test-token' };
+
+  // Fake agent process: streams a short scripted session, then exits 0 — the endpoints
+  // under test see exactly what a real `claude -p` run would leave behind.
+  const spawner: Spawner = {
+    spawn(_opts: SpawnOpts): SpawnHandle {
+      async function* gen() {
+        yield '{"type":"system","subtype":"init"}';
+        yield '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit"}]}}';
+        yield '{"type":"result","subtype":"success","num_turns":2,"usage":{"input_tokens":1200,"output_tokens":340},"result":"All green — fixed the flaky test."}';
+      }
+      return { lines: gen(), done: Promise.resolve(0), kill: () => {} };
+    },
+  };
+
+  beforeAll(async () => {
+    srv = await buildServer(ENV, { startSystem: false, spawner });
+    // no scanner in tests → the dispatch cwd allow-list resolves through bus repo state
+    srv.bus.publish({
+      id: 'e-runlog-repo',
+      type: 'repo.upserted',
+      ts: '2026-07-16T08:00:00.000Z',
+      source: { kind: 'scanner', ref: 'test' },
+      payload: {
+        repo: {
+          id: 'sentinel', name: 'SENTINEL', category: 'game', status: 'active',
+          description: 'x', branch: 'main', updatedTs: '2026-07-16T08:00:00.000Z', agents: [],
+        },
+      },
+    });
+  });
+  afterAll(async () => {
+    await srv.close();
+  });
+
+  it('refuses the run log without the token', async () => {
+    expect((await srv.app.inject({ method: 'GET', url: '/api/runs', headers: HOST_OK })).statusCode).toBe(401);
+  });
+
+  it('dispatch → history row → detail with ended timeline + final report; kill refuses finished runs', async () => {
+    const dis = await srv.app.inject({
+      method: 'POST', url: '/api/dispatch', headers: AUTH,
+      payload: { repoId: 'sentinel', task: 'fix the flaky test' },
+    });
+    expect(dis.statusCode).toBe(200);
+    const runId = dis.json().runId as string;
+    await new Promise((r) => setTimeout(r, 30)); // fake spawn finishes near-instantly
+
+    const list = await srv.app.inject({ method: 'GET', url: '/api/runs?limit=5', headers: AUTH });
+    expect(list.statusCode).toBe(200);
+    const rows = list.json().runs as Array<{ id: string; status: string }>;
+    expect(rows[0]).toMatchObject({ id: runId, status: 'done' });
+
+    const detail = await srv.app.inject({ method: 'GET', url: `/api/runs/${runId}`, headers: AUTH });
+    expect(detail.statusCode).toBe(200);
+    const run = detail.json().run as {
+      timelineState: string; timeline: Array<{ kind: string; text: string }>; resultText: string | null;
+    };
+    expect(run.timelineState).toBe('ended'); // started this boot, finished — never 'unavailable'
+    expect(run.timeline.some((e) => e.kind === 'tool' && e.text === 'Edit')).toBe(true);
+    expect(run.resultText).toContain('All green');
+
+    // a finished run is not killable — 400 with an honest reason, not a silent no-op
+    const kill = await srv.app.inject({ method: 'POST', url: `/api/runs/${runId}/kill`, headers: AUTH, payload: {} });
+    expect(kill.statusCode).toBe(400);
+
+    expect((await srv.app.inject({ method: 'GET', url: '/api/runs/never-existed', headers: AUTH })).statusCode).toBe(404);
   });
 });

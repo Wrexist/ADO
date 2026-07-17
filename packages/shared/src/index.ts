@@ -6,6 +6,7 @@ export * from './incidents';
 export * from './autoreview';
 export * from './projectSettings';
 export * from './testflight';
+export * from './runs';
 export * from './connectors';
 export * from './requirements';
 export * from './workflows';

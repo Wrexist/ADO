@@ -511,6 +511,20 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-17 · Claude · Run Control (history · live timeline · kill · re-run)
+- shipped: runs stopped being fire-and-forget. Shared AgentRun/RunDetail contracts; migration 0003
+  (runs.result_text); runner records a per-run timeline ring (status/tool/progress, this-boot only)
+  and supports kill (queued → cancel-before-spawn, running → SIGTERM, notes say which); three
+  token-gated endpoints (GET /api/runs, GET /api/runs/:id with timelineState live|ended|unavailable,
+  POST /api/runs/:id/kill); Agents page gained a Run history card — expandable detail with live 2s
+  timeline poll, final report, two-step kill confirm, "Dispatch again". 209 tests green.
+- next / watch-outs: timeline is per-boot by design (pre-boot runs say 'unavailable', never a
+  reconstruction). If run volume grows, consider persisting timelines to a table — but only with a
+  retention story. resultText is capped at 4000 chars in the adapter; the UI says "No final report
+  captured" when absent. Zod backfill for the low-risk REST payloads still pending.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

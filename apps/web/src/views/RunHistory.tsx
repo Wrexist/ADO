@@ -1,0 +1,217 @@
+import { useEffect, useState } from 'react';
+import type { AgentRun, RunDetail } from '@ado/shared';
+import { Button, Card, Chip, Icon, cx, type Tone } from '../kit';
+import { useBus } from '../store/bus';
+import { durationLabel, timeAgo } from '../lib/time';
+import { fetchRunDetail, fetchRuns, killRun } from '../lib/runs';
+import { dispatchPrompt } from '../lib/prompts';
+
+const STATUS_TONE: Record<AgentRun['status'], Tone> = {
+  queued: 'warning',
+  running: 'info',
+  done: 'success',
+  failed: 'danger',
+};
+
+const fmtTokens = (n: number | null): string => (n == null ? '—' : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+
+/** Expanded run detail: live timeline (polls while running) + final report + controls. */
+function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => void }) {
+  const [detail, setDetail] = useState<RunDetail | null>(null);
+  const [err, setErr] = useState('');
+  const [confirmKill, setConfirmKill] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+
+  // Load, then poll every 2s while the run is live so the timeline grows in place.
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      try {
+        const d = await fetchRunDetail(runId);
+        if (!alive) return;
+        setDetail(d);
+        if (d.timelineState === 'live') timer = setTimeout(load, 2000);
+      } catch (e) {
+        if (alive) setErr((e as Error).message);
+      }
+    };
+    void load();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [runId]);
+
+  if (err) return <p className="mt-2 text-label text-danger">{err}</p>;
+  if (!detail) return <p className="mt-2 text-label text-text3">Loading…</p>;
+
+  const inFlight = detail.status === 'running' || detail.status === 'queued';
+
+  const kill = async () => {
+    if (!confirmKill) {
+      setConfirmKill(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      await killRun(detail.id);
+      setNote('Kill requested — the run will finish as failed.');
+      onChanged();
+    } catch (e) {
+      setNote((e as Error).message);
+    } finally {
+      setBusy(false);
+      setConfirmKill(false);
+    }
+  };
+
+  const again = async () => {
+    setBusy(true);
+    setNote('');
+    try {
+      const { runId: newId } = await dispatchPrompt(detail.repoId, detail.task, detail.model === 'default' ? undefined : detail.model);
+      setNote(`Dispatched again — run ${newId.slice(0, 12)}.`);
+      onChanged();
+    } catch (e) {
+      setNote((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t pt-3">
+      <p className="whitespace-pre-wrap break-words rounded-tile bg-elevated px-3 py-2 text-label text-text2">{detail.task}</p>
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-text3">
+        <span>model: {detail.model}</span>
+        <span>tokens: {fmtTokens(detail.tokensIn)} in · {fmtTokens(detail.tokensOut)} out</span>
+        <span>turns: {detail.turns ?? '—'}</span>
+        <span>exit: {detail.exitCode ?? '—'}</span>
+        {detail.note ? <span className="text-warning">{detail.note}</span> : null}
+      </div>
+
+      {/* timeline — live (growing), ended (complete for this boot), or honestly unavailable */}
+      <div className="mt-3">
+        <p className="text-label font-medium uppercase tracking-wider text-text3">
+          Timeline{detail.timelineState === 'live' ? ' · live' : ''}
+        </p>
+        {detail.timelineState === 'unavailable' ? (
+          <p className="mt-1 text-label text-text3">
+            This run predates the current server session — its live timeline wasn't captured. The summary above and the final
+            report below are the persisted record.
+          </p>
+        ) : detail.timeline.length === 0 ? (
+          <p className="mt-1 text-label text-text3">No timeline entries yet.</p>
+        ) : (
+          <div className="mt-1.5 max-h-56 overflow-y-auto rounded-tile border bg-app p-2.5">
+            {detail.timeline.map((e, i) => (
+              <div key={`${e.ts}-${i}`} className="flex items-baseline gap-2 py-0.5">
+                <span className="w-14 shrink-0 font-mono text-label text-text3">{e.ts.slice(11, 19)}</span>
+                {e.kind === 'tool' ? (
+                  <Chip size="sm" tone="violet">{e.text}</Chip>
+                ) : (
+                  <span className={cx('min-w-0 flex-1 truncate text-label', e.kind === 'status' ? 'font-medium text-text2' : 'text-text3')}>
+                    {e.text}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {detail.resultText ? (
+        <div className="mt-3">
+          <p className="text-label font-medium uppercase tracking-wider text-text3">Final report</p>
+          <pre className="mt-1.5 max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-tile border bg-app p-3 text-label text-text2">
+            {detail.resultText}
+          </pre>
+        </div>
+      ) : detail.status === 'done' || detail.status === 'failed' ? (
+        <p className="mt-3 text-label text-text3">No final report captured for this run.</p>
+      ) : null}
+
+      <div className="mt-3 flex items-center gap-2">
+        {inFlight ? (
+          <Button size="sm" variant="outline" onClick={() => void kill()} disabled={busy}
+            className={confirmKill ? 'border-danger/60 text-danger' : ''}>
+            {confirmKill ? 'Confirm kill' : detail.status === 'queued' ? 'Cancel run' : 'Kill run'}
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => void again()} disabled={busy}>
+            {busy ? 'Dispatching…' : 'Dispatch again'}
+          </Button>
+        )}
+        {confirmKill ? (
+          <Button size="sm" variant="ghost" onClick={() => setConfirmKill(false)}>Keep running</Button>
+        ) : null}
+        {note ? <span className={cx('text-label', note.startsWith('Dispatched') || note.startsWith('Kill requested') ? 'text-text2' : 'text-danger')}>{note}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Run history — the REAL persisted run log (survives restarts), newest first. Click a run
+ * for the tool-by-tool timeline (live while running), the agent's final report, kill/cancel
+ * for in-flight runs, and one-click re-dispatch for finished ones.
+ */
+export function RunHistory() {
+  const repos = useBus((s) => s.state.repos);
+  const [rows, setRows] = useState<AgentRun[] | null>(null);
+  const [err, setErr] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const refresh = () => {
+    fetchRuns(undefined, 30)
+      .then((r) => {
+        setRows(r);
+        setErr('');
+      })
+      .catch((e) => {
+        setRows([]);
+        setErr((e as Error).message);
+      });
+  };
+  useEffect(refresh, []);
+
+  return (
+    <Card className="mt-3 p-2">
+      {rows === null ? (
+        <p className="p-4 text-label text-text3">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="p-4 text-center text-body text-text3">
+          {err ? err : 'No runs recorded yet — dispatch an agent and its full history lands here.'}
+        </p>
+      ) : (
+        <div className="flex flex-col divide-y divide-white/[0.05]">
+          {rows.map((r) => (
+            <div key={r.id} className="px-3 py-3">
+              <button
+                type="button"
+                onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}
+                aria-expanded={openId === r.id}
+                className="flex w-full items-center gap-3 text-left"
+              >
+                <Icon name="agents" size={15} className="shrink-0 text-text3" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body font-medium text-text1">{r.task.split('\n')[0].slice(0, 100)}</p>
+                  <p className="truncate text-label text-text3">
+                    {repos[r.repoId]?.name ?? r.repoId} · {timeAgo(r.startedTs)}
+                    {r.durationMs != null ? ` · ${durationLabel(Math.round(r.durationMs / 1000))}` : ''}
+                  </p>
+                </div>
+                <Chip tone={STATUS_TONE[r.status]} size="sm" dot>{r.status}</Chip>
+                <Icon name="chevronDown" size={14} className={cx('shrink-0 text-text3 transition-transform duration-150 ease-soft', openId === r.id ? 'rotate-180' : '')} />
+              </button>
+              {openId === r.id ? <RunDetailBody runId={r.id} onChanged={refresh} /> : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}

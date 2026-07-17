@@ -67,6 +67,7 @@ export const runs = sqliteTable(
     humanAction: text('human_action'), // accepted | corrected | redone | null — reserved, unwritten
     exitCode: integer('exit_code'),
     note: text('note'), // e.g. "orphaned on boot", "opaque stream"
+    resultText: text('result_text'), // the agent's final message (capped); null = none captured
   },
   (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status)],
 );

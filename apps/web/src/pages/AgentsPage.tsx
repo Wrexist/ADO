@@ -3,6 +3,7 @@ import { AgentTile, Card, Chip, Icon, SectionHeader, type Tone } from '../kit';
 import { useBus } from '../store/bus';
 import { buildRows, rosterAgents, runningAgents } from '../lib/selectors';
 import { durationLabel } from '../lib/time';
+import { RunHistory } from '../views/RunHistory';
 
 const BUILD_TONE: Record<string, Tone> = {
   running: 'info',
@@ -67,6 +68,9 @@ export function AgentsPage() {
       ) : (
         empty('No builds in the queue.')
       )}
+
+      <SectionHeader title="Run history" className="mt-8" />
+      <RunHistory />
     </PageShell>
   );
 }

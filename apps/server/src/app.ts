@@ -4,12 +4,14 @@
  */
 import { randomUUID } from 'node:crypto';
 import { statSync } from 'node:fs';
+import { desc, eq } from 'drizzle-orm';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, type ProbeResult, type AutomationTrigger, type IncidentRecord } from '@ado/shared';
 import { openDb } from './db';
+import { runs } from './db/schema';
 import { expandHome, type Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
@@ -535,6 +537,56 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     } catch (err) {
       return reply.code(403).send({ error: (err as Error).message });
     }
+  });
+
+  // Run log + live run control. History is the REAL persisted `runs` table (survives
+  // restarts); the tool-by-tool timeline lives only for runs started this boot — older
+  // runs report timelineState 'unavailable' instead of a reconstructed fake (conv. 1).
+  const runRow = (r: typeof runs.$inferSelect) => ({
+    id: r.id,
+    repoId: r.repoId,
+    task: r.task,
+    model: r.model,
+    status: r.status as 'queued' | 'running' | 'done' | 'failed',
+    startedTs: r.startedTs,
+    endedTs: r.endedTs,
+    durationMs: r.durationMs,
+    tokensIn: r.tokensIn,
+    tokensOut: r.tokensOut,
+    turns: r.turns,
+    exitCode: r.exitCode,
+    note: r.note,
+  });
+  app.get('/api/runs', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const q = req.query as { repo?: string; limit?: string };
+    const limit = Math.min(100, Math.max(1, Number(q.limit) || 30));
+    const base = db.select().from(runs).orderBy(desc(runs.startedTs)).limit(limit);
+    const rows = q.repo ? base.where(eq(runs.repoId, q.repo)).all() : base.all();
+    return { runs: rows.map(runRow) };
+  });
+  app.get('/api/runs/:id', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    const row = db.select().from(runs).where(eq(runs.id, id)).get();
+    if (!row) return reply.code(404).send({ error: 'unknown run' });
+    const timeline = runner.timeline(id);
+    return {
+      run: {
+        ...runRow(row),
+        timelineState: runner.isLive(id) ? 'live' : timeline ? 'ended' : 'unavailable',
+        timeline: timeline ?? [],
+        resultText: row.resultText,
+      },
+    };
+  });
+  app.post('/api/runs/:id/kill', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    const row = db.select().from(runs).where(eq(runs.id, id)).get();
+    if (!row) return reply.code(404).send({ error: 'unknown run' });
+    if (!runner.kill(id)) return reply.code(400).send({ error: 'this run is not in flight (already finished, or started under a previous server boot)' });
+    return { ok: true };
   });
 
   // Self-diagnosis endpoints. The web ErrorBoundary reports render crashes here; the current

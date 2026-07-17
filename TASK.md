@@ -6,6 +6,29 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Run Control round (2026-07-17) — agents stop being fire-and-forget
+- [x] **Persisted run history** (survives restarts — it's the real `runs` table, not bus memory):
+  shared `AgentRun`/`RunDetail`/`RunTimelineEntry` zod contracts; migration 0003 adds
+  `runs.result_text` so the agent's final report is part of the permanent record.
+- [x] **Live tool-by-tool timeline**: the runner records Queued → Spawned → Agent started → each
+  tool call → Completed/Failed/Killed per run (in-memory ring, 200 entries/run, ~50 runs). Honest
+  scope: timelines exist only for runs started THIS boot — older runs report
+  `timelineState: 'unavailable'` (copy explains why), never a reconstructed fake (conv. 1).
+- [x] **Kill / cancel**: `POST /api/runs/:id/kill` — queued runs are cancelled before spawn
+  (note: "cancelled from the dashboard before it started"), running ones get SIGTERM and finish
+  as failed with note "killed from the dashboard" (precedence over the generic opaque-stream note).
+  Finished/pre-boot runs → 400 with an honest reason, never a silent no-op.
+- [x] **Web — Agents page "Run history"**: expandable rows (task · repo · age · duration · status
+  chip) → detail with meta line (model/tokens/turns/exit), live timeline (2s poll while running,
+  tool calls as chips), final report block, two-step Kill confirm, and one-click "Dispatch again"
+  (reuses `/api/dispatch`). Client zod-parses every payload (conv. 2).
+- [x] **Tests**: runner timeline capture + kill semantics (queued vs running vs finished) with a
+  blockable fake spawner; full endpoint round-trip in app.test.ts (dispatch → history → detail
+  with ended timeline + final report → kill refusal → 404). **209 tests green**, zero console
+  errors on /agents · /command · /ops.
+
+---
+
 ## Polish + audit round (2026-07-16f) — everything reviewed, everything confirmed fixed
 - [x] **Visual sweep**: all 16 pages captured + reviewed at 1536px, ZERO console errors app-wide.
   Two real defects found and fixed: **feeds rendered in arrival order, not time order** (activity +
