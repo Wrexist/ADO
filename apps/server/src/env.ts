@@ -15,6 +15,9 @@ export interface Env {
   demo: boolean;
   /** Dirs to scan for repos (council S6 amendment: a list, not one dir). */
   projectDirs: string[];
+  /** Absolute path to a BUILT web bundle to serve same-origin (desktop app / single-port
+   *  deployments). Empty = API-only, the dev default (Vite serves the web separately). */
+  serveWebDir?: string;
 }
 
 /** Expand a leading ~ to the home dir; trim whitespace. */
@@ -65,5 +68,6 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
     dbPath: overrides.dbPath ?? process.env.DB_PATH ?? (demo ? ':memory:' : join(root, 'data/acc.sqlite')),
     demo,
     projectDirs: overrides.projectDirs ?? parseProjectDirs(process.env.PROJECT_DIRS),
+    serveWebDir: overrides.serveWebDir ?? process.env.SERVE_WEB_DIR ?? '',
   };
 }

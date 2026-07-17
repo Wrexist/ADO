@@ -36,3 +36,4 @@ Thumbs.db
 
 # claude harness logs
 .claude/logs/
+apps/desktop/release/

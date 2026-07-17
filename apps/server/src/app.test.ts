@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { AccServer } from './app';
 import { buildServer } from './app';
@@ -57,6 +60,39 @@ describe('server security + bus (gate p2 criteria)', () => {
   it('refuses the SSE stream without a token (read-only ≠ public, S0)', async () => {
     const res = await srv.app.inject({ method: 'GET', url: '/events', headers: HOST_OK });
     expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('same-origin web serving (desktop / single-port mode)', () => {
+  let srv: AccServer;
+  let webDir: string;
+
+  beforeAll(async () => {
+    webDir = mkdtempSync(join(tmpdir(), 'acc-webdir-'));
+    writeFileSync(join(webDir, 'index.html'), '<!doctype html><title>acc</title>');
+    mkdirSync(join(webDir, 'assets'));
+    writeFileSync(join(webDir, 'assets', 'app.js'), 'console.log(1)');
+    srv = await buildServer({ ...ENV, serveWebDir: webDir }, { startSystem: false });
+  });
+  afterAll(async () => {
+    await srv.close();
+    rmSync(webDir, { recursive: true, force: true });
+  });
+
+  it('serves the bundle and falls back to index.html for client routes only', async () => {
+    expect((await srv.app.inject({ method: 'GET', url: '/', headers: HOST_OK })).statusCode).toBe(200);
+    expect((await srv.app.inject({ method: 'GET', url: '/assets/app.js', headers: HOST_OK })).body).toContain('console.log');
+    // SPA fallback: an app route returns the shell…
+    const spa = await srv.app.inject({ method: 'GET', url: '/agents', headers: HOST_OK });
+    expect(spa.statusCode).toBe(200);
+    expect(spa.body).toContain('<!doctype html>');
+    // …but API/SSE typos stay honest 404/401s, never HTML
+    expect((await srv.app.inject({ method: 'GET', url: '/api/nope', headers: { ...HOST_OK, 'x-acc-token': 'test-token' } })).statusCode).toBe(404);
+    expect((await srv.app.inject({ method: 'GET', url: '/events', headers: HOST_OK })).statusCode).toBe(401);
+  });
+
+  it('refuses to boot when the bundle is missing (build the web app first)', async () => {
+    await expect(buildServer({ ...ENV, serveWebDir: join(webDir, 'nope') }, { startSystem: false })).rejects.toThrow(/does not exist/);
   });
 });
 

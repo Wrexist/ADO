@@ -12,7 +12,10 @@ import * as schema from './schema';
 
 export type Db = BetterSQLite3Database<typeof schema>;
 
-const MIGRATIONS = join(dirname(fileURLToPath(import.meta.url)), '../../drizzle');
+// Migrations ship beside the source in dev; a packaged app (desktop bundle) relocates them
+// and points here via ACC_MIGRATIONS_DIR — resolved lazily so the env override always wins.
+const migrationsDir = (): string =>
+  process.env.ACC_MIGRATIONS_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../drizzle');
 
 export function openDb(dbPath: string): { db: Db; sqlite: Database.Database } {
   if (dbPath !== ':memory:') mkdirSync(dirname(dbPath), { recursive: true });
@@ -21,6 +24,6 @@ export function openDb(dbPath: string): { db: Db; sqlite: Database.Database } {
   sqlite.pragma('synchronous = NORMAL');
   sqlite.pragma('foreign_keys = ON');
   const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: MIGRATIONS });
+  migrate(db, { migrationsFolder: migrationsDir() });
   return { db, sqlite };
 }

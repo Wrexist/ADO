@@ -3,12 +3,13 @@
  * tests can build an app against :memory: without binding a port.
  */
 import { randomUUID } from 'node:crypto';
-import { statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { desc, eq, gte } from 'drizzle-orm';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, RunHumanAction, type ProbeResult, type AutomationTrigger, type IncidentRecord } from '@ado/shared';
 import { openDb } from './db';
 import { runs } from './db/schema';
@@ -161,6 +162,23 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id'],
   });
   registerSecurity(app, env);
+
+  // Same-origin web serving (desktop app / single-port mode): serve the BUILT bundle and
+  // fall back to index.html for client routes. API/SSE paths keep their own 404s — a typo'd
+  // /api call must fail loudly, never silently return HTML (conv. 1).
+  if (env.serveWebDir) {
+    const webRoot = env.serveWebDir;
+    if (!existsSync(join(webRoot, 'index.html'))) {
+      throw new Error(`SERVE_WEB_DIR is set but ${join(webRoot, 'index.html')} does not exist — build the web app first (npm run build -w @ado/web)`);
+    }
+    await app.register(fastifyStatic, { root: webRoot, index: ['index.html'] });
+    app.setNotFoundHandler((req, reply) => {
+      const path = req.url.split('?')[0];
+      const isApp = req.method === 'GET' && !path.startsWith('/api') && !path.startsWith('/events') && !path.startsWith('/health');
+      if (isApp) return reply.sendFile('index.html');
+      return reply.code(404).send({ error: 'not found' });
+    });
+  }
 
   app.get('/health', async () => ({
     status: 'ok',

@@ -566,6 +566,21 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-17e · Claude · desktop distribution (Electron + release pipeline)
+- shipped: docs/DESKTOP.md decision record (researched: Electron over Tauri for a Node+native
+  backend; NSIS + GitHub Releases + electron-updater; Azure Artifact Signing as the signing
+  path). apps/desktop wrapper (fixPath → port probe → 0600 token in userData → server
+  in-process → same-origin web via SERVE_WEB_DIR → window; preload injects runtime config).
+  Server seams: SERVE_WEB_DIR static+SPA (tested), ACC_MIGRATIONS_DIR. release.yml: tag v* →
+  .exe/.dmg/.AppImage on the Release. README + /setup download card (unsigned-build honesty).
+  Headless bundle smoke caught 2 real bugs (bundled migrations path, dialog import interop).
+- next / watch-outs: cut `v0.1.0` to produce the first real installers (bump apps/desktop
+  version in the same commit). Icons are Electron defaults — add buildResources icon set when
+  Isac has art. macOS auto-update stays off until signed. If electron-builder's auto
+  @electron/rebuild of better-sqlite3 fails on a runner, pin @electron/rebuild explicitly.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

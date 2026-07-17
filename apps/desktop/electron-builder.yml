@@ -1,0 +1,60 @@
+# electron-builder config — see docs/DESKTOP.md for the decision record.
+# appId is the upgrade/uninstall identity on Windows (NSIS GUID derives from it): NEVER change it.
+appId: com.wrexist.acc
+productName: AI Control Center
+copyright: © 2026 Wrexist
+
+directories:
+  output: release
+
+files:
+  - dist/**
+  - package.json
+
+# The built web bundle + drizzle migrations ride beside the asar; the server serves the web
+# same-origin and applies migrations from ACC_MIGRATIONS_DIR at boot.
+extraResources:
+  - from: ../web/dist
+    to: web
+  - from: ../server/drizzle
+    to: drizzle
+
+asar: true
+# Native module: must live outside the asar to be dlopen-able; electron-builder also
+# rebuilds it for Electron's ABI (npmRebuild default) on each platform runner.
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # Unsigned for now → SmartScreen "More info → Run anyway" (documented honestly in
+  # docs/DESKTOP.md + README). Azure Artifact Signing slots in here when Isac has an account.
+  artifactName: ACC-Setup-${version}.${ext}
+
+nsis:
+  oneClick: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
+  artifactName: ACC-Setup-${version}.${ext}
+
+mac:
+  target:
+    - dmg
+    - zip # electron-updater on macOS reads the zip (only functional once builds are signed)
+  category: public.app-category.developer-tools
+  artifactName: ACC-${version}-${arch}.${ext}
+
+linux:
+  target:
+    - AppImage
+  category: Development
+  artifactName: ACC-${version}.${ext}
+
+# Tag push → GitHub Actions builds → installers + latest*.yml land on the tag's Release;
+# packaged apps auto-update from there (electron-updater).
+publish:
+  provider: github
+  owner: Wrexist
+  repo: ADO

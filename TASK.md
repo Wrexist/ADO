@@ -6,6 +6,38 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Desktop distribution (2026-07-17e) — download an installer, click, it runs
+- [x] **Research first** (Isac's ask): compared Electron vs Tauri vs source-install for a
+  Node+native-module local server; decision record with sources in **docs/DESKTOP.md**.
+  Electron wins for THIS app (server runs in-process; NSIS .exe is the standard website/GitHub
+  Windows target; GitHub Releases + electron-updater is the standard update pipeline;
+  better-sqlite3 rebuild/asarUnpack is a solved path). Signing documented honestly: unsigned →
+  SmartScreen "More info → Run anyway"; Azure Artifact Signing (GA 2026) is the upgrade path.
+- [x] **apps/desktop** Electron wrapper: PATH fix for GUI launches → free-port probe (Host
+  allow-list + CORS stay exact) → token generated once into userData (0600) → server boots
+  in-process with dbPath in userData → serves the BUILT web bundle same-origin →
+  BrowserWindow(127.0.0.1:port) → auto-update check (packaged only, non-fatal; macOS needs
+  signing). Preload passes {serverUrl:'', accToken} via additionalArguments →
+  window.__ACC_DESKTOP__ (contextIsolation on; token never in URL/localStorage).
+- [x] **Seams kept tiny + tested**: server `SERVE_WEB_DIR` static mode with SPA fallback (API/
+  SSE 404s stay JSON — new tests, incl. refuse-to-boot when the bundle is missing);
+  `ACC_MIGRATIONS_DIR` override for relocated drizzle migrations; web config prefers the
+  desktop-injected runtime config over build-time Vite env.
+- [x] **Headless end-to-end smoke of the real bundle** (electron stubbed, everything else real):
+  boot → port probed → migrations applied → token file 0600 → index.html + SPA fallback served
+  → /api/runs 200 with the generated token, 401 without. Caught 2 real bugs pre-ship
+  (migrations path inside the bundle; error-dialog import interop) — both fixed.
+- [x] **Release pipeline**: `.github/workflows/release.yml` — push tag `v*` → windows/macos/
+  ubuntu runners build web + wrapper → `ACC-Setup-<v>.exe` / `.dmg` / `.AppImage` + updater
+  manifests attached to the tag's GitHub Release (electron-builder publish).
+- [x] **Download surfaces**: README "Download the desktop app" section + Setup-page card →
+  releases/latest, both stating the unsigned-build SmartScreen reality plainly.
+- [x] **verify green — 213 tests** (desktop workspace in the typecheck/lint/build gate), zero
+  console errors on /command · /ops · /setup. First installer appears when the first `v*` tag
+  is pushed — deliberately not claimed as existing until then.
+
+---
+
 ## Trend + outcome loop + full sweep (2026-07-17d) — every page checked, noise quieted
 - [x] **Real token trend**: the daily stats-snapshot job now also records `tokensRuns` — the
   EXACT trailing-7-day token sum from the runs table (own key; never mixed with the ≈

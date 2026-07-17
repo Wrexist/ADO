@@ -1,0 +1,42 @@
+# Desktop release pipeline (docs/DESKTOP.md): push a v* tag → three OS runners build the
+# web bundle + Electron wrapper and attach installers (+ electron-updater manifests) to the
+# GitHub Release for that tag. Download link surface: /setup page + README → releases/latest.
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # electron-builder uploads the installers to the tag's Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web bundle
+        run: npm run build -w @ado/web
+
+      - name: Bundle desktop main + preload
+        run: npm run build -w @ado/desktop
+
+      - name: Package + publish installers
+        run: npx electron-builder --publish always
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
