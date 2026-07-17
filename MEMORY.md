@@ -552,6 +552,20 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-17d · Claude · trend + outcome loop + full sweep
+- shipped: stats-snapshot job records exact tokensRuns (trailing-7d sum from runs table, own
+  series key); Analytics trend prefers it with a source caption; POST /api/runs/:id/outcome
+  writes humanAction (finished runs only) with Work-outcome buttons + verdict chips in Run
+  history — the self-learning feed now accrues from day one. Swept all 17 routes (zero console
+  errors app-wide), confirmed every nav destination is real or honestly placeheld. Noise audit:
+  server logs + client timers already quiet; fixed 3 UI spots (Review now → outline, "never" →
+  "not run yet", placeholder copy dedup). 211 tests green.
+- next / watch-outs: humanAction is one-way today (latest click wins, no clear/undo — add if it
+  ever matters). tokensRuns starts accruing on first real boot; the trend needs 2 real days
+  before it renders outside demo. verifyVerdict remains reserved for the parked analyzer.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

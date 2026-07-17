@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { AgentRun, RunDetail } from '@ado/shared';
+import type { AgentRun, RunDetail, RunHumanAction } from '@ado/shared';
 import { Button, Card, Chip, Icon, cx, type Tone } from '../kit';
 import { useBus } from '../store/bus';
 import { durationLabel, timeAgo } from '../lib/time';
-import { fetchRunDetail, fetchRuns, killRun } from '../lib/runs';
+import { fetchRunDetail, fetchRuns, killRun, setRunOutcome } from '../lib/runs';
 import { dispatchPrompt } from '../lib/prompts';
 
 const STATUS_TONE: Record<AgentRun['status'], Tone> = {
@@ -15,6 +15,13 @@ const STATUS_TONE: Record<AgentRun['status'], Tone> = {
 };
 
 const fmtTokens = (n: number | null): string => (n == null ? '—' : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+
+const OUTCOMES: Array<{ action: RunHumanAction; label: string }> = [
+  { action: 'accepted', label: 'Accepted' },
+  { action: 'corrected', label: 'Corrected' },
+  { action: 'redone', label: 'Redone' },
+];
+const OUTCOME_TONE: Record<RunHumanAction, Tone> = { accepted: 'success', corrected: 'warning', redone: 'danger' };
 
 /** Expanded run detail: live timeline (polls while running) + final report + controls. */
 function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => void }) {
@@ -75,6 +82,19 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       const { runId: newId } = await dispatchPrompt(detail.repoId, detail.task, detail.model === 'default' ? undefined : detail.model);
       setNote(`Dispatched again — run ${newId.slice(0, 12)}.`);
       onChanged();
+    } catch (e) {
+      setNote((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const judge = async (action: RunHumanAction) => {
+    setBusy(true);
+    try {
+      const updated = await setRunOutcome(detail.id, action);
+      setDetail({ ...detail, humanAction: updated.humanAction });
+      onChanged(); // the row chip reflects the verdict
     } catch (e) {
       setNote((e as Error).message);
     } finally {
@@ -151,6 +171,33 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         ) : null}
         {note ? <span className={cx('text-label', note.startsWith('Dispatched') || note.startsWith('Kill requested') ? 'text-text2' : 'text-danger')}>{note}</span> : null}
       </div>
+
+      {/* work outcome — one click, feeds the self-learning loop once it un-parks (≥100 runs) */}
+      {!inFlight ? (
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <span className="text-label text-text3">Work outcome:</span>
+          {OUTCOMES.map((o) => {
+            const active = detail.humanAction === o.action;
+            return (
+              <button
+                key={o.action}
+                type="button"
+                disabled={busy || active}
+                onClick={() => void judge(o.action)}
+                className={cx(
+                  'rounded-full border px-2.5 py-1 text-label transition-colors duration-150 ease-soft',
+                  active ? 'border-primary/60 bg-primary/15 text-primary' : 'text-text3 hover:border-hover hover:text-text1',
+                )}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+          <span className="text-label text-text3">
+            {detail.humanAction ? '' : 'not judged yet'}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -224,6 +271,7 @@ export function RunHistory({ repoId }: { repoId?: string }) {
                     {r.durationMs != null ? ` · ${durationLabel(Math.round(r.durationMs / 1000))}` : ''}
                   </p>
                 </div>
+                {r.humanAction ? <Chip tone={OUTCOME_TONE[r.humanAction]} size="sm">{r.humanAction}</Chip> : null}
                 <Chip tone={STATUS_TONE[r.status]} size="sm" dot>{r.status}</Chip>
                 <Icon name="chevronDown" size={14} className={cx('shrink-0 text-text3 transition-transform duration-150 ease-soft', openId === r.id ? 'rotate-180' : '')} />
               </button>

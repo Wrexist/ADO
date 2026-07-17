@@ -14,6 +14,11 @@ import { z } from 'zod';
 export const AgentRunStatus = z.enum(['queued', 'running', 'done', 'failed']);
 export type AgentRunStatus = z.infer<typeof AgentRunStatus>;
 
+/** What the human did with a finished run's work — the seed data for the (parked) self-learning
+ *  analyzer. Set from the run detail; null = not judged (the honest default, never inferred). */
+export const RunHumanAction = z.enum(['accepted', 'corrected', 'redone']);
+export type RunHumanAction = z.infer<typeof RunHumanAction>;
+
 /** One row of the persisted run log. */
 export const AgentRun = z.object({
   id: z.string(),
@@ -30,6 +35,8 @@ export const AgentRun = z.object({
   exitCode: z.number().int().nullable(),
   /** Honest annotation: 'orphaned on boot', 'opaque stream', 'killed from the dashboard', … */
   note: z.string().nullable(),
+  /** Human verdict on the run's work (accepted/corrected/redone) — null until someone judges it. */
+  humanAction: RunHumanAction.nullable(),
 });
 export type AgentRun = z.infer<typeof AgentRun>;
 

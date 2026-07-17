@@ -56,7 +56,7 @@ function RepoRow({ repoId, name, settings, hasKey, onChanged }: {
       <Button size="sm" variant="outline" onClick={toggle} disabled={busy !== null}>
         {busy === 'toggle' ? 'Saving…' : enabled ? 'Disable auto' : 'Enable auto'}
       </Button>
-      <Button size="sm" onClick={run} disabled={busy !== null || !hasKey}>
+      <Button size="sm" variant="outline" onClick={run} disabled={busy !== null || !hasKey}>
         {busy === 'run' ? 'Starting…' : 'Review now'}
       </Button>
       {note ? <p className="w-full text-label text-text3">{note}</p> : null}

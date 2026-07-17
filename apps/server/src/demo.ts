@@ -233,6 +233,8 @@ export function seedDemo(bus: Bus): void {
   const repoCount = MOCK_VIEW_A.repos.length;
   const deployCount = MOCK_VIEW_B.deployments.length;
   const agentSeries = [3, 4, 3, 5, 4, 6, 5]; // day-7 … day-1, feeds the View B agents sparkline
+  // trailing-7d run-token sums (illustrative, per council B1) — ends near the seeded runs' total
+  const tokensRunsSeries = [88_400, 104_100, 121_700, 139_200, 158_600, 176_900, 191_300];
   for (let d = 7; d >= 1; d--) {
     const day = new Date(new Date(MOCK_NOW).getTime() - d * 86_400_000).toISOString().slice(0, 10);
     pub(`stats:${day}`, 'stats.snapshot', `${day}T12:00:00.000Z`, {
@@ -241,6 +243,7 @@ export function seedDemo(bus: Bus): void {
         repos: repoCount - (d >= 4 ? 2 : 1),
         deployments: deployCount - (d >= 4 ? 1 : 0),
         agentsActive: agentSeries[7 - d],
+        tokensRuns: tokensRunsSeries[7 - d],
       },
     });
   }

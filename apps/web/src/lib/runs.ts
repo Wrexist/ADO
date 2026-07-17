@@ -1,5 +1,5 @@
 /** Client for the run log + live run control — zod-parsed at the boundary (convention 2). */
-import { AgentRun, RunDetail, RunStats } from '@ado/shared';
+import { AgentRun, RunDetail, RunStats, type RunHumanAction } from '@ado/shared';
 import { ACC_TOKEN, SERVER_URL } from './config';
 
 const headers = () => ({ 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN });
@@ -30,6 +30,17 @@ export async function fetchRunStats(days = 7): Promise<RunStats> {
   const res = await fetch(`${SERVER_URL}/api/runs/stats?days=${days}`, { headers: headers() });
   if (!res.ok) throw new Error(await bodyError(res, `run stats: ${res.status}`));
   return RunStats.parse(((await res.json()) as { stats: unknown }).stats);
+}
+
+/** Record what happened to a finished run's work — feeds the (parked) self-learning loop. */
+export async function setRunOutcome(id: string, action: RunHumanAction): Promise<AgentRun> {
+  const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/outcome`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ action }),
+  });
+  if (!res.ok) throw new Error(await bodyError(res, `outcome failed (${res.status})`));
+  return AgentRun.parse(((await res.json()) as { run: unknown }).run);
 }
 
 /** Kill a running run / cancel a queued one. Server refuses runs that aren't in flight. */

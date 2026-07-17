@@ -71,6 +71,9 @@ export function AnalyticsPage() {
   const failed = builds.filter((b) => b.state === 'failed').length;
   const buildMax = Math.max(1, passing, failed, builds.filter((b) => b.state === 'running').length, builds.filter((b) => b.state === 'queued').length);
 
+  // Prefer the EXACT series (trailing-7d sums from the run log, snapshotted daily by the
+  // scheduler); fall back to the legacy ≈ session-parse series. Never mixed — different provenance.
+  const runTokenSeries = (state.statHistory.tokensRuns ?? []).map((p) => p.value);
   const tokenSeries = (state.statHistory.tokens ?? []).map((p) => p.value);
 
   return (
@@ -158,8 +161,16 @@ export function AnalyticsPage() {
         {/* token usage trend */}
         <Card className="p-5">
           <SectionHeader title="Token usage trend" />
-          {tokenSeries.length >= 2 ? (
-            <MiniArea points={tokenSeries} tone="warning" width={480} height={80} responsive className="mt-4" />
+          {runTokenSeries.length >= 2 ? (
+            <>
+              <MiniArea points={runTokenSeries} tone="warning" width={480} height={80} responsive className="mt-4" />
+              <p className="mt-2 text-label text-text3">Exact trailing-7-day token sums from the run log, snapshotted daily.</p>
+            </>
+          ) : tokenSeries.length >= 2 ? (
+            <>
+              <MiniArea points={tokenSeries} tone="warning" width={480} height={80} responsive className="mt-4" />
+              <p className="mt-2 text-label text-text3">≈ approximate session-parse totals — exact run-log snapshots take over as they accrue.</p>
+            </>
           ) : (
             <p className="mt-4 text-label text-text3">Trend needs ≥2 daily snapshots — collecting data.</p>
           )}

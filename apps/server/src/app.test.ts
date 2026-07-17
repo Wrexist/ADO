@@ -240,4 +240,20 @@ describe('run log + live run control API (persisted history, honest timeline sta
     expect(stats.byRepo).toEqual([{ key: 'sentinel', runs: 2, tokensIn: 2400, tokensOut: 680 }]);
     expect(stats.byModel.map((s) => s.key).sort()).toEqual(['default', 'sonnet']);
   });
+
+  it('outcome: a human judges a FINISHED run; bad input and unknown runs are refused', async () => {
+    const list = await srv.app.inject({ method: 'GET', url: '/api/runs?limit=1', headers: AUTH });
+    const runId = (list.json().runs as Array<{ id: string }>)[0].id;
+
+    const bad = await srv.app.inject({ method: 'POST', url: `/api/runs/${runId}/outcome`, headers: AUTH, payload: { action: 'loved-it' } });
+    expect(bad.statusCode).toBe(400);
+    expect((await srv.app.inject({ method: 'POST', url: '/api/runs/nope/outcome', headers: AUTH, payload: { action: 'accepted' } })).statusCode).toBe(404);
+
+    const ok = await srv.app.inject({ method: 'POST', url: `/api/runs/${runId}/outcome`, headers: AUTH, payload: { action: 'corrected' } });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().run.humanAction).toBe('corrected');
+
+    const detail = await srv.app.inject({ method: 'GET', url: `/api/runs/${runId}`, headers: AUTH });
+    expect(detail.json().run.humanAction).toBe('corrected'); // persisted, not just echoed
+  });
 });

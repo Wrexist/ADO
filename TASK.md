@@ -6,6 +6,29 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Trend + outcome loop + full sweep (2026-07-17d) — every page checked, noise quieted
+- [x] **Real token trend**: the daily stats-snapshot job now also records `tokensRuns` — the
+  EXACT trailing-7-day token sum from the runs table (own key; never mixed with the ≈
+  session-parse series — different provenance). Analytics' trend card prefers the exact series
+  and captions its source; falls back to the legacy ≈ series, else the honest empty state.
+  --demo seeds a week of tokensRuns history so the chart demonstrates itself.
+- [x] **Run outcome loop (self-learning feed)**: `POST /api/runs/:id/outcome` writes
+  `humanAction` (accepted · corrected · redone) — finished runs only, zod-validated, 404/400
+  otherwise. Run detail gains a one-click "Work outcome" row ("not judged yet" until set);
+  history rows show the verdict chip. `verifyVerdict` stays reserved (analyzer-only, unwritten).
+  Demo: Bloom's TestFlight run seeded 'accepted'.
+- [x] **Full 17-route sweep** (every page in main.tsx at 1536px, zero console errors app-wide):
+  all pages work, honest states everywhere; "Releases" nav confirmed → real /deployments;
+  unknown /planned/* slugs fall back to the honest generic placeholder.
+- [x] **Noise audit + fixes**: server logs already state-change/failure-only (no per-cycle spam;
+  no-key auto-review skips silently); client timers all bounded (2s poll only while a live
+  timeline is open). Quieted the 3 UI noise spots the sweep found: 8 loud primary "Review now"
+  buttons → outline (matches Automations' Run now); Automations' cryptic "never" → "not run
+  yet"; placeholder page copy deduped (said "planned/not wired" three ways).
+- [x] **verify green — 211 tests**, zero console errors on all captured pages.
+
+---
+
 ## Palette runs + run analytics (2026-07-17c) — the run log reaches ⌘K and Analytics
 - [x] **⌘K Recent runs**: the palette fetches the latest 8 runs when it opens (REST, not bus;
   a fetch failure just omits the group) — entries read "task · Run · repo · status · age" and

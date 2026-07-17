@@ -276,7 +276,7 @@ function AutomationRow({ a, onChanged, onEdit }: { a: Automation; onChanged: () 
         <p className="truncate text-label text-text3">{a.task}</p>
         {msg ? <p className={cx('text-label', msg.startsWith('run-') ? 'text-success' : 'text-danger')}>{msg.startsWith('run-') ? `dispatched ${msg}` : msg}</p> : null}
       </div>
-      <span className="w-16 shrink-0 text-right text-label tabular-nums text-text3">{a.lastRunTs ? timeAgo(a.lastRunTs) : 'never'}</span>
+      <span className="w-20 shrink-0 text-right text-label tabular-nums text-text3">{a.lastRunTs ? timeAgo(a.lastRunTs) : 'not run yet'}</span>
       <div className="flex shrink-0 items-center gap-1.5">
         <Button size="sm" variant="outline" disabled={busy} onClick={() => void act(async () => { const { runId } = await runAutomation(a.id); setMsg(runId); })}>Run now</Button>
         <Button size="sm" variant="ghost" disabled={busy} onClick={onEdit}>Edit</Button>

@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
-import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, type ProbeResult, type AutomationTrigger, type IncidentRecord } from '@ado/shared';
+import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, RunHumanAction, type ProbeResult, type AutomationTrigger, type IncidentRecord } from '@ado/shared';
 import { openDb } from './db';
 import { runs } from './db/schema';
 import { expandHome, type Env } from './env';
@@ -313,6 +313,15 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       agentsActive: running,
     };
     if (st.tokens?.approxTokens != null) values.tokens = st.tokens.approxTokens;
+    // Exact trailing-7-day token sum from the run log — a second series with its own key,
+    // never mixed with the ≈ session-parse number above (different provenance, conv. 1).
+    const runCutoff = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    values.tokensRuns = db
+      .select()
+      .from(runs)
+      .where(gte(runs.startedTs, runCutoff))
+      .all()
+      .reduce((n, r) => n + (r.tokensIn ?? 0) + (r.tokensOut ?? 0), 0);
     const now = new Date().toISOString();
     bus.publish({
       id: `stats:${now.slice(0, 10)}:${now}`,
@@ -483,7 +492,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
           id: 'demo-run-tf1', repoId: 'bloom', model: 'default', status: 'done',
           task: 'Ship Bloom 1.4.1 (57) to TestFlight (archive, upload, submit test notes).',
           startedTs: ago(90), endedTs: ago(71), durationMs: 19 * 60_000,
-          tokensIn: 112_400, tokensOut: 21_800, turns: 31, exitCode: 0, note: null,
+          tokensIn: 112_400, tokensOut: 21_800, turns: 31, exitCode: 0, note: null, humanAction: 'accepted',
           resultText: 'Archived Bloom.xcodeproj (Release) and uploaded.\nTESTFLIGHT_UPLOADED com.wrexist.bloom 1.4.1 (57)',
         },
         {
@@ -588,6 +597,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     turns: r.turns,
     exitCode: r.exitCode,
     note: r.note,
+    humanAction: r.humanAction as 'accepted' | 'corrected' | 'redone' | null,
   });
   app.get('/api/runs', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
@@ -660,6 +670,21 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!row) return reply.code(404).send({ error: 'unknown run' });
     if (!runner.kill(id)) return reply.code(400).send({ error: 'this run is not in flight (already finished, or started under a previous server boot)' });
     return { ok: true };
+  });
+  // Human verdict on a finished run's work — the seed data the (parked) self-learning
+  // analyzer will consume at ≥100 runs. Only a human sets this, only on finished runs.
+  app.post('/api/runs/:id/outcome', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    const parsed = RunHumanAction.safeParse(((req.body ?? {}) as { action?: unknown }).action);
+    if (!parsed.success) return reply.code(400).send({ error: "action must be 'accepted', 'corrected' or 'redone'" });
+    const row = db.select().from(runs).where(eq(runs.id, id)).get();
+    if (!row) return reply.code(404).send({ error: 'unknown run' });
+    if (row.status !== 'done' && row.status !== 'failed') {
+      return reply.code(400).send({ error: 'judge the run after it finishes — it is still in flight' });
+    }
+    db.update(runs).set({ humanAction: parsed.data }).where(eq(runs.id, id)).run();
+    return { run: runRow({ ...row, humanAction: parsed.data }) };
   });
 
   // Self-diagnosis endpoints. The web ErrorBoundary reports render crashes here; the current

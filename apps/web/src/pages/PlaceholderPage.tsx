@@ -22,8 +22,7 @@ export function PlaceholderPage() {
           </span>
           <p className="text-section font-semibold text-text1">Planned — not wired yet</p>
           <p className="max-w-[52ch] text-body text-text2">
-            An honest placeholder: no fake data or controls live here. When {f.title} is built it
-            will render from real events like the rest of the dashboard.
+            No fake data or controls live here — this page lights up from real events when it ships.
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
             <Link to="/prompts" className={link}>Browse the Prompt Library</Link>
