@@ -37,14 +37,15 @@ export const TestFlightProfileInput = z.object({
 export type TestFlightProfileInputT = z.infer<typeof TestFlightProfileInput>;
 
 /** Stored shape — the input contract plus server-owned fields (derived, can't drift). */
-export type TestFlightProfile = Omit<TestFlightProfileInputT, 'id'> & {
-  id: string;
-  createdTs: string;
-  lastDeployTs: string | null;
-  lastDeployRunId: string | null;
+export const TestFlightProfile = TestFlightProfileInput.omit({ id: true }).extend({
+  id: z.string(),
+  createdTs: z.string(),
+  lastDeployTs: z.string().nullable(),
+  lastDeployRunId: z.string().nullable(),
   /** The last version/build dispatched — display only ("1.4.2 (58)"), never re-used silently. */
-  lastVersion: string | null;
-};
+  lastVersion: z.string().nullable(),
+});
+export type TestFlightProfile = z.infer<typeof TestFlightProfile>;
 
 /** Per-deploy version override — entered every time, validated at the boundary. */
 export const DeployVersion = z.object({
@@ -56,25 +57,27 @@ export const DeployVersion = z.object({
 export type DeployVersion = z.infer<typeof DeployVersion>;
 
 /** One Xcode project's auto-fill facts — a multi-app monorepo yields several of these. */
-export interface IosAppFacts {
+export const IosAppFacts = z.object({
   /** Repo-relative project path — the picker label ("ios/Bloom.xcodeproj"). */
-  project: string;
-  bundleId?: string;
-  teamId?: string;
-  marketingVersion?: string;
-  buildNumber?: string;
+  project: z.string(),
+  bundleId: z.string().optional(),
+  teamId: z.string().optional(),
+  marketingVersion: z.string().optional(),
+  buildNumber: z.string().optional(),
   /** Shared schemes found in the project (empty = none shared — the user types one). */
-  schemes: string[];
+  schemes: z.array(z.string()),
   /** Which real files informed the values ("ios/App.xcodeproj/project.pbxproj", "fastlane/Appfile"). */
-  sources: string[];
-}
+  sources: z.array(z.string()),
+});
+export type IosAppFacts = z.infer<typeof IosAppFacts>;
 
 /** What the read-only repo probe could auto-fill — every Xcode project found, with provenance. */
-export interface TestFlightAutofill {
+export const TestFlightAutofill = z.object({
   /** True when at least one Xcode project was actually found in the repo. */
-  detected: boolean;
-  apps: IosAppFacts[];
-}
+  detected: z.boolean(),
+  apps: z.array(IosAppFacts),
+});
+export type TestFlightAutofill = z.infer<typeof TestFlightAutofill>;
 
 /** The facts to prefill for a template: match by bundle id when known, else the first app. */
 export function factsForBundle(autofill: TestFlightAutofill | null, bundleId?: string): IosAppFacts | null {

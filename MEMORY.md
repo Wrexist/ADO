@@ -525,6 +525,19 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-17b · Claude · Run Control follow-ups (reach + zod debt)
+- shipped: RunHistory now repo-scopable (`repoId` prop → server `?repo=`) and deep-linkable
+  (`?run=<id>` auto-expands once, only when present in the list); ProjectPage ends with the
+  project's run log; both top bars gained a conditional live-run chip (hidden when idle; 1 running
+  → deep-link, N running → /agents plain since agents carry no startedTs). Zod backfill closed:
+  WorkflowMeta, ConnectionStatus, TestFlightAutofill, AutoReviewSettings, Automation,
+  TestFlightProfile are schemas, all clients .parse(). 209 tests green.
+- next / watch-outs: Zustand + derive-in-selector = getSnapshot infinite loop (caught live by the
+  console-error floor) — always select the stable ref, derive after. If agents ever get a
+  startedTs, the multi-run chip can deep-link the newest. M1 (.env.example) still awaits Isac.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

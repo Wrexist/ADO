@@ -72,12 +72,13 @@ export const AutoReview = z.object({
 export type AutoReview = z.infer<typeof AutoReview>;
 
 /** Per-repo Auto-Review settings row returned by the API (never contains secrets). */
-export interface AutoReviewSettings {
-  repoId: string;
-  enabled: boolean;
+export const AutoReviewSettings = z.object({
+  repoId: z.string(),
+  enabled: z.boolean(),
   /** Baseline sha: only commits AFTER this are auto-reviewed (seeded when enabling). */
-  lastSha: string | null;
-}
+  lastSha: z.string().nullable(),
+});
+export type AutoReviewSettings = z.infer<typeof AutoReviewSettings>;
 
 /** Severity → weight used to derive a chip/ordering; UI maps severities to tones itself. */
 export const SEVERITY_ORDER: Record<ReviewSeverity, number> = { critical: 3, major: 2, minor: 1, info: 0 };

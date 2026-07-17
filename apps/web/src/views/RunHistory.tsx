@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { AgentRun, RunDetail } from '@ado/shared';
 import { Button, Card, Chip, Icon, cx, type Tone } from '../kit';
 import { useBus } from '../store/bus';
@@ -158,15 +159,18 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
  * Run history — the REAL persisted run log (survives restarts), newest first. Click a run
  * for the tool-by-tool timeline (live while running), the agent's final report, kill/cancel
  * for in-flight runs, and one-click re-dispatch for finished ones.
+ * `repoId` scopes the list to one project; `?run=<id>` auto-expands that run once (deep links).
  */
-export function RunHistory() {
+export function RunHistory({ repoId }: { repoId?: string }) {
   const repos = useBus((s) => s.state.repos);
   const [rows, setRows] = useState<AgentRun[] | null>(null);
   const [err, setErr] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const autoOpened = useRef(false);
 
   const refresh = () => {
-    fetchRuns(undefined, 30)
+    fetchRuns(repoId, 30)
       .then((r) => {
         setRows(r);
         setErr('');
@@ -176,7 +180,16 @@ export function RunHistory() {
         setErr((e as Error).message);
       });
   };
-  useEffect(refresh, []);
+  useEffect(refresh, [repoId]);
+
+  // Deep link (?run=<id>): expand that run on first load — only if it's actually in the list.
+  useEffect(() => {
+    const want = params.get('run');
+    if (!autoOpened.current && want && rows?.some((r) => r.id === want)) {
+      autoOpened.current = true;
+      setOpenId(want);
+    }
+  }, [rows, params]);
 
   return (
     <Card className="mt-3 p-2">

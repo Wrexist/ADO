@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../kit';
 import { usePalette } from '../lib/palette';
 import { ConnectionBadge } from './ConnectionBadge';
+import { LiveRunsChip } from './LiveRunsChip';
 import { ViewSwitcher } from './ViewSwitcher';
 
 /**
@@ -55,6 +56,7 @@ export function TopBarA() {
 
       {/* actions + avatar */}
       <div className="flex shrink-0 items-center gap-2">
+        <LiveRunsChip />
         <ViewSwitcher />
         <ConnectionBadge />
         <TopBarButton icon="plus" label="Add project" to="/repositories?add=1" />

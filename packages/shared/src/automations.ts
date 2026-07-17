@@ -41,12 +41,13 @@ export type AutomationInputT = z.infer<typeof AutomationInput>;
 /** Stored shape returned to the client — the input contract plus server-owned fields.
  *  Derived from the zod schema (convention 2), so the field set and the source.kind enum
  *  can never drift from AutomationInput. */
-export type Automation = Omit<AutomationInputT, 'id'> & {
-  id: string;
-  createdTs: string;
-  lastRunTs: string | null;
-  lastRunId: string | null;
-};
+export const Automation = AutomationInput.omit({ id: true }).extend({
+  id: z.string(),
+  createdTs: z.string(),
+  lastRunTs: z.string().nullable(),
+  lastRunId: z.string().nullable(),
+});
+export type Automation = z.infer<typeof Automation>;
 
 /** Is a scheduled automation due to run again? */
 export function isScheduleDue(trigger: AutomationTrigger, lastRunMs: number | null, nowMs: number): boolean {

@@ -1,5 +1,5 @@
 /** Client for the Auto-Review API — settings, manual runs, and confirmed fix dispatch. */
-import type { AutoReviewSettings, ReviewSeverity, ReviewVerdict } from '@ado/shared';
+import { AutoReviewSettings, type ReviewSeverity, type ReviewVerdict } from '@ado/shared';
 import type { Tone } from '../kit';
 import { ACC_TOKEN, SERVER_URL } from './config';
 
@@ -12,7 +12,8 @@ async function bodyError(res: Response, fallback: string): Promise<string> {
 export async function fetchAutoReviewSettings(): Promise<{ settings: AutoReviewSettings[]; hasKey: boolean }> {
   const res = await fetch(`${SERVER_URL}/api/autoreview`, { headers: headers() });
   if (!res.ok) throw new Error(`autoreview settings: ${res.status}`);
-  return (await res.json()) as { settings: AutoReviewSettings[]; hasKey: boolean };
+  const body = (await res.json()) as { settings: unknown; hasKey?: unknown };
+  return { settings: AutoReviewSettings.array().parse(body.settings), hasKey: body.hasKey === true };
 }
 
 export async function setAutoReviewEnabled(repoId: string, enabled: boolean): Promise<AutoReviewSettings> {
@@ -22,7 +23,7 @@ export async function setAutoReviewEnabled(repoId: string, enabled: boolean): Pr
     body: JSON.stringify({ enabled }),
   });
   if (!res.ok) throw new Error(await bodyError(res, `toggle failed (${res.status})`));
-  return ((await res.json()) as { settings: AutoReviewSettings }).settings;
+  return AutoReviewSettings.parse(((await res.json()) as { settings: unknown }).settings);
 }
 
 /** Start a review of the repo's latest change now. The result streams in over SSE. */

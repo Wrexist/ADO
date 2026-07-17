@@ -12,6 +12,7 @@ import { fetchAutomations, runAutomation } from '../lib/automations';
 import { pollReview, startReview } from '../lib/review';
 import { fetchProjectGit, fetchProjectSettings, setProjectFeature } from '../lib/projectSettings';
 import { TestFlightCard } from '../views/TestFlightCard';
+import { RunHistory } from '../views/RunHistory';
 
 const BUILD_TONE: Record<BuildState, Tone> = { running: 'info', queued: 'muted', success: 'success', failed: 'danger' };
 const triggerLabel = (a: Automation): string =>
@@ -475,6 +476,13 @@ export function ProjectPage() {
           </Card>
         </div>
       </div>
+
+      {/* full width: this project's slice of the persisted run log (wide content — task + timeline) */}
+      <div className="mt-6 flex items-center justify-between">
+        <h2 className="text-section font-semibold text-text1">Run history</h2>
+        <Link to="/agents" className="text-label text-primary hover:text-text1">All projects →</Link>
+      </div>
+      <RunHistory repoId={repo.id} />
     </PageShell>
   );
 }

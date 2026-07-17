@@ -6,6 +6,27 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Run Control follow-ups (2026-07-17b) — reachable from everywhere + zod debt paid
+- [x] **Per-project run history**: `RunHistory` takes `repoId` (server-side `?repo=` filter);
+  ProjectPage ends with the project's own slice of the run log (full width — task text and
+  timelines are wide) + "All projects →" to the Agents page.
+- [x] **Live-run chip in BOTH top bars**: renders nothing while idle (bars keep their reference
+  layout); while agents run, a pulsing chip ("2 agents running") appears. One running agent
+  deep-links `/agents?run=<id>` (that row auto-expands via the new `?run=` param — only if the
+  run is actually in the list); several link to /agents plainly — the agents slice has no start
+  time, so "newest" would be a guessed ordering (conv. 1). `motion-reduce` honored.
+- [x] **Zod backfill (closes the 16f follow-up)**: WorkflowMeta/WorkflowPhase, ConnectionStatus,
+  TestFlightAutofill/IosAppFacts, AutoReviewSettings, Automation and TestFlightProfile are now
+  zod schemas (stored shapes derived from their input contracts — field sets can't drift);
+  all six web clients `.parse()` at the boundary (conv. 2). Remaining as-casts are ad-hoc
+  `{runId}`-style envelopes only.
+- [x] **Real bug caught by the zero-console-error floor**: the chip's first selector returned a
+  fresh filtered array per call → Zustand getSnapshot infinite re-render loop. Fixed by
+  selecting the stable state ref and deriving after (the repo-wide pattern). **209 tests green**,
+  zero console errors on /command · /ops · /agents · /repositories/sentinel.
+
+---
+
 ## Run Control round (2026-07-17) — agents stop being fire-and-forget
 - [x] **Persisted run history** (survives restarts — it's the real `runs` table, not bus memory):
   shared `AgentRun`/`RunDetail`/`RunTimelineEntry` zod contracts; migration 0003 adds
