@@ -1,54 +1,54 @@
 import type { Config } from 'tailwindcss';
+// Relative import on purpose: tokens.ts is pure data (zero imports), so the PostCSS/jiti
+// config loader stays dependency-free while the hex values live in exactly ONE place
+// (packages/shared/src/tokens.ts — CLAUDE.md convention 3, audit L1).
+import { tokens } from '../../packages/shared/src/tokens';
 
-/**
- * Tailwind theme — mirrors packages/shared/src/tokens.ts (both derive from
- * docs/DESIGN_SPEC.md §tokens). Values are inlined here (not imported) so the
- * PostCSS/jiti config loader stays dependency-free and robust. Keep the two in sync;
- * Phase 1 may add a codegen step that derives this theme from tokens.ts.
- */
+const c = tokens.color;
+
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        app: '#0A0A12',
-        panel: '#0F0F19',
-        card: '#14141F',
-        elevated: '#1B1B29',
-        text1: '#F4F5FA',
-        text2: '#9CA0B4',
-        text3: '#5E6274',
-        primary: '#7C5CFF',
-        'gradient-from': '#A855F7',
-        'gradient-to': '#EC4899',
-        success: '#22C55E',
-        warning: '#F59E0B',
-        info: '#38BDF8',
-        danger: '#EF4444',
+        app: c.bgApp,
+        panel: c.bgPanel,
+        card: c.bgCard,
+        elevated: c.bgElevated,
+        text1: c.text1,
+        text2: c.text2,
+        text3: c.text3,
+        primary: c.primary,
+        'gradient-from': c.gradientFrom,
+        'gradient-to': c.gradientTo,
+        success: c.success,
+        warning: c.warning,
+        info: c.info,
+        danger: c.danger,
         // single-value alias (gradient end) for the 'pink' tone. Named `magenta` so it
         // can never collide with Tailwind's default `pink` palette object.
-        magenta: '#EC4899',
+        magenta: c.gradientTo,
       },
       borderColor: {
-        DEFAULT: 'rgba(255,255,255,0.07)',
-        hover: 'rgba(255,255,255,0.12)',
+        DEFAULT: c.border,
+        hover: c.borderHover,
       },
       borderRadius: {
-        card: '16px',
-        tile: '10px',
+        card: `${tokens.radius.card}px`,
+        tile: `${tokens.radius.tile}px`,
       },
       fontFamily: {
         sans: ["'Inter'", 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
       },
       fontSize: {
-        label: ['11px', { lineHeight: '16px' }],
-        body: ['13px', { lineHeight: '20px' }],
-        section: ['15px', { lineHeight: '22px' }],
-        stat: ['28px', { lineHeight: '34px' }],
-        title: ['28px', { lineHeight: '34px' }],
+        label: [`${tokens.font.size.label}px`, { lineHeight: '16px' }],
+        body: [`${tokens.font.size.body}px`, { lineHeight: '20px' }],
+        section: [`${tokens.font.size.sectionTitle}px`, { lineHeight: '22px' }],
+        stat: [`${tokens.font.size.statValue}px`, { lineHeight: '34px' }],
+        title: [`${tokens.font.size.pageTitle}px`, { lineHeight: '34px' }],
       },
       transitionTimingFunction: {
-        soft: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        soft: tokens.motion.ease,
       },
     },
   },

@@ -4,19 +4,22 @@
  * reads each file's `meta` block at runtime and serves it here so the visual can never drift
  * from the real files (no hand-maintained copy to fall out of date). PRESENTATION only.
  */
+import { z } from 'zod';
 
-export interface WorkflowPhase {
-  title: string;
-  detail?: string;
-}
+export const WorkflowPhase = z.object({
+  title: z.string(),
+  detail: z.string().optional(),
+});
+export type WorkflowPhase = z.infer<typeof WorkflowPhase>;
 
-export interface WorkflowMeta {
+export const WorkflowMeta = z.object({
   /** e.g. "review" */
-  name: string;
-  description: string;
+  name: z.string(),
+  description: z.string(),
   /** the recipe's own `meta.whenToUse` guidance, if it declares one */
-  whenToUse?: string;
-  phases: WorkflowPhase[];
+  whenToUse: z.string().optional(),
+  phases: z.array(WorkflowPhase),
   /** source file basename, e.g. "review.js" — proves it maps to a real file */
-  file: string;
-}
+  file: z.string(),
+});
+export type WorkflowMeta = z.infer<typeof WorkflowMeta>;

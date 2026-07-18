@@ -4,6 +4,7 @@
  * land in 2.2–2.4/3/4). Deterministic and idempotent: stable ids + frozen fixture
  * clock; re-running changes nothing. This is the seed the P3.5 baselines render.
  */
+import type { AutoReview } from '@ado/shared';
 import { MOCK_NOW, MOCK_VIEW_A, MOCK_VIEW_B } from '@ado/shared/mock';
 import type { Bus } from './bus';
 
@@ -171,12 +172,73 @@ export function seedDemo(bus: Bus): void {
     },
   );
 
+  // auto-reviews → the /reviews feed. Two finished examples (one with findings, one clean)
+  // so the page is self-documenting in the demo world; real mode only ever shows reviews the
+  // real model produced. Reported exactly as the engine publishes them (upsert by id).
+  const rvTs = (minAgo: number) => new Date(new Date(MOCK_NOW).getTime() - minAgo * 60_000).toISOString();
+  // Typed against the shared contract (conv. 2); generated metadata is applied AFTER the
+  // spread so a seed can never override ts/model/status (trigger may vary per example).
+  type SeededReview = Omit<AutoReview, 'ts' | 'model' | 'status' | 'trigger'> & { trigger?: AutoReview['trigger'] };
+  const seedReview = ({ trigger, ...review }: SeededReview, minAgo: number) =>
+    pub(`autoreview:${review.id}:done`, 'autoreview.updated', rvTs(minAgo), {
+      review: { ...review, trigger: trigger ?? 'commit', ts: rvTs(minAgo), model: 'claude-opus-4-8', status: 'done' } satisfies AutoReview,
+    });
+  seedReview(
+    {
+      id: 'demo-rv-1',
+      repoId: 'sentinel',
+      ref: '9c41b7d2f3a8e6905b1c4d7e8f2a3b4c5d6e7f80',
+      refLabel: '9c41b7d · wave spawner: scale difficulty per sector',
+      verdict: 'attention',
+      summary:
+        'Adds per-sector difficulty scaling to the wave spawner. The scaling math is sound, but the sector index can go one past the config table and the new branch has no test.',
+      stats: { files: 3, additions: 84, deletions: 12 },
+      findings: [
+        {
+          severity: 'major',
+          category: 'correctness',
+          file: 'src/game/waves.ts',
+          line: 118,
+          title: 'Sector index can exceed the difficulty table',
+          detail: 'sectorFor() clamps to MAX_SECTOR, but the new lookup uses sector + 1 for the "next sector preview", which reads past the table on the last sector and yields undefined scaling.',
+          suggestion: 'Clamp the preview index too: DIFFICULTY[Math.min(sector + 1, MAX_SECTOR)] — and return the current sector’s row as the honest fallback.',
+        },
+        {
+          severity: 'minor',
+          category: 'testing',
+          file: 'src/game/waves.test.ts',
+          line: undefined,
+          title: 'No test for the last-sector boundary',
+          detail: 'The new scaling branch is untested exactly at the boundary where it can break (final sector).',
+          suggestion: 'Add a case asserting the preview scaling at MAX_SECTOR equals the final row instead of undefined.',
+        },
+      ],
+    },
+    18,
+  );
+  seedReview(
+    {
+      id: 'demo-rv-2',
+      repoId: 'atlas',
+      trigger: 'manual',
+      ref: 'working-tree',
+      refLabel: 'uncommitted changes on main',
+      verdict: 'clean',
+      summary: 'Copy edits and a token-only color tweak on the landing page. No behavior change; nothing to flag.',
+      stats: { files: 2, additions: 9, deletions: 7 },
+      findings: [],
+    },
+    95,
+  );
+
   // stat history → the "↑N this week" deltas render in the baseline world (real mode
   // accrues these live via the daily stats-snapshot job). One point per day for a week;
   // oldest-in-window is the delta baseline, so repos read +2 and deployments +1 vs today.
   const repoCount = MOCK_VIEW_A.repos.length;
   const deployCount = MOCK_VIEW_B.deployments.length;
   const agentSeries = [3, 4, 3, 5, 4, 6, 5]; // day-7 … day-1, feeds the View B agents sparkline
+  // trailing-7d run-token sums (illustrative, per council B1) — ends near the seeded runs' total
+  const tokensRunsSeries = [88_400, 104_100, 121_700, 139_200, 158_600, 176_900, 191_300];
   for (let d = 7; d >= 1; d--) {
     const day = new Date(new Date(MOCK_NOW).getTime() - d * 86_400_000).toISOString().slice(0, 10);
     pub(`stats:${day}`, 'stats.snapshot', `${day}T12:00:00.000Z`, {
@@ -185,6 +247,7 @@ export function seedDemo(bus: Bus): void {
         repos: repoCount - (d >= 4 ? 2 : 1),
         deployments: deployCount - (d >= 4 ? 1 : 0),
         agentsActive: agentSeries[7 - d],
+        tokensRuns: tokensRunsSeries[7 - d],
       },
     });
   }

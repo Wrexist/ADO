@@ -15,6 +15,13 @@ describe('stream-json adapter (council B5)', () => {
     expect(done[0]).toMatchObject({ kind: 'done', ok: true, tokensIn: 100, tokensOut: 50, turns: 3 });
   });
 
+  it('captures the final result text (capped) for outcome-marker consumers', () => {
+    const done = parseStreamLine('{"type":"result","subtype":"success","result":"Done.\\nTESTFLIGHT_UPLOADED com.x.y 1.0 (2)"}');
+    expect(done[0]).toMatchObject({ kind: 'done', resultText: expect.stringContaining('TESTFLIGHT_UPLOADED com.x.y 1.0 (2)') });
+    // non-string result → null, never a guess
+    expect(parseStreamLine('{"type":"result","result":42}')[0]).toMatchObject({ kind: 'done', resultText: null });
+  });
+
   it('degrades unknown/garbled lines to opaque — never throws', () => {
     expect(parseStreamLine('{"type":"quantum_flux_v9"}')).toEqual([{ kind: 'opaque' }]);
     expect(parseStreamLine('not json at all')).toEqual([{ kind: 'opaque' }]);
@@ -124,6 +131,89 @@ describe('runner (Prompts 3.1–3.2)', () => {
     await drain();
     expect(db.select().from(runs).where(eq(runs.id, runId)).get()!.status).toBe('failed');
     expect(bus.snapshot().state.builds[runId]?.state).toBe('failed');
+    sqlite.close();
+  });
+
+  it('onRunDone fires once with the final text on success, and with null text on a failed spawn', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    const calls: Array<{ runId: string; ok: boolean; resultText: string | null }> = [];
+    const stream = [
+      '{"type":"system","subtype":"init"}',
+      '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":1,"output_tokens":1},"result":"TESTFLIGHT_UPLOADED com.a.b 1.0 (2)"}',
+    ];
+    const runner = new Runner(bus, db, fakeSpawner(stream), {
+      cwdFor,
+      onRunDone: (runId, info) => calls.push({ runId, ...info }),
+    });
+    const { runId } = runner.dispatch({ repoId: 'sentinel', task: 'deploy' });
+    await drain();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ runId, ok: true, resultText: expect.stringContaining('TESTFLIGHT_UPLOADED') });
+
+    // a throwing hook never breaks the runner
+    const runner2 = new Runner(bus, db, fakeSpawner(stream), {
+      cwdFor,
+      onRunDone: () => { throw new Error('hook boom'); },
+    });
+    const r2 = runner2.dispatch({ repoId: 'sentinel', task: 'x' });
+    await drain();
+    const row = db.select().from(runs).where(eq(runs.id, r2.runId)).get()!;
+    expect(row.status).toBe('done'); // hook throw swallowed
+    sqlite.close();
+  });
+
+  it('captures a live timeline, persists resultText, and reports isLive honestly', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    const stream = [
+      '{"type":"system","subtype":"init"}',
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit"}]}}',
+      '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":5,"output_tokens":5},"result":"All done: fixed the test."}',
+    ];
+    const runner = new Runner(bus, db, fakeSpawner(stream), { cwdFor });
+    const { runId } = runner.dispatch({ repoId: 'sentinel', task: 'fix' });
+    await drain();
+    const t = runner.timeline(runId)!;
+    expect(t.map((e) => e.kind)).toEqual(['status', 'status', 'status', 'tool', 'status']); // Queued·Spawned·started·Edit·Completed
+    expect(t.some((e) => e.kind === 'tool' && e.text === 'Edit')).toBe(true);
+    expect(runner.isLive(runId)).toBe(false);
+    expect(runner.timeline('run-from-last-boot')).toBeNull(); // honest absence, not []
+    expect(db.select().from(runs).where(eq(runs.id, runId)).get()!.resultText).toBe('All done: fixed the test.');
+    sqlite.close();
+  });
+
+  it('kill: cancels a QUEUED run and SIGTERMs a RUNNING one (note records why)', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    // a killable "running" spawn: lines block until kill() fires, then the run exits 143
+    let release!: (code: number) => void;
+    const killable: Spawner = {
+      spawn(): SpawnHandle {
+        const done = new Promise<number>((r) => (release = r));
+        async function* gen() { await done; yield* [] as string[]; }
+        return { lines: gen(), done, kill: () => release(143) };
+      },
+    };
+    const runner = new Runner(bus, db, killable, { cwdFor, maxConcurrent: 1 });
+    const a = runner.dispatch({ repoId: 'sentinel', task: 'long job' }); // running (stuck)
+    const b = runner.dispatch({ repoId: 'sentinel', task: 'waiting' }); // queued behind it
+
+    expect(runner.kill(b.runId)).toBe(true); // queued → cancelled, never spawned
+    await drain();
+    const rowB = db.select().from(runs).where(eq(runs.id, b.runId)).get()!;
+    expect(rowB.status).toBe('failed');
+    expect(rowB.note).toContain('cancelled from the dashboard');
+
+    expect(runner.isLive(a.runId)).toBe(true);
+    expect(runner.kill(a.runId)).toBe(true); // running → SIGTERM → exit 143
+    await drain();
+    const rowA = db.select().from(runs).where(eq(runs.id, a.runId)).get()!;
+    expect(rowA.status).toBe('failed');
+    expect(rowA.note).toBe('killed from the dashboard');
+
+    expect(runner.kill(a.runId)).toBe(false); // already finished — nothing in flight
+    expect(runner.kill('never-existed')).toBe(false);
     sqlite.close();
   });
 

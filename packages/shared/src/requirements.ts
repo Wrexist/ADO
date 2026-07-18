@@ -11,6 +11,7 @@
  * The install COMMAND for each item is derived server-side from this catalog by `id`; the
  * client never sends a command string (allow-list, CLAUDE.md convention 10/§V2).
  */
+import { z } from 'zod';
 
 export type ReqCategory = 'runtime' | 'cli' | 'extension' | 'app' | 'account' | 'config';
 
@@ -224,27 +225,33 @@ export const REQUIREMENT_BY_ID: Record<string, Requirement> = Object.fromEntries
 );
 
 // —— server→client status (dynamic; never fabricated) ————————————————————————————
+// Zod contracts (convention 2): the web client PARSES these payloads at the boundary
+// instead of as-casting, so a server-side shape drift fails loudly, never renders garbage.
 
-export type ReqStatus = 'installed' | 'missing' | 'manual' | 'unknown';
+export const ReqStatus = z.enum(['installed', 'missing', 'manual', 'unknown']);
+export type ReqStatus = z.infer<typeof ReqStatus>;
 
-export interface ProbeResult {
-  id: string;
-  status: ReqStatus;
-  version: string | null; // parsed version if the detector found one
-  detail: string | null; // honest note, e.g. "the `code` CLI was not found"
-  installable: boolean; // can the server auto-install it right now?
-  checkedTs: string;
-}
+export const ProbeResult = z.object({
+  id: z.string(),
+  status: ReqStatus,
+  version: z.string().nullable(), // parsed version if the detector found one
+  detail: z.string().nullable(), // honest note, e.g. "the `code` CLI was not found"
+  installable: z.boolean(), // can the server auto-install it right now?
+  checkedTs: z.string(),
+});
+export type ProbeResult = z.infer<typeof ProbeResult>;
 
-export type InstallRunStatus = 'running' | 'done' | 'failed';
+export const InstallRunStatus = z.enum(['running', 'done', 'failed']);
+export type InstallRunStatus = z.infer<typeof InstallRunStatus>;
 
-export interface InstallRun {
-  runId: string;
-  reqId: string;
-  status: InstallRunStatus;
-  command: string; // the exact command that ran (shown to the user — allow-listed, not secret)
-  output: string[]; // stdout+stderr lines, in order
-  code: number | null; // exit code once finished
-  startedTs: string;
-  endedTs: string | null;
-}
+export const InstallRun = z.object({
+  runId: z.string(),
+  reqId: z.string(),
+  status: InstallRunStatus,
+  command: z.string(), // the exact command that ran (shown to the user — allow-listed, not secret)
+  output: z.array(z.string()), // stdout+stderr lines, in order
+  code: z.number().int().nullable(), // exit code once finished
+  startedTs: z.string(),
+  endedTs: z.string().nullable(),
+});
+export type InstallRun = z.infer<typeof InstallRun>;

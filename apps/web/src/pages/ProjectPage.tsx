@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import type { Automation, BuildState, Repo, ReviewRun } from '@ado/shared';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { PROJECT_FEATURES, type Automation, type BuildState, type ProjectFeatureId, type ProjectFeatureMap, type ProjectGitInfo, type Repo, type ReviewRun } from '@ado/shared';
 import { AgentTile, Button, Card, Chip, FeedRow, GradientProgress, Icon, IconTile, StatusDot, cx, type Tone } from '../kit';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
@@ -10,6 +10,9 @@ import { timeAgo } from '../lib/time';
 import { dispatchPrompt } from '../lib/prompts';
 import { fetchAutomations, runAutomation } from '../lib/automations';
 import { pollReview, startReview } from '../lib/review';
+import { fetchProjectGit, fetchProjectSettings, setProjectFeature } from '../lib/projectSettings';
+import { TestFlightCard } from '../views/TestFlightCard';
+import { RunHistory } from '../views/RunHistory';
 
 const BUILD_TONE: Record<BuildState, Tone> = { running: 'info', queued: 'muted', success: 'success', failed: 'danger' };
 const triggerLabel = (a: Automation): string =>
@@ -132,11 +135,159 @@ function ReviewCard({ repo }: { repo: Repo }) {
   );
 }
 
+/** One feature switch row: name + blurb, an On/Off toggle, honest per-row save errors. */
+function FeatureRow({ repoId, feature, enabled, onChanged }: {
+  repoId: string;
+  feature: (typeof PROJECT_FEATURES)[number];
+  enabled: boolean;
+  onChanged: (features: ProjectFeatureMap) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const flip = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      onChanged(await setProjectFeature(repoId, feature.id as ProjectFeatureId, !enabled));
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="border-t py-3 first:border-t-0 first:pt-1 last:pb-1">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-body font-medium text-text1">{feature.name}</p>
+          <p className="mt-0.5 text-label text-text3">{feature.blurb}</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => void flip()} disabled={busy} aria-label={`${feature.name}: ${enabled ? 'on' : 'off'}`}>
+          <span className={cx('h-1.5 w-1.5 rounded-full', enabled ? 'bg-success' : 'bg-text3')} />
+          {busy ? 'Saving…' : enabled ? 'On' : 'Off'}
+        </Button>
+      </div>
+      {err ? <p className="mt-1.5 text-label text-danger">{err}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Per-project settings — the switches behind the header's Settings button. Stored on the
+ * server per repo; each switch is enforced at its real choke point (runner, engines,
+ * notifier), so Off genuinely means off everywhere.
+ */
+function ProjectSettingsCard({ repoId }: { repoId: string }) {
+  const [features, setFeatures] = useState<ProjectFeatureMap | null>(null);
+  const [loadErr, setLoadErr] = useState('');
+  useEffect(() => {
+    let alive = true;
+    setFeatures(null);
+    setLoadErr(''); // a previous repo's failure must not linger over this repo's settings
+    fetchProjectSettings(repoId)
+      .then((f) => alive && setFeatures(f))
+      .catch((e) => alive && setLoadErr((e as Error).message));
+    return () => {
+      alive = false;
+    };
+  }, [repoId]);
+
+  return (
+    <Card className="mt-4 p-5">
+      <div className="flex items-center gap-2">
+        <Icon name="settings" size={15} className="text-primary" />
+        <h2 className="text-section font-semibold text-text1">Project settings</h2>
+      </div>
+      <p className="mt-1 text-label text-text3">Saved per project. Off means off everywhere — schedules, events, and fix buttons included.</p>
+      <div className="mt-3">
+        {features === null && !loadErr ? <p className="py-2 text-label text-text3">Loading…</p> : null}
+        {loadErr ? <p className="py-2 text-label text-danger">{loadErr}</p> : null}
+        {features
+          ? PROJECT_FEATURES.map((f) => (
+              <FeatureRow key={f.id} repoId={repoId} feature={f} enabled={features[f.id]} onChanged={setFeatures} />
+            ))
+          : null}
+      </div>
+    </Card>
+  );
+}
+
+/** GitHub actions for this repo: View on GitHub · Open PR #n (live) / New PR (compare page). */
+function GitRow({ repoId }: { repoId: string }) {
+  const [git, setGit] = useState<ProjectGitInfo | null>(null);
+  const [hidden, setHidden] = useState(false); // not scanned locally → nothing to show
+  useEffect(() => {
+    let alive = true;
+    setGit(null);
+    setHidden(false);
+    fetchProjectGit(repoId)
+      .then((g) => alive && setGit(g))
+      .catch(() => alive && setHidden(true));
+    return () => {
+      alive = false;
+    };
+  }, [repoId]);
+
+  if (hidden || git === null) return null;
+
+  const a = 'inline-flex h-8 items-center gap-1.5 rounded-tile border bg-card px-3 text-body text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1';
+  return (
+    <div className="w-full border-t pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Icon name="github" size={15} className="shrink-0 text-text3" />
+        {git.github ? (
+          <>
+            <span className="font-mono text-label text-text3">{git.github.owner}/{git.github.repo}</span>
+            <span className="ml-auto flex items-center gap-2">
+              {git.openPr ? (
+                <>
+                  {git.openPr.checks ? (
+                    <Chip
+                      size="sm"
+                      dot
+                      tone={git.openPr.checks === 'passing' ? 'success' : git.openPr.checks === 'failing' ? 'danger' : 'info'}
+                    >
+                      {git.openPr.checks === 'passing' ? 'checks passing' : git.openPr.checks === 'failing' ? 'checks failing' : 'checks running'}
+                    </Chip>
+                  ) : null}
+                  {git.openPr.mergeable === false ? (
+                    <Chip size="sm" dot tone="danger">conflicts</Chip>
+                  ) : git.openPr.mergeable === true ? (
+                    <Chip size="sm" dot tone="success">mergeable</Chip>
+                  ) : null}
+                  <a href={git.openPr.url} target="_blank" rel="noreferrer" title={git.openPr.title} className="inline-flex h-8 items-center gap-1.5 rounded-tile bg-primary px-3 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
+                    <Icon name="branch" size={13} /> Open PR #{git.openPr.number} ↗
+                  </a>
+                </>
+              ) : (
+                <a href={git.github.newPrUrl} target="_blank" rel="noreferrer" className={a}>
+                  <Icon name="plus" size={13} /> New PR on {git.branch} ↗
+                </a>
+              )}
+              <a href={git.github.webUrl} target="_blank" rel="noreferrer" className={a}>View on GitHub ↗</a>
+            </span>
+          </>
+        ) : (
+          <span className="text-label text-text3">{git.remoteUrl ? `origin: ${git.remoteUrl}` : 'No git remote configured — push this repo to GitHub to get PR shortcuts.'}</span>
+        )}
+      </div>
+      {git.github && git.prState === 'no-token' ? (
+        <p className="mt-1.5 text-label text-text3">
+          Connect GitHub in <Link to="/settings" className="text-primary hover:text-text1">Settings</Link> to see this branch's open PR here.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProjectPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const state = useBus((s) => s.state);
   const repo = id ? state.repos[id] : undefined;
 
+  // ?settings=1 (RepoCard gear / ⌘K) opens the panel on arrival.
+  const [showSettings, setShowSettings] = useState(searchParams.get('settings') === '1');
   const [autos, setAutos] = useState<Automation[] | null>(null);
   const refreshAutos = () => {
     if (!id) return;
@@ -177,9 +328,22 @@ export function ProjectPage() {
       title={repo.name}
       subtitle={repo.description}
       actions={
-        <Link to={`/automations?repo=${repo.id}&new=1`} className="inline-flex items-center gap-1.5 rounded-tile bg-primary px-3 py-2 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
-          <Icon name="workflow" size={14} /> Automate
-        </Link>
+        <>
+          <button
+            type="button"
+            onClick={() => setShowSettings((v) => !v)}
+            aria-expanded={showSettings}
+            className={cx(
+              'inline-flex items-center gap-1.5 rounded-tile border px-3 py-2 text-body transition-colors duration-150 ease-soft',
+              showSettings ? 'border-primary/50 bg-primary/15 text-text1' : 'bg-card text-text2 hover:border-hover hover:text-text1',
+            )}
+          >
+            <Icon name="settings" size={14} /> Settings
+          </button>
+          <Link to={`/automations?repo=${repo.id}&new=1`} className="inline-flex items-center gap-1.5 rounded-tile bg-primary px-3 py-2 text-body font-medium text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85">
+            <Icon name="workflow" size={14} /> Automate
+          </Link>
+        </>
       }
     >
       {/* header strip */}
@@ -211,7 +375,10 @@ export function ProjectPage() {
             <span className="text-label text-text3">No CI runs yet</span>
           )}
         </div>
+        <GitRow repoId={repo.id} />
       </Card>
+
+      {showSettings ? <ProjectSettingsCard repoId={repo.id} /> : null}
 
       <div className="mt-6 grid grid-cols-3 gap-4">
         {/* left: dispatch + builds */}
@@ -288,6 +455,8 @@ export function ProjectPage() {
             )}
           </Card>
 
+          <TestFlightCard repoId={repo.id} />
+
           <Card className="p-5">
             <h2 className="text-section font-semibold text-text1">Deployments</h2>
             {deployments.length > 0 ? (
@@ -308,6 +477,13 @@ export function ProjectPage() {
           </Card>
         </div>
       </div>
+
+      {/* full width: this project's slice of the persisted run log (wide content — task + timeline) */}
+      <div className="mt-6 flex items-center justify-between">
+        <h2 className="text-section font-semibold text-text1">Run history</h2>
+        <Link to="/agents" className="text-label text-primary hover:text-text1">All projects →</Link>
+      </div>
+      <RunHistory repoId={repo.id} />
     </PageShell>
   );
 }

@@ -21,6 +21,7 @@ import { AutomationsPage } from './pages/AutomationsPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { DiagnosticsPage } from './pages/DiagnosticsPage';
+import { ReviewsPage } from './pages/ReviewsPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { CommandPalette } from './chrome/CommandPalette';
 import { ErrorBoundary } from './chrome/ErrorBoundary';
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="/performance" element={<PerformancePage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
+        <Route path="/reviews" element={<ReviewsPage />} />
         <Route path="/planned/:slug" element={<PlaceholderPage />} />
         {/* kit demo — every component in every state (gate p1 criterion) */}
         <Route path="/kit" element={<KitPage />} />

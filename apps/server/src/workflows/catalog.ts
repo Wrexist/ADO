@@ -46,7 +46,6 @@ export function extractMeta(src: string, file: string): WorkflowMeta | null {
 
   let obj: unknown;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
     obj = new Function(`return (${src.slice(open, end + 1)});`)();
   } catch {
     return null;

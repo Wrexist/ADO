@@ -282,6 +282,38 @@ export function SetupPage() {
             </section>
           );
         })}
+
+        {/* Desktop app — the no-terminal install path (docs/DESKTOP.md). Honest copy: links to
+            the releases page; installers exist there once a v* tag has been pushed. */}
+        <section>
+          <div className="mb-3">
+            <h2 className="text-section font-semibold text-text1">Desktop app</h2>
+            <p className="text-label text-text3">One download instead of git + npm — the same dashboard as an installable app.</p>
+          </div>
+          <Card className="p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-tile bg-elevated text-text2">
+                <Icon name="rocket" size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-body font-medium text-text1">AI Control Center for Windows · macOS · Linux</p>
+                <p className="text-label text-text3">
+                  Installers are built by the release pipeline and attached to each tagged release
+                  (Setup .exe, .dmg, .AppImage). Data lives in your OS user folder; the app
+                  auto-updates from new releases on Windows/Linux.
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => window.open('https://github.com/Wrexist/ADO/releases/latest', '_blank', 'noopener')}>
+                Get the latest release ↗
+              </Button>
+            </div>
+            <p className="mt-3 text-label text-warning">
+              Builds are currently unsigned: Windows shows a SmartScreen prompt (More info → Run
+              anyway) and macOS needs right-click → Open on first launch. Signing is documented
+              in docs/DESKTOP.md and slots into the same pipeline.
+            </p>
+          </Card>
+        </section>
       </div>
     </PageShell>
   );

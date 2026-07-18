@@ -7,6 +7,7 @@
  * Secrets never live here or anywhere in the repo; they're stored server-side in a
  * gitignored file and never returned to the client (only a masked hint + connected flag).
  */
+import { z } from 'zod';
 
 export type ConnectorGroup =
   | 'source'
@@ -121,9 +122,10 @@ export const CONNECTOR_BY_ID: Record<string, Connector> = Object.fromEntries(
 );
 
 /** Status the server returns per connector — NEVER the secret itself. */
-export interface ConnectionStatus {
-  id: string;
-  connected: boolean;
-  hint: string | null; // e.g. "••••4f2a" — last 4 chars only
-  updatedTs: string | null;
-}
+export const ConnectionStatus = z.object({
+  id: z.string(),
+  connected: z.boolean(),
+  hint: z.string().nullable(), // e.g. "••••4f2a" — last 4 chars only
+  updatedTs: z.string().nullable(),
+});
+export type ConnectionStatus = z.infer<typeof ConnectionStatus>;

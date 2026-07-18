@@ -61,12 +61,13 @@ export const runs = sqliteTable(
     tokensIn: integer('tokens_in'),
     tokensOut: integer('tokens_out'),
     turns: integer('turns'),
-    // Reserved for the (parked) self-learning analyzer — NOT written yet. Kept nullable so the
-    // column exists when the analyzer ships; today every run leaves both null (honest unknown).
+    // Self-learning feed: humanAction is written by POST /api/runs/:id/outcome (a human judging
+    // a finished run); verifyVerdict stays reserved for the (parked) analyzer — unwritten today.
     verifyVerdict: text('verify_verdict'), // pass | fail | null — reserved, unwritten
-    humanAction: text('human_action'), // accepted | corrected | redone | null — reserved, unwritten
+    humanAction: text('human_action'), // accepted | corrected | redone | null until judged
     exitCode: integer('exit_code'),
     note: text('note'), // e.g. "orphaned on boot", "opaque stream"
+    resultText: text('result_text'), // the agent's final message (capped); null = none captured
   },
   (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status)],
 );

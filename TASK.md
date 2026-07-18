@@ -6,6 +6,311 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## PR #3 review response (2026-07-17f) — CodeRabbit triage: verify, fix, refute, skip
+- [x] **Verified every finding against the code first** (external review = data, conv. 11).
+  The one "Critical" (triple-declared variable → SyntaxError) was FALSE — single declaration,
+  and 213 green tests would be impossible otherwise; refuted on the PR.
+- [x] **Fixed 20 confirmed findings**: credential redaction in git remote URLs; deploy-marker
+  final-line protocol (echoes/mid-report markers never verify a deploy) + JSON-framed template
+  data (fields can't escape the conv.-11 boundary) + uploaded-marker-with-failed-exit refused;
+  factsForBundle never returns another app's facts; "Last dispatch" honesty label; desktop
+  token via one-shot IPC (never argv), will-navigate lockdown, http(s)-only external opens,
+  validated preload config; release.yml persist-credentials:false + tag/version match gate;
+  JSON stores: ENOENT-only reset, corruption throws, atomic rename, row validation (no more
+  silent wipes; scheduler can't crash on a malformed row); settings store delta-only writes;
+  RepoCard keyboard a11y; RunHistory row refresh on terminal transition; autoReviews sorted by
+  ts; findingIdx integer check; encodeURIComponent(repoId); loadErr cleared per repo; Windows
+  path splitting; bounded pbxproj read; typed demo review seeds; test robustness (poll-till-
+  terminal, ANTHROPIC_API_KEY isolation, mutating-401 coverage).
+- [x] **Skipped with reasons (posted on the PR)**: Zustand-slice migrations for page-local
+  one-shot REST reads (conv. 4 governs SHARED state; the bus is the shared store), per-target
+  pbxproj scoping + runId-keyed deploy attempts + commit-range auto-review (real but heavy —
+  tracked as follow-ups), server-side re-parse of its own typed rows (client boundary already
+  zod-enforced), docstring-coverage threshold (repo convention: comments explain constraints).
+- [x] **verify green — 215 tests** (+ my own hostile-template test initially asserted the wrong
+  property — fixed the TEST, the code was right).
+
+---
+
+## Desktop distribution (2026-07-17e) — download an installer, click, it runs
+- [x] **Research first** (Isac's ask): compared Electron vs Tauri vs source-install for a
+  Node+native-module local server; decision record with sources in **docs/DESKTOP.md**.
+  Electron wins for THIS app (server runs in-process; NSIS .exe is the standard website/GitHub
+  Windows target; GitHub Releases + electron-updater is the standard update pipeline;
+  better-sqlite3 rebuild/asarUnpack is a solved path). Signing documented honestly: unsigned →
+  SmartScreen "More info → Run anyway"; Azure Artifact Signing (GA 2026) is the upgrade path.
+- [x] **apps/desktop** Electron wrapper: PATH fix for GUI launches → free-port probe (Host
+  allow-list + CORS stay exact) → token generated once into userData (0600) → server boots
+  in-process with dbPath in userData → serves the BUILT web bundle same-origin →
+  BrowserWindow(127.0.0.1:port) → auto-update check (packaged only, non-fatal; macOS needs
+  signing). Preload passes {serverUrl:'', accToken} via additionalArguments →
+  window.__ACC_DESKTOP__ (contextIsolation on; token never in URL/localStorage).
+- [x] **Seams kept tiny + tested**: server `SERVE_WEB_DIR` static mode with SPA fallback (API/
+  SSE 404s stay JSON — new tests, incl. refuse-to-boot when the bundle is missing);
+  `ACC_MIGRATIONS_DIR` override for relocated drizzle migrations; web config prefers the
+  desktop-injected runtime config over build-time Vite env.
+- [x] **Headless end-to-end smoke of the real bundle** (electron stubbed, everything else real):
+  boot → port probed → migrations applied → token file 0600 → index.html + SPA fallback served
+  → /api/runs 200 with the generated token, 401 without. Caught 2 real bugs pre-ship
+  (migrations path inside the bundle; error-dialog import interop) — both fixed.
+- [x] **Release pipeline**: `.github/workflows/release.yml` — push tag `v*` → windows/macos/
+  ubuntu runners build web + wrapper → `ACC-Setup-<v>.exe` / `.dmg` / `.AppImage` + updater
+  manifests attached to the tag's GitHub Release (electron-builder publish).
+- [x] **Download surfaces**: README "Download the desktop app" section + Setup-page card →
+  releases/latest, both stating the unsigned-build SmartScreen reality plainly.
+- [x] **verify green — 213 tests** (desktop workspace in the typecheck/lint/build gate), zero
+  console errors on /command · /ops · /setup. First installer appears when the first `v*` tag
+  is pushed — deliberately not claimed as existing until then.
+
+---
+
+## Trend + outcome loop + full sweep (2026-07-17d) — every page checked, noise quieted
+- [x] **Real token trend**: the daily stats-snapshot job now also records `tokensRuns` — the
+  EXACT trailing-7-day token sum from the runs table (own key; never mixed with the ≈
+  session-parse series — different provenance). Analytics' trend card prefers the exact series
+  and captions its source; falls back to the legacy ≈ series, else the honest empty state.
+  --demo seeds a week of tokensRuns history so the chart demonstrates itself.
+- [x] **Run outcome loop (self-learning feed)**: `POST /api/runs/:id/outcome` writes
+  `humanAction` (accepted · corrected · redone) — finished runs only, zod-validated, 404/400
+  otherwise. Run detail gains a one-click "Work outcome" row ("not judged yet" until set);
+  history rows show the verdict chip. `verifyVerdict` stays reserved (analyzer-only, unwritten).
+  Demo: Bloom's TestFlight run seeded 'accepted'.
+- [x] **Full 17-route sweep** (every page in main.tsx at 1536px, zero console errors app-wide):
+  all pages work, honest states everywhere; "Releases" nav confirmed → real /deployments;
+  unknown /planned/* slugs fall back to the honest generic placeholder.
+- [x] **Noise audit + fixes**: server logs already state-change/failure-only (no per-cycle spam;
+  no-key auto-review skips silently); client timers all bounded (2s poll only while a live
+  timeline is open). Quieted the 3 UI noise spots the sweep found: 8 loud primary "Review now"
+  buttons → outline (matches Automations' Run now); Automations' cryptic "never" → "not run
+  yet"; placeholder page copy deduped (said "planned/not wired" three ways).
+- [x] **verify green — 211 tests**, zero console errors on all captured pages.
+
+---
+
+## Palette runs + run analytics (2026-07-17c) — the run log reaches ⌘K and Analytics
+- [x] **⌘K Recent runs**: the palette fetches the latest 8 runs when it opens (REST, not bus;
+  a fetch failure just omits the group) — entries read "task · Run · repo · status · age" and
+  deep-link `/agents?run=<id>`.
+- [x] **Deep links that land**: the auto-open effect re-arms per target id (picking run B from
+  the palette while run A is open works) and scrolls the expanded row into view
+  (`scroll-mt-4`, reduced-motion honored). Verified end-to-end with a Playwright pass:
+  palette search → Enter → expanded row with meta, honest pre-boot timeline notice, final
+  report (TESTFLIGHT_UPLOADED marker), Dispatch again.
+- [x] **`GET /api/runs/stats`** (token-gated, `?days=` 1–90, default 7): exact sums over stored
+  rows — totals, byStatus, tokens in/out, total duration, `runsWithoutUsage` (runs whose stream
+  carried no usage COUNT as unknown, never estimated), byRepo/byModel top-8. Registered before
+  `/:id`; shared `RunStats` contract; endpoint test asserts exact sums + the 401.
+  **Deliberately no dollar figure**: price tables drift → a computed cost would be a fabricated
+  number (conv. 1). Tokens/durations are stored facts.
+- [x] **Analytics · "Agent runs · last 7 days"**: Run outcomes, Run volume (runs · total agent
+  time · exact tokens, + honest no-usage line when >0), Tokens by project (repo names), Tokens
+  by model. Honest loading/error/empty states.
+- [x] **Demo world runs**: 3 seeded runs (sentinel fix · bloom TestFlight ship whose id matches
+  the template's `lastDeployRunId` · a failed ops run) — Run history, the palette group, and
+  the Analytics section all demonstrate themselves in --demo; timelines honestly report
+  'unavailable' (they predate the boot). smoke.sh now also sweeps /agents + /analytics.
+- [x] **verify green — 210 tests**, zero console errors on /command · /ops · /agents · /analytics
+  (+ the palette/deep-link Playwright pass).
+
+---
+
+## Run Control follow-ups (2026-07-17b) — reachable from everywhere + zod debt paid
+- [x] **Per-project run history**: `RunHistory` takes `repoId` (server-side `?repo=` filter);
+  ProjectPage ends with the project's own slice of the run log (full width — task text and
+  timelines are wide) + "All projects →" to the Agents page.
+- [x] **Live-run chip in BOTH top bars**: renders nothing while idle (bars keep their reference
+  layout); while agents run, a pulsing chip ("2 agents running") appears. One running agent
+  deep-links `/agents?run=<id>` (that row auto-expands via the new `?run=` param — only if the
+  run is actually in the list); several link to /agents plainly — the agents slice has no start
+  time, so "newest" would be a guessed ordering (conv. 1). `motion-reduce` honored.
+- [x] **Zod backfill (closes the 16f follow-up)**: WorkflowMeta/WorkflowPhase, ConnectionStatus,
+  TestFlightAutofill/IosAppFacts, AutoReviewSettings, Automation and TestFlightProfile are now
+  zod schemas (stored shapes derived from their input contracts — field sets can't drift);
+  all six web clients `.parse()` at the boundary (conv. 2). Remaining as-casts are ad-hoc
+  `{runId}`-style envelopes only.
+- [x] **Real bug caught by the zero-console-error floor**: the chip's first selector returned a
+  fresh filtered array per call → Zustand getSnapshot infinite re-render loop. Fixed by
+  selecting the stable state ref and deriving after (the repo-wide pattern). **209 tests green**,
+  zero console errors on /command · /ops · /agents · /repositories/sentinel.
+
+---
+
+## Run Control round (2026-07-17) — agents stop being fire-and-forget
+- [x] **Persisted run history** (survives restarts — it's the real `runs` table, not bus memory):
+  shared `AgentRun`/`RunDetail`/`RunTimelineEntry` zod contracts; migration 0003 adds
+  `runs.result_text` so the agent's final report is part of the permanent record.
+- [x] **Live tool-by-tool timeline**: the runner records Queued → Spawned → Agent started → each
+  tool call → Completed/Failed/Killed per run (in-memory ring, 200 entries/run, ~50 runs). Honest
+  scope: timelines exist only for runs started THIS boot — older runs report
+  `timelineState: 'unavailable'` (copy explains why), never a reconstructed fake (conv. 1).
+- [x] **Kill / cancel**: `POST /api/runs/:id/kill` — queued runs are cancelled before spawn
+  (note: "cancelled from the dashboard before it started"), running ones get SIGTERM and finish
+  as failed with note "killed from the dashboard" (precedence over the generic opaque-stream note).
+  Finished/pre-boot runs → 400 with an honest reason, never a silent no-op.
+- [x] **Web — Agents page "Run history"**: expandable rows (task · repo · age · duration · status
+  chip) → detail with meta line (model/tokens/turns/exit), live timeline (2s poll while running,
+  tool calls as chips), final report block, two-step Kill confirm, and one-click "Dispatch again"
+  (reuses `/api/dispatch`). Client zod-parses every payload (conv. 2).
+- [x] **Tests**: runner timeline capture + kill semantics (queued vs running vs finished) with a
+  blockable fake spawner; full endpoint round-trip in app.test.ts (dispatch → history → detail
+  with ended timeline + final report → kill refusal → 404). **209 tests green**, zero console
+  errors on /agents · /command · /ops.
+
+---
+
+## Polish + audit round (2026-07-16f) — everything reviewed, everything confirmed fixed
+- [x] **Visual sweep**: all 16 pages captured + reviewed at 1536px, ZERO console errors app-wide.
+  Two real defects found and fixed: **feeds rendered in arrival order, not time order** (activity +
+  deployments now sort by ts in the shared reducer — every consumer inherits; +1 reducer test) and
+  **Analytics zero-count bars drew a 4% colored stub** (now empty at 0 — no fabricated-looking bar).
+- [x] **Convention audit** (Fable 5 orchestrating, 8× Opus 4.8: sweep → adversarial verify →
+  consolidate): **0 critical / 0 high**; 2 medium + 1 low confirmed.
+  - **M2 fixed** — REST payloads were plain TS interfaces as-cast by the web (conv. 2 gap). The
+    three carrying nullable/external fields are now zod contracts parsed at the boundary:
+    `ProjectGitInfo`, `ProbeResult`/`InstallRun`, `ReviewRun` (schemas in shared, `.parse()` in
+    lib/projectSettings·setup·review). Remaining low-risk payloads (WorkflowMeta, ConnectionStatus,
+    TestFlightAutofill, AutoReviewSettings, Automation) noted for backfill.
+  - **L1 fixed** — tailwind.config.ts now IMPORTS tokens.ts (pure-data relative import; loader
+    stays dependency-free): every hex/radius/font-size exists in exactly one place (conv. 3).
+  - **M1 still open — Isac's sign-off required**: `.env.*` deny globs + hook regex block the
+    committed `.env.example` template (same finding as 16c; the permission layer correctly refuses
+    my self-modification). Proposed two-layer fix unchanged, documented in round 16c above.
+- [x] **verify green** — typecheck ×3 · lint · **205 tests** · build; zero console errors on
+  `/activity` · `/analytics` · `/command` · `/ops` after the fixes. Screenshots sent.
+
+---
+
+## TestFlight next-steps round (2026-07-16e) — picker · Deployments surfacing · verified deploy events
+- [x] **Multi-app monorepos**: `probeIos` now returns EVERY Xcode project found (`apps: IosAppFacts[]`,
+  per-project facts + provenance); the project-page card gains an Xcode-project picker (>1 app) that
+  drives the new-template prefill; per-template version prefill matches by bundle id (`factsForBundle`).
+- [x] **Deployments page**: new "TestFlight templates" section — every saved template across projects,
+  with repo chip + the same fresh-version Deploy flow (ProfileRow reused; renders only when templates
+  exist). Per-repo live autofill fetched best-effort.
+- [x] **Verified `deploy.recorded`**: the rendered deploy task now ends with a reporting protocol —
+  `TESTFLIGHT_UPLOADED <bundleId> <version> (<build>)` on VERIFIED delivery or `TESTFLIGHT_FAILED <step>`.
+  The stream adapter captures the run's final text (`resultText`, capped); the runner gained a guarded
+  `onRunDone` hook; the TestFlight watcher records a REAL deploy.recorded (env testflight, ok true/false)
+  ONLY from a parsed, bundle-matched marker — no marker / ambiguous both-markers / bundle mismatch /
+  non-deploy run → nothing recorded (honest unknown). The Deployments feed updates itself.
+- [x] **verify green** — typecheck ×3 · lint · **204 tests** (+7: multi-app probe, marker parse,
+  watcher record/refuse matrix, adapter resultText, onRunDone incl. throwing-hook guard) · build;
+  zero console errors on `/deployments` · `/repositories/bloom` · `/command` · `/ops`.
+
+---
+
+## TestFlight deploy round (2026-07-16d) — saved, reusable, version-per-deploy
+- [x] **Shared** (`@ado/shared/testflight`): `TestFlightProfileInput` zod (name · repoId · scheme ·
+  bundleId · teamId · configuration · testNotes · credentialsNote — a POINTER, never key material) +
+  derived stored type; `DeployVersion` (validated per deploy — never stored in the template);
+  `TestFlightAutofill` with per-file provenance; `renderTestFlightTask` (config fenced as DATA,
+  steps demand verified upload, "do not claim a deploy that did not happen").
+- [x] **Server**: `probeIos` — read-only auto-fill from the repo's real files (pbxproj bundle id/
+  versions/team with $(…)-ref + test-target filtering, shared schemes, fastlane Appfile, Info.plist
+  fallback; honest detected:false for non-iOS repos). `TestFlightProfileStore` (JSON, markDeployed
+  records runId + version label). Endpoints (token-gated): profiles CRUD (?repo=), 
+  `/api/projects/:id/testflight/autofill`, `/api/testflight/profiles/:id/deploy` — validates the
+  per-deploy version, renders the task, dispatches through the RUNNER (cwd allow-list + per-project
+  Agent-dispatch switch apply automatically). 11 new tests incl. the agents-off 403.
+- [x] **Web**: TestFlight card on the project page — saved templates (facts + last deploy),
+  **Deploy…** expands version/build inputs pre-filled from the live probe (build auto-bumped when
+  numeric), **New template** form auto-filled from the project, provenance line, honest non-iOS /
+  not-scanned states. ⌘K "TestFlight deploy for <app>" actions. Demo seeds one Bloom template.
+- [x] **verify green** — typecheck ×3 · lint · **197 tests** · build; zero console errors on
+  `/repositories/bloom` · `/command` · `/ops` at 1536px. Screenshots sent.
+
+---
+
+## Follow-ups + full-app audit round (2026-07-16c)
+- [x] **Follow-ups shipped**: clone **destination picker** (shown when >1 tracked folder; server
+  accepts only already-tracked folders as targets); **live PR status** on the Open PR button
+  (aggregated check-runs passing/failing/running + mergeable/conflicts chips, honest nulls);
+  **settings gear on every repo card** (deep-links `?settings=1`).
+- [x] **Whole-app audit** (Fable 5 orchestrating, 10× Opus 4.8 agents: 4-area sweep → adversarial
+  verify per finding → consolidate): **0 critical / 0 high**. 5 confirmed findings — 1 medium,
+  4 low. Fixed this round:
+  - mock/types.ts hand-copied enums (Tone had already drifted — missing 'muted') → primitive enums
+    now imported/re-exported from the canonical zod schemas in state.ts (conv. 2).
+  - `Automation` interface re-stated the AutomationInput zod shape (incl. a parallel source.kind
+    union) → now derived via `Omit<z.infer<…>,'id'> & {server fields}` (conv. 2).
+  - Dead export `AccEventType` removed (events.ts).
+  - CLAUDE.md reference-doc paths corrected to `docs/…` (matched reality/README).
+- [ ] **Audit finding #1 (medium) — awaiting Isac's sign-off** (the permission layer rightly refuses
+  self-modification): the `.env.*` deny globs in `.claude/settings.json` + the hook regex in
+  `.claude/hooks/pre-tool-use.sh` also block the committed non-secret `.env.example` template, so
+  agents can't read or maintain it. Proposed fix (two layers, land together): replace the blanket
+  `.env.*` deny with `.env.local` + `.env.*.local`, and exempt `.example/.sample/.template`
+  suffixes in both hook regexes.
+- [x] **verify green** — typecheck ×3 · lint · **186 tests** · build; zero console errors on
+  `/command` (now with per-card settings gear) + `/ops` at 1536px. Screenshots sent.
+
+---
+
+## Project settings + GitHub flow round (2026-07-16b) — per-project control, polished
+Every project gets a **Settings** button with stored feature switches, and the GitHub flow is
+one-click end to end (get a repo in · open a PR · jump to the open PR).
+- [x] **Shared** (`@ado/shared/projectSettings`): `PROJECT_FEATURES` catalog (agents · autoReview ·
+  automations · notifications, each with name/blurb/default) — adding a future feature = one catalog
+  row + one `isEnabled` consult; `ProjectSettingsPatch` zod; `ProjectGitInfo` (branch · remote ·
+  github ref · newPrUrl · openPr + honest `prState` provenance).
+- [x] **Server — switches enforced at real choke points**: `ProjectSettingsStore` (delta-over-default
+  JSON). `agents` → Runner `blockedReason` (ONE choke point: command box, prompts, automations,
+  incident/review fixes all honor it); `automations` → engine predicate (background triggers sleep;
+  a deliberate manual run still works); `notifications` → gated at the notifier call sites (builds,
+  deploys, review pings; untagged deploys still fire); `autoReview` → delegates to the AutoReview
+  engine/store (single source of truth + baseline seeding). Endpoints: GET/POST
+  `/api/projects/:id/settings` (token-gated, zod-validated, 404 unknown).
+- [x] **Get a project from GitHub**: `parseGithubRepo` (owner/repo · https · ssh, path/shell-trick
+  rejects) + `GithubCloner` — clean https URL in argv, token ONLY via env (`GIT_CONFIG_*`
+  extraheader, never in argv/.git/config/errors), `GIT_TERMINAL_PROMPT=0` (never hangs), refuses an
+  existing dest, token-free failure copy. `POST /api/projects/github` clones into the tracked
+  projects folder → live rescan. UI: Repositories → Add panel gains "…or get it from GitHub".
+- [x] **PR flow**: `GET /api/projects/:id/git` reads the CONFIGURED remote (`git config`, immune to
+  machine-level insteadOf rewrites), parses the GitHub ref, builds the compare-page `newPrUrl`, and
+  — with GitHub connected — fetches the current branch's open PR (`openPrForBranch` added to the
+  GitHubClient adapter, ETag-cached). Project page header: **Open PR #n ↗** (primary, when live) or
+  **New PR ↗** + **View on GitHub ↗**, with honest no-remote / connect-GitHub states.
+- [x] **Web**: ProjectPage Settings gear (auto-open via `?settings=1`) + settings card (per-row save,
+  honest errors); ⌘K "Project settings for <repo>" actions; AddProjectPanel clone block.
+- [x] **verify green** — typecheck ×3 · lint clean · **185 tests** (+14: settings store, parser,
+  cloner env-safety, endpoints, gating) · build; zero console errors on `/command` · `/ops` ·
+  `/repositories/sentinel?settings=1` · `/repositories?add=1` at 1536px. Screenshots sent to Isac.
+
+---
+
+## Auto-Review round (2026-07-16) — structured AI code review, safe by construction
+Every new commit on an enabled project gets a real, structured AI code review; nothing is ever
+fabricated and nothing is ever auto-applied.
+- [x] **Shared contracts** (`@ado/shared/autoreview`, leaf module): `ReviewFinding` (severity ·
+  category · file:line · title/detail/suggestion) / `AutoReview` (trigger · ref/refLabel · model
+  provenance · status · verdict clean/attention/block · stats) + `autoreview.updated` event with
+  upsert-by-id reducer (`state.autoReviews`, newest-first, cap 30) + compaction (latest lifecycle
+  row per review id). Reducer tests.
+- [x] **Server — safety-first pipeline**: `differ.ts` (READ-ONLY `execFile` git, no shell, cwd only
+  from the scanner allow-list; lockfile/dist exclusions; 90K-char cap with an explicit truncation
+  marker; dirty tree → uncommitted changes, clean tree → last commit; honest errors for no-commits/
+  untracked-only). `ClaudeReviewer` — forced **strict** tool call on the top model, zod-validated,
+  **NO heuristic fallback** (a heuristic "review" would fabricate findings — conv. 1): no key →
+  typed error → honest failed/skip; **anti-hallucination guard** drops findings whose file isn't in
+  the diff. `AutoReviewEngine` — single-flight per repo, enable **seeds the baseline sha** (never
+  surprise-reviews old commits), 10-min commit poll via the catch-up scheduler with a per-repo
+  min-interval throttle, no-key auto runs skip silently (no failed-row spam), every failure lands as
+  an honest `failed` row. 20 server tests (real temp git repos, fake fetch, lifecycle/throttle).
+- [x] **Endpoints** (token-gated): `GET /api/autoreview` (settings + honest `hasKey`),
+  `POST /api/autoreview/:repoId` (toggle), `POST /api/autoreview/:repoId/run` (manual),
+  `POST /api/reviews/:id/fix` (**confirmed** per-finding fix dispatch through the runner allow-list
+  — same "nothing acts without confirm" rule as incidents).
+- [x] **Web — `/reviews`**: per-project enable/Review-now strip, honest no-key banner ("nothing here
+  is simulated"), review cards with verdict/severity/category chips, file:line, fix suggestion, and
+  per-finding **Dispatch fix**. Nav in both sidebars (View A badge = reviews needing attention) +
+  ⌘K page & per-repo actions. `--demo` seeds one attention + one clean review (self-documenting).
+- [x] **Notifications**: non-clean verdicts ping connected Slack/Discord (`reviewNeedsAttention`,
+  deduped) — clean reviews stay quiet.
+- [x] **verify green** (typecheck ×3 · lint **0 warnings** · **171 tests** · build); zero console
+  errors on `/command` · `/ops` · `/reviews` at 1536px. Screenshots sent to Isac.
+
+---
+
 ## Self-healing round (2026-07-13) — "if it breaks, fix itself"
 Built an honest realization of the ask: the app degrades gracefully instead of breaking, uses the
 Anthropic key to explain WHY each failure happened, and offers a **confirmed** one-click fix. Auto-

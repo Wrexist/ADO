@@ -4,16 +4,23 @@
  * capability the dashboard can drive; it spends the user's Claude subscription, so it's a
  * manual button, never an automation trigger. Output is streamed raw and honestly (we don't
  * parse structured findings we can't guarantee across CLI versions).
+ *
+ * Zod contract (convention 2): the web client PARSES run payloads through this schema
+ * instead of as-casting, so a server-side shape drift fails loudly at the boundary.
  */
-export type ReviewRunStatus = 'running' | 'done' | 'failed';
+import { z } from 'zod';
 
-export interface ReviewRun {
-  runId: string;
-  repoId: string;
-  status: ReviewRunStatus;
-  command: string; // the exact command run (shown to the user; not secret)
-  output: string[]; // stdout+stderr lines, in order
-  code: number | null;
-  startedTs: string;
-  endedTs: string | null;
-}
+export const ReviewRunStatus = z.enum(['running', 'done', 'failed']);
+export type ReviewRunStatus = z.infer<typeof ReviewRunStatus>;
+
+export const ReviewRun = z.object({
+  runId: z.string(),
+  repoId: z.string(),
+  status: ReviewRunStatus,
+  command: z.string(), // the exact command run (shown to the user; not secret)
+  output: z.array(z.string()), // stdout+stderr lines, in order
+  code: z.number().int().nullable(),
+  startedTs: z.string(),
+  endedTs: z.string().nullable(),
+});
+export type ReviewRun = z.infer<typeof ReviewRun>;

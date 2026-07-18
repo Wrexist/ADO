@@ -34,6 +34,7 @@ class FakeClient implements GitHubClient {
   constructor(private repos: GhRepo[], private runs: Record<string, GhRun | null> = {}, private rels: Record<string, GhRelease[]> = {}) {}
   async listRepos() { this.calls.repos++; return this.repos; }
   async openPrCount() { this.calls.prs++; return 2; }
+  async openPrForBranch() { return null; }
   async latestRun(_o: string, n: string) { this.calls.runs++; return this.runs[n] ?? null; }
   async listReleases(_o: string, n: string) { this.calls.releases++; return this.rels[n] ?? []; }
 }

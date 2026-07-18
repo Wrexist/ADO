@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PROMPTS } from '@ado/shared';
+import { PROMPTS, type AgentRun } from '@ado/shared';
 import { Icon, cx, type IconName } from '../kit';
 import { useBus } from '../store/bus';
 import { usePalette } from '../lib/palette';
+import { fetchRuns } from '../lib/runs';
+import { timeAgo } from '../lib/time';
 
 interface Item {
   id: string;
@@ -50,6 +52,20 @@ export function CommandPalette() {
     }
   }, [open]);
 
+  // Recent runs come from the REST run log (not bus state) — refetched each time the
+  // palette opens so the list is current. A fetch failure just omits the group.
+  const [runs, setRuns] = useState<AgentRun[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    fetchRuns(undefined, 8)
+      .then((r) => alive && setRuns(r))
+      .catch(() => alive && setRuns([]));
+    return () => {
+      alive = false;
+    };
+  }, [open]);
+
   const items = useMemo<Item[]>(() => {
     // Actions come first — the palette should DO, not just navigate. Each opens the real
     // surface where the action happens (add-project panel, dispatch box, automation form),
@@ -65,6 +81,29 @@ export function CommandPalette() {
         icon: 'agents' as IconName,
         to: `/repositories/${r.id}`,
       })),
+      ...Object.values(state.repos).map((r) => ({
+        id: `a:review:${r.id}`,
+        label: `Review ${r.name}'s latest change`,
+        sub: 'Action',
+        icon: 'check' as IconName,
+        to: '/reviews',
+      })),
+      ...Object.values(state.repos).map((r) => ({
+        id: `a:settings:${r.id}`,
+        label: `Project settings for ${r.name}`,
+        sub: 'Action',
+        icon: 'settings' as IconName,
+        to: `/repositories/${r.id}?settings=1`,
+      })),
+      ...Object.values(state.repos)
+        .filter((r) => r.category === 'app')
+        .map((r) => ({
+          id: `a:testflight:${r.id}`,
+          label: `TestFlight deploy for ${r.name}`,
+          sub: 'Action',
+          icon: 'rocket' as IconName,
+          to: `/repositories/${r.id}`,
+        })),
     ];
     const pages: Item[] = [
       { id: 'p:command', label: 'Command dashboard', sub: 'Page', icon: 'overview', to: '/command' },
@@ -76,6 +115,7 @@ export function CommandPalette() {
       { id: 'p:prompts', label: 'Prompt Library', sub: 'Page', icon: 'chat', to: '/prompts' },
       { id: 'p:workflows', label: 'Workflows', sub: 'Page', icon: 'workflow', to: '/workflows' },
       { id: 'p:automations', label: 'Automations', sub: 'Page', icon: 'pipeline', to: '/automations' },
+      { id: 'p:reviews', label: 'Auto-Review · AI code review', sub: 'Page', icon: 'check', to: '/reviews' },
       { id: 'p:diagnostics', label: 'Diagnostics · Self-healing', sub: 'Page', icon: 'sparkle', to: '/diagnostics' },
       { id: 'p:setup', label: 'Setup · Install requirements', sub: 'Page', icon: 'rocket', to: '/setup' },
       { id: 'p:settings', label: 'Settings · Connections', sub: 'Page', icon: 'settings', to: '/settings' },
@@ -101,8 +141,16 @@ export function CommandPalette() {
       icon: 'chat',
       to: '/prompts',
     }));
-    return [...actions, ...pages, ...repos, ...agents, ...prompts];
-  }, [state.repos, state.agents]);
+    // Recent runs — deep-link straight to the expanded row (timeline · report · kill/re-run).
+    const runItems: Item[] = runs.map((r) => ({
+      id: `run:${r.id}`,
+      label: r.task.split('\n')[0].slice(0, 90),
+      sub: `Run · ${state.repos[r.repoId]?.name ?? r.repoId} · ${r.status} · ${timeAgo(r.startedTs)}`,
+      icon: 'agents',
+      to: `/agents?run=${encodeURIComponent(r.id)}`,
+    }));
+    return [...actions, ...pages, ...repos, ...agents, ...runItems, ...prompts];
+  }, [state.repos, state.agents, runs]);
 
   const query = q.trim().toLowerCase();
   const results = useMemo(

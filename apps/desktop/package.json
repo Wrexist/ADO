@@ -1,0 +1,25 @@
+{
+  "name": "@ado/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Control Center — desktop app (Electron wrapper around the local server + web UI)",
+  "main": "dist/main.cjs",
+  "author": "Wrexist",
+  "license": "UNLICENSED",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:publish": "npm run build && electron-builder --publish always"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.25.5",
+    "fix-path": "^4.0.0"
+  }
+}

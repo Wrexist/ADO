@@ -11,7 +11,7 @@ import { sidebarCounts, isNavActive } from '../lib/selectors';
 type NavEntry = { icon: IconName; label: string; count?: number; active?: boolean; to?: string };
 type NavGroup = { eyebrow?: string; items: NavEntry[] };
 
-const buildGroups = (counts: { repositories: number; games: number; agents: number; diagnostics: number }): NavGroup[] => [
+const buildGroups = (counts: { repositories: number; games: number; agents: number; diagnostics: number; attention: number }): NavGroup[] => [
   { items: [{ icon: 'overview', label: 'Overview', to: '/command' }] },
   {
     eyebrow: 'Workspace',
@@ -30,6 +30,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
       { icon: 'chat', label: 'Prompt Library', to: '/prompts' },
       { icon: 'workflow', label: 'Workflows', to: '/workflows' },
       { icon: 'pipeline', label: 'Automations', to: '/automations' },
+      { icon: 'check', label: 'Auto-Review', count: counts.attention || undefined, to: '/reviews' },
       { icon: 'code', label: 'Code Assistant', to: '/planned/code-assistant' },
       { icon: 'games', label: 'Game Builder', to: '/planned/game-builder' },
       { icon: 'wand', label: 'UI Generator', to: '/planned/ui-generator' },
@@ -101,7 +102,12 @@ export function SidebarA() {
   const state = useBus((s) => s.state);
   const location = useLocation();
   const path = location.pathname;
-  const raw = buildGroups({ ...sidebarCounts(state), diagnostics: state.incidents.length });
+  const raw = buildGroups({
+    ...sidebarCounts(state),
+    diagnostics: state.incidents.length,
+    // Reviews that need a human read: finished with a non-clean verdict.
+    attention: state.autoReviews.filter((r) => r.status === 'done' && r.verdict && r.verdict !== 'clean').length,
+  });
   // Real destinations stay in their groups; unbuilt (/planned/*) items collapse into one
   // dimmed "Soon" disclosure so the working surface stands out.
   const groups = raw.map((g) => ({

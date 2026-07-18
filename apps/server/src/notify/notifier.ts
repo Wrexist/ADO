@@ -46,6 +46,14 @@ export class Notifier {
     this.fanout(`deploy:${name}:${env}:${ok}`, `${ok ? '🚀' : '⚠️'} Deploy ${ok ? 'succeeded' : 'FAILED'} — ${name} → ${env}`);
   }
 
+  /** Auto-Review found real issues — only non-clean verdicts ping (clean reviews stay quiet). */
+  reviewNeedsAttention(repoLabel: string, verdict: 'attention' | 'block', counts: { major: number; critical: number }): void {
+    const badge = verdict === 'block' ? '⛔' : '🔍';
+    const parts = [counts.critical > 0 ? `${counts.critical} critical` : '', counts.major > 0 ? `${counts.major} major` : ''].filter(Boolean);
+    const tail = parts.length > 0 ? ` (${parts.join(', ')})` : '';
+    this.fanout(`review:${repoLabel}:${verdict}`, `${badge} Auto-Review: ${repoLabel} needs ${verdict === 'block' ? 'a BLOCKING fix' : 'attention'}${tail} — see /reviews`);
+  }
+
   /** Post `text` to every connected webhook (Slack uses {text}, Discord uses {content}). */
   private fanout(key: string, text: string): void {
     if (this.tooSoon(key)) return;

@@ -82,6 +82,26 @@ describe('AutomationEngine', () => {
     expect(calls).toHaveLength(1); // only the enabled r1 build.failed one
   });
 
+  it('honors the per-project switch: background triggers sleep, a manual run still works', () => {
+    const now = { t: 10 * 24 * 60 * 60 * 1000 };
+    const calls: { repoId: string }[] = [];
+    const store = freshStore();
+    const engine = new AutomationEngine(
+      store,
+      (repoId) => { calls.push({ repoId }); return { runId: 'r' }; },
+      () => {},
+      () => now.t,
+      (repoId) => repoId !== 'r1', // project switch OFF for r1
+    );
+    const a = store.upsert(base({ repoId: 'r1', trigger: { on: 'event', event: 'build.failed' } }));
+    store.upsert(base({ repoId: 'r1', name: 'sched', trigger: { on: 'schedule', every: 'day' } }));
+    engine.onBuildEvent('r1', 'build.failed');
+    engine.tickScheduled();
+    expect(calls).toHaveLength(0); // background triggers respect the switch
+    engine.runNow(a.id); // a deliberate click outranks the background switch
+    expect(calls).toHaveLength(1);
+  });
+
   it('debounces: the same automation does not refire within the window', () => {
     const now = { t: 1_000 };
     const { store, engine, calls } = makeEngine(now);

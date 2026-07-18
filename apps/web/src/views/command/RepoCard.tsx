@@ -32,6 +32,7 @@ export function RepoCard({ repo }: { repo: Repo }) {
       aria-label={`Open ${repo.name}`}
       onClick={open}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return; // inner buttons keep their native keyboard behavior
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           open();
@@ -58,6 +59,18 @@ export function RepoCard({ repo }: { repo: Repo }) {
             className="rounded p-1 text-text3 transition-colors duration-150 ease-soft hover:text-primary"
           >
             <Icon name="workflow" size={14} />
+          </button>
+          <button
+            type="button"
+            aria-label={`Settings for ${repo.name}`}
+            title="Project settings (features on/off)"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/repositories/${repo.id}?settings=1`);
+            }}
+            className="rounded p-1 text-text3 transition-colors duration-150 ease-soft hover:text-primary"
+          >
+            <Icon name="settings" size={14} />
           </button>
         </div>
       </div>
