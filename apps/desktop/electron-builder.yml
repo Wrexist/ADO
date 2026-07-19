@@ -3,6 +3,8 @@
 appId: com.wrexist.acc
 productName: AI Control Center
 copyright: © 2026 Wrexist
+# Clean on-disk binary name (the default would derive "@adodesktop" from the package name).
+executableName: ai-control-center
 
 # electron-builder needs an EXACT electron version to fetch platform binaries; in a monorepo
 # it can't always read it from the hoisted node_modules, so state it here. MUST match the
@@ -30,6 +32,8 @@ asar: true
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 
+# Windows-only release (Isac's call). macOS/Linux targets removed; add them back here + in
+# release.yml's matrix if cross-platform is wanted later.
 win:
   target:
     - target: nsis
@@ -44,22 +48,14 @@ nsis:
   deleteAppDataOnUninstall: false
   artifactName: ACC-Setup-${version}.${ext}
 
-mac:
-  target:
-    - dmg
-    - zip # electron-updater on macOS reads the zip (only functional once builds are signed)
-  category: public.app-category.developer-tools
-  artifactName: ACC-${version}-${arch}.${ext}
-
-linux:
-  target:
-    - AppImage
-  category: Development
-  artifactName: ACC-${version}.${ext}
-
 # Tag push → GitHub Actions builds → installers + latest*.yml land on the tag's Release;
 # packaged apps auto-update from there (electron-updater).
+# releaseType: release — upload straight to the (already-published) release for the tag. The
+# default "draft" is SKIPPED when a published release already exists — which is exactly what
+# happens when the release is created from the GitHub UI (that's what mints the tag). With
+# "release", every platform job uploads its installer to that release.
 publish:
   provider: github
   owner: Wrexist
   repo: ADO
+  releaseType: release
