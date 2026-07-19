@@ -296,21 +296,21 @@ export function SetupPage() {
                 <Icon name="rocket" size={18} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-body font-medium text-text1">AI Control Center for Windows · macOS · Linux</p>
+                <p className="text-body font-medium text-text1">AI Control Center for Windows</p>
                 <p className="text-label text-text3">
-                  Installers are built by the release pipeline and attached to each tagged release
-                  (Setup .exe, .dmg, .AppImage). Data lives in your OS user folder; the app
-                  auto-updates from new releases on Windows/Linux.
+                  Download the installer (ACC-Setup-…exe), run it, and the dashboard opens — no
+                  terminal, no npm. Data lives in your Windows user folder; the app auto-updates
+                  from new releases.
                 </p>
               </div>
               <Button size="sm" variant="outline" onClick={() => window.open('https://github.com/Wrexist/ADO/releases/latest', '_blank', 'noopener')}>
-                Get the latest release ↗
+                Download for Windows ↗
               </Button>
             </div>
             <p className="mt-3 text-label text-warning">
-              Builds are currently unsigned: Windows shows a SmartScreen prompt (More info → Run
-              anyway) and macOS needs right-click → Open on first launch. Signing is documented
-              in docs/DESKTOP.md and slots into the same pipeline.
+              The build is currently unsigned, so Windows SmartScreen shows a prompt on first
+              launch — click “More info → Run anyway”. Signing (Azure Artifact Signing) is
+              documented in docs/DESKTOP.md and drops into the same pipeline.
             </p>
           </Card>
         </section>

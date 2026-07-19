@@ -1,23 +1,24 @@
-# Desktop release pipeline (docs/DESKTOP.md): push a v* tag → three OS runners build the
-# web bundle + Electron wrapper and attach installers (+ electron-updater manifests) to the
-# GitHub Release for that tag. Download link surface: /setup page + README → releases/latest.
+# Desktop release pipeline (docs/DESKTOP.md) — WINDOWS ONLY.
+# Two ways to run it:
+#   • push a v* tag           → builds ACC-Setup-<version>.exe and publishes to that tag's release
+#   • Actions → Run workflow  → same build; electron-builder CREATES the release for the version
+#                               in apps/desktop/package.json (publish.releaseType: release) and
+#                               uploads the .exe to it. This is the no-tag path used to ship
+#                               without pushing a git tag by hand.
 name: release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: {}
 
 permissions:
-  contents: write # electron-builder uploads the installers to the tag's Release
+  contents: write # electron-builder creates the release and uploads the installer
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,9 +32,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # A v0.2.0 tag with package version 0.1.0 would publish mismatched installer names
-      # and updater manifests — refuse instead of shipping the confusion.
+      # On a tag push, refuse a tag whose name doesn't match the desktop package version
+      # (mismatched installer names + updater metadata). Skipped for manual runs, where the
+      # version comes from package.json and electron-builder mints the matching tag.
       - name: Verify tag matches the desktop package version
+        if: github.event_name == 'push'
         working-directory: apps/desktop
         shell: bash
         run: |
@@ -45,7 +48,7 @@ jobs:
       - name: Bundle desktop main + preload
         run: npm run build -w @ado/desktop
 
-      - name: Package + publish installers
+      - name: Package + publish installer
         run: npx electron-builder --publish always
         working-directory: apps/desktop
         env:

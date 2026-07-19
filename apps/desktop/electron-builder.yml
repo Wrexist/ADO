@@ -3,9 +3,7 @@
 appId: com.wrexist.acc
 productName: AI Control Center
 copyright: © 2026 Wrexist
-# The on-disk binary/AppImage name. Derived from the package name by default, which strips
-# "@ado/desktop" to "@adodesktop" — the "@" is illegal in a Linux executable path and fails
-# the AppImage build. A clean fixed name is safe on every platform.
+# Clean on-disk binary name (the default would derive "@adodesktop" from the package name).
 executableName: ai-control-center
 
 # electron-builder needs an EXACT electron version to fetch platform binaries; in a monorepo
@@ -34,6 +32,8 @@ asar: true
 asarUnpack:
   - "**/node_modules/better-sqlite3/**"
 
+# Windows-only release (Isac's call). macOS/Linux targets removed; add them back here + in
+# release.yml's matrix if cross-platform is wanted later.
 win:
   target:
     - target: nsis
@@ -47,19 +47,6 @@ nsis:
   perMachine: false
   deleteAppDataOnUninstall: false
   artifactName: ACC-Setup-${version}.${ext}
-
-mac:
-  target:
-    - dmg
-    - zip # electron-updater on macOS reads the zip (only functional once builds are signed)
-  category: public.app-category.developer-tools
-  artifactName: ACC-${version}-${arch}.${ext}
-
-linux:
-  target:
-    - AppImage
-  category: Development
-  artifactName: ACC-${version}.${ext}
 
 # Tag push → GitHub Actions builds → installers + latest*.yml land on the tag's Release;
 # packaged apps auto-update from there (electron-updater).

@@ -63,18 +63,20 @@ Current state is always in [`TASK.md`](./TASK.md); phase gates are in [`.claude/
 
 ---
 
-## Download the desktop app
+## Download the desktop app (Windows)
 
-No terminal required: grab the installer for your OS from
-**[the latest release](https://github.com/Wrexist/ADO/releases/latest)** — `ACC-Setup-<version>.exe`
-(Windows), `.dmg` (macOS), `.AppImage` (Linux). Installers are built and attached automatically
-by [`release.yml`](./.github/workflows/release.yml) whenever a `v*` tag is pushed; the app keeps
-itself updated from new releases on Windows/Linux. Your data lives in the OS user-data folder,
-and the app still drives the same local-first server — nothing moves to a cloud.
+No terminal required: grab **`ACC-Setup-<version>.exe`** from
+**[the latest release](https://github.com/Wrexist/ADO/releases/latest)**, run it, and the
+dashboard opens. The installer is built and published by
+[`release.yml`](./.github/workflows/release.yml) (on a `v*` tag, or a manual "Run workflow");
+the app keeps itself updated from new releases. Your data lives in your Windows user folder,
+and it still drives the same local-first server — nothing moves to a cloud.
 
-> Honest note: builds are currently **unsigned** — Windows SmartScreen will ask for
-> "More info → Run anyway" and macOS needs right-click → Open the first time. The signing path
-> (Azure Artifact Signing + Apple notarization) is documented in [`docs/DESKTOP.md`](./docs/DESKTOP.md).
+> Honest note: the build is currently **unsigned**, so Windows SmartScreen asks for
+> "More info → Run anyway" the first time. The signing path (Azure Artifact Signing) is
+> documented in [`docs/DESKTOP.md`](./docs/DESKTOP.md). macOS/Linux installers are not built
+> today — the wrapper is cross-platform, so they can be re-enabled in `release.yml` +
+> `electron-builder.yml` when wanted.
 
 ## Quickstart (from source)
 
