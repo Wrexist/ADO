@@ -6,6 +6,29 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 ---
 
+## Marketing prompt pack (2026-07-18) — Hormozi funnel → Prompt Library
+- [x] PR #3 merged; branch restarted from main (4a79220). New round from Isac's shared
+  "Hormozi's $100M Funnel" image: the 5 mega-prompts belong in the Prompt Library — new
+  **marketing** category (enum + meta + icon; tabs/counts/⌘K/custom-prompt select all follow
+  automatically): Content Batching Machine · Value Equation Offer Builder · Hook Generator ·
+  Authority Builder · Funnel Audit. Every step from the card implemented faithfully (5–7
+  pillars/10 subtopics, 20 short-form ideas, per-platform formats, proof on ≥50%, 30-day
+  calendar; verbatim pain quotes → dream outcomes → 10 offers scored 1–10 on the four Value-
+  Equation axes → top 3 rewritten; 4 hook families × 10 templates, 20+ hooks/pain at 10–15
+  words, top 25 ranked, top 10 × 3 formats; proof in 4 buckets × 3 lengths → 20 proof-stories;
+  awareness audit + 10 concrete fixes, lead-capture Value-Equation scoring + weakest magnet
+  rewritten).
+- [x] **Convention adaptations** (the two rules every body carries): single-shot draft for
+  Isac to edit — no loops on copy (conv. 6); real proof only — never invented stats/clients/
+  testimonials, honest [NEEDS REAL PROOF] placeholders instead (conv. 1). All 5 are
+  `dispatchable: false` — Copy/Preview flows, not repo agents.
+- [x] Not built (noted): the card's "run in sequence" — prompt chaining is a new engine
+  concept; the outputs pipe manually (research → offers → hooks → proof → audit) and chaining
+  copy edges into loop-on-copy territory. Revisit only if Isac asks.
+- [x] verify green — 215 tests; /prompts Marketing tab zero console errors (30 prompts total).
+
+---
+
 ## PR #3 review response (2026-07-17f) — CodeRabbit triage: verify, fix, refute, skip
 - [x] **Verified every finding against the code first** (external review = data, conv. 11).
   The one "Critical" (triple-declared variable → SyntaxError) was FALSE — single declaration,

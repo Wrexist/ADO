@@ -581,6 +581,20 @@ Built + shipped the three the user asked for, pushed together.
 
 ---
 
+## 2026-07-18 · Claude · PR #3 merged + marketing prompt pack
+- shipped: PR #3 (12 commits + review fixes) MERGED to main; branch restarted from 4a79220.
+  Isac shared a "Hormozi $100M funnel" prompt image → implemented as a new **marketing**
+  Prompt Library category (5 prompts: content batching · value-equation offers · hooks ·
+  authority/proof · funnel audit), every step from the card kept, plus the two house rules in
+  every body: single-shot copy draft (conv. 6) and real-proof-only with [NEEDS REAL PROOF]
+  placeholders (conv. 1). dispatchable:false (Copy/Preview, not repo agents). The exhaustive
+  CAT_ICON Record caught the new enum member at typecheck — the guard works.
+- next / watch-outs: the card's "run in sequence" idea = prompt chaining — deliberately NOT
+  built (new engine concept + edges into loop-on-copy); outputs pipe manually. First
+  installers still await a v0.1.0 tag on main.
+
+---
+
 ## Template — copy for each session
 ## YYYY-MM-DD · who · title
 - shipped: …

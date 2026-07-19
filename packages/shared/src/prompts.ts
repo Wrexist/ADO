@@ -25,6 +25,7 @@ export const PromptCategoryEnum = z.enum([
   'refactor',
   'docs',
   'devops',
+  'marketing',
 ]);
 export type PromptCategory = z.infer<typeof PromptCategoryEnum>;
 
@@ -65,6 +66,7 @@ export const PROMPT_CATEGORIES: PromptCategoryMeta[] = [
   { id: 'refactor', title: 'Refactor', blurb: 'Readability, reuse, and cleanup.' },
   { id: 'docs', title: 'Docs', blurb: 'READMEs and API docs.' },
   { id: 'devops', title: 'DevOps', blurb: 'CI/CD, Docker, releases.' },
+  { id: 'marketing', title: 'Marketing', blurb: 'Offers, hooks, content, proof, funnel audits — single-shot drafts.' },
 ];
 
 /** Per-model tuning preamble — applied to every prompt when that model is selected. */
@@ -436,6 +438,115 @@ Include: install with dependency caching, typecheck + lint + test + build, run o
     dispatchable: true,
     body: `Dockerize {app}.
 Rules: multi-stage build (build → slim runtime); non-root user; pinned base image; .dockerignore; no secrets baked in; healthcheck. Aim for the smallest correct image. Deliver the Dockerfile, .dockerignore, and the build/run commands.`,
+  }),
+
+  // ── Marketing (Hormozi $100M funnel pack) ──────────────────────────────────
+  // Two house rules baked into every body: (1) copy is a SINGLE-SHOT draft for me to
+  // edit — never loop/iterate on it (conv. 6); (2) proof is REAL ONLY — no invented
+  // stats, case studies, or testimonials, ever (conv. 1 applied to marketing).
+  P({
+    id: 'mkt-content-batching',
+    title: 'Content Batching Machine',
+    category: 'marketing',
+    tags: ['content', 'calendar', 'repurposing'],
+    summary: 'One long-form piece → a 30-day, multi-platform content calendar with proof on half the posts.',
+    recommendedModel: 'claude',
+    dispatchable: false,
+    body: `Role: content strategist for {business} (audience: {audience}). This is a SINGLE-SHOT draft for me to edit — do not ask follow-ups or iterate; make reasonable assumptions and label them.
+Inputs I'm giving you: my long-form piece below, and my REAL proof assets (case studies, numbers, results). Use only proof I actually provide — never invent statistics, clients, or results. Where a post calls for proof I haven't supplied, write [NEEDS REAL PROOF: what to insert] instead.
+
+LONG-FORM PIECE:
+{longFormPiece}
+
+REAL PROOF ASSETS:
+{proofAssets}
+
+Steps — do all five, in order:
+1. Extract 5–7 core content pillars for this business; under each pillar list 10 subtopics (70 max, numbered).
+2. Repurpose the long-form piece into 20 short-form ideas: mix of hooks, one-liners, and mini-stories (label each type).
+3. Format for platform: for the 10 strongest ideas, write the actual post as a Twitter/X thread opener, an IG carousel outline (slide-by-slide), a TikTok/Reels script (spoken word, 30–45s), and a LinkedIn post. Native tone per platform — no cross-posting voice.
+4. Proof-loop injection: weave a real case study, stat, or result into AT LEAST 50% of the posts, drawn ONLY from my proof assets above (or the [NEEDS REAL PROOF] placeholder).
+5. Batch everything into a 30-day calendar (table: day · pillar · platform · post/hook · proof? yes/no) balanced across pillars and platforms.`,
+  }),
+  P({
+    id: 'mkt-value-offer',
+    title: 'Value Equation Offer Builder',
+    category: 'marketing',
+    tags: ['offers', 'positioning', 'pricing'],
+    summary: 'Mine real customer pain → 10 offers scored on the Value Equation → top 3 rewritten to be irresistible.',
+    recommendedModel: 'claude',
+    dispatchable: false,
+    body: `Role: offer strategist for {business} selling {product} to {audience}. SINGLE-SHOT draft for me to edit — no follow-up questions; state assumptions inline.
+Ground rules: work ONLY from the real customer research I paste below (forum threads, Reddit posts, reviews, support tickets, call notes). Quote pains VERBATIM with their source. If the research is too thin for a step, say exactly what to go collect (which subreddits/forums/review pages for my niche) and continue with what exists — never fabricate quotes or numbers.
+
+CUSTOMER RESEARCH:
+{research}
+
+Steps — do all five, in order:
+1. Extract the top 10 burning pains from the research, each with 1–2 exact quotes (verbatim, with source labels).
+2. Flip each pain into a vivid dream outcome — one sentence, written in the customer's own vocabulary, concrete enough to picture.
+3. Build 10 offer concepts using the Value Equation (value = dream outcome × likelihood of achievement ÷ time delay × effort/sacrifice): for each, name it, define the core promise, the mechanism, pricing angle, 2–3 bonuses that shrink time/effort, and a risk-reversal.
+4. Score each offer 1–10 on all four axes: Dream Outcome, Perceived Likelihood, Time Delay (10 = fastest), Effort/Sacrifice (10 = least). Show the math (sum).
+5. Rank by score and REWRITE the top 3 to be irresistible: tightened promise, named offer, stack (line-item what they get), price framing, and the one-sentence version for an ad.`,
+  }),
+  P({
+    id: 'mkt-hook-generator',
+    title: 'Hook Generator',
+    category: 'marketing',
+    tags: ['hooks', 'copywriting', 'ads'],
+    summary: 'Hook formulas → 20+ niche hooks per pain (10–15 words) → top 10 rewritten in 3 formats.',
+    recommendedModel: 'claude',
+    dispatchable: false,
+    body: `Role: direct-response copywriter for {business} ({niche}, audience: {audience}). SINGLE-SHOT draft for me to edit — no iteration.
+Honesty rule: hooks may promise only what my offer actually delivers (described below); any number or result cited must come from my real materials — placeholders like [REAL RESULT] where I haven't supplied one. Never write a hook that would be a lie for this business.
+
+MY OFFER / WHAT'S TRUE:
+{offer}
+
+TOP CUSTOMER PAINS (from my research):
+{pains}
+
+Steps — do all three, in order:
+1. Extract the four hook formula families — PAIN, DESIRE, PROOF, CURIOSITY — and write 10 template examples of each (40 total), as reusable fill-in patterns.
+2. Generate niche hooks: for EACH pain listed above, write 5 hooks per formula family (20+ per pain), every hook 10–15 words, in my audience's language. Number them.
+3. Rank the best 25 overall on clarity, curiosity, and pull (1–10 each, show scores). Then rewrite the top 10 in 3 formats each: spoken opener (TikTok/Reels first line), written headline (ad/landing), and thread/carousel opener.`,
+  }),
+  P({
+    id: 'mkt-authority-builder',
+    title: 'Authority Builder',
+    category: 'marketing',
+    tags: ['proof', 'trust', 'storytelling'],
+    summary: 'Categorize your REAL proof, rewrite it in 3 lengths, fuse it into 20 sticky proof-stories.',
+    recommendedModel: 'claude',
+    dispatchable: false,
+    body: `Role: brand strategist for {business}. SINGLE-SHOT draft for me to edit — no iteration.
+Hard rule: this prompt runs ONLY on real proof. Everything below must trace to the raw materials I paste in — no invented clients, numbers, timelines, or quotes. If a category has no material, output that category as "EMPTY — go collect: <specific suggestions>" rather than filling it with fiction.
+
+RAW PROOF MATERIALS (testimonials, results, screenshots described, press, credentials, client stories):
+{proofMaterials}
+
+Steps — do all three, in order:
+1. Gather + categorize every piece of proof above into four buckets: QUANTITATIVE (numbers/results), QUALITATIVE (quotes/testimonials), TRANSFORMATION (before → after journeys), AUTHORITY (credentials, press, associations). List each item with a one-line label.
+2. Rewrite each proof asset in 3 formats: SHORT (one punchy line for a post/ad), MID (2–3 sentences for a landing section), LONG (a full paragraph for email/sales page). Keep every fact exactly as given.
+3. Fuse proof with stories: write 20 sticky proof-stories (3–6 sentences each) that pair one proof item with a narrative arc — struggle → turn → result — leading with emotion and landing on the concrete fact. Number them and tag which proof item each uses.`,
+  }),
+  P({
+    id: 'mkt-funnel-audit',
+    title: 'Funnel Audit',
+    category: 'marketing',
+    tags: ['funnel', 'conversion', 'lead-magnet'],
+    summary: 'Stress-test awareness (hooks, messaging, proof) and lead capture; 10 fixes + the weakest magnet rewritten.',
+    recommendedModel: 'claude',
+    dispatchable: false,
+    body: `Role: funnel auditor for {business}. SINGLE-SHOT audit draft for me to edit — no iteration.
+Audit ONLY what I paste below (landing copy, ad hooks, opt-in offers, emails). Judge against what's actually on the page — never assume assets I haven't shown you, and flag any claim in MY copy that reads as unprovable or fabricated (that's a defect, not a style choice).
+
+FUNNEL ASSETS:
+{funnelAssets}
+
+Steps — do both, in order:
+1. AWARENESS AUDIT: stress-test the hooks, messaging, and proof placement. Is the strongest proof upfront? Does the first line earn the second? Flag every attention leak (weak first lines, vague promises, buried proof, mixed messages, slow reveals) with the exact quoted text, then give the 10 highest-impact fixes ranked by expected effect — each fix as a concrete rewrite, not advice.
+2. LEAD CAPTURE AUDIT: score each opt-in/lead magnet on the Value Equation (dream outcome · perceived likelihood · time delay · effort — 1–10 each, show the math). Kill friction: list every field, click, and hesitation point that can go. Then REWRITE the weakest magnet completely: new name, new one-sentence promise, new opt-in copy (headline + subline + button).`,
   }),
 ];
 

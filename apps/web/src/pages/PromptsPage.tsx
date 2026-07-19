@@ -43,6 +43,7 @@ const CAT_ICON: Record<PromptCategory, IconName> = {
   refactor: 'workflow',
   docs: 'list',
   devops: 'pipeline',
+  marketing: 'sparkle',
 };
 
 const MODEL_LABEL: Record<TargetModel, string> = { any: 'Any model', claude: 'Claude', gpt: 'GPT', gemini: 'Gemini' };
