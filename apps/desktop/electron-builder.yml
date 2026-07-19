@@ -4,6 +4,11 @@ appId: com.wrexist.acc
 productName: AI Control Center
 copyright: © 2026 Wrexist
 
+# electron-builder needs an EXACT electron version to fetch platform binaries; in a monorepo
+# it can't always read it from the hoisted node_modules, so state it here. MUST match the
+# pinned "electron" version in package.json (both are 36.9.5) — bump them together on upgrade.
+electronVersion: 36.9.5
+
 directories:
   output: release
 
