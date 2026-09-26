@@ -20,11 +20,11 @@ export function PageShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen min-w-[1280px] bg-app text-text1">
-      <TopBarA />
+    <div className="min-h-screen min-w-0 bg-app text-text1">
+      <div className="hidden lg:block"><TopBarA /></div>
       <StaleBanner />
-      <main className="mx-auto max-w-[1100px] px-8 py-8">
-        <div className="flex items-start justify-between gap-4">
+      <main className="mx-auto max-w-[1100px] px-4 py-6 lg:px-8 lg:py-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-title font-semibold text-text1">{title}</h1>
             {subtitle ? <p className="mt-1 max-w-[72ch] text-body text-text2">{subtitle}</p> : null}

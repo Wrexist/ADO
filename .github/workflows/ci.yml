@@ -1,7 +1,7 @@
 name: CI
 
 # Mirrors the local gate (scripts/verify.sh → typecheck · lint · test · build) so a PR
-# can't merge red. The visual smoke (npm run smoke) needs ACC_TOKEN + a browser and stays
+# reports failures. Branch protection must separately require this check. The visual smoke
 # a local/manual gate — CI does not fabricate a pass for a step it can't honestly run.
 
 on:
@@ -22,17 +22,22 @@ concurrency:
 
 jobs:
   verify:
-    name: verify (typecheck · lint · test · build)
-    runs-on: ubuntu-latest
+    name: verify (${{ matrix.os }}, Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ['22.12', '24']
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node 20.12 (engines floor)
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20.12' # test the exact declared floor — catches use of APIs newer than 20.12 (e.g. process.loadEnvFile needs 20.12)
+          node-version: ${{ matrix.node }}
           cache: npm
 
       - name: Install (clean, from lockfile)

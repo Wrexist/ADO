@@ -16,7 +16,7 @@ import { runs } from './db/schema';
 import { expandHome, type Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
-import { ConnectionsStore } from './connections/store';
+import { ConnectionsStore, type SecretCodec } from './connections/store';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
@@ -29,7 +29,10 @@ import type { GitHubClient } from './integrations/github/types';
 import { Sysmon } from './system/sysmon';
 import { HealthChecker } from './system/health';
 import { Runner } from './runner';
-import { ClaudeSpawner, type Spawner } from './runner/spawner';
+import { PROVIDERS, ProviderSpawner } from './runner/providers';
+import { Verifier } from './runner/verification';
+import { workspaceEvidence } from './runner/workspace';
+import { type Spawner } from './runner/spawner';
 import { HeuristicParser } from './command/parser';
 import { ClaudeParser } from './command/claudeParser';
 import { respond, execute } from './command/execute';
@@ -51,6 +54,7 @@ import { AutoReviewEngine } from './autoreview/engine';
 import { TestFlightProfileStore } from './testflight/store';
 import { probeIos } from './testflight/autofill';
 import { testflightRunDone } from './testflight/watch';
+import { stopProcesses } from './lib/processControl';
 import {
   DeployVersion,
   Intent,
@@ -77,6 +81,7 @@ export interface AccServer {
 
 /** Injectable deps (tests + local demos supply fakes). */
 export interface AccDeps {
+  secretCodec?: SecretCodec;
   githubClient?: GitHubClient;
   /** Tests set false to skip the real sysmon/health background loops. */
   startSystem?: boolean;
@@ -162,6 +167,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id'],
   });
   registerSecurity(app, env);
+  // Global mutation authentication validates pairing without revealing a credential.
+  app.post('/api/session', async () => ({ authenticated: true }));
 
   // Same-origin web serving (desktop app / single-port mode): serve the BUILT bundle and
   // fall back to index.html for client routes. API/SSE paths keep their own 404s — a typo'd
@@ -284,7 +291,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const connections = new ConnectionsStore(connectionsPath, (id) => {
     const key = ENV_FALLBACK[id];
     return key ? process.env[key] : undefined;
-  });
+  }, deps.secretCodec);
 
   // Self-diagnosis: capture failures, ask the AI (or a heuristic offline) WHY they happened,
   // and stream both through the bus. The diagnoser reserves the top model for this debugging
@@ -404,7 +411,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     snapshotStats(); // accurate snapshot once the scan populated/pruned repos
   };
   // Boot scan only in real runs; tests (startSystem:false) stay hermetic (no fs walk/watch).
-  if (deps.startSystem !== false) void rebuildScanner().catch((err) => app.log.error(err));
+  if (deps.startSystem !== false) await rebuildScanner();
 
   // GitHub enrichment: token comes from the connections store (or an injected client).
   // Restartable so the Settings page connects GitHub live — no server restart needed.
@@ -427,7 +434,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // cwd allow-list: only scanned repos are dispatchable (demo maps ids straight through
   // for the sim agent). Shared by the runner and the command center — defined once.
   const cwdFor = (id: string): string | null =>
-    scanner ? scanner.cwdFor(id) : bus.snapshot().state.repos[id] ? `/repos/${id}` : null;
+    scanner ? scanner.cwdFor(id) : deps.spawner && bus.snapshot().state.repos[id] ? `/repos/${id}` : null;
 
   // Runner: dispatch headless agents. The per-project "Agent dispatch" switch is enforced
   // HERE (the one choke point) so every path — command box, prompts, automations, fixes —
@@ -442,9 +449,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const runner = new Runner(
     bus,
     db,
-    deps.spawner ?? new ClaudeSpawner(),
+    deps.spawner ?? new ProviderSpawner(),
     {
       cwdFor,
+      defaultProvider: env.agentProvider,
+      secrets: () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))],
+      workspaceRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'workspaces') : undefined,
       blockedReason: (repoId) =>
         projectSettings.isEnabled(repoId, 'agents')
           ? null
@@ -588,13 +598,19 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     });
   }
 
+  app.get('/api/providers', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { providers: PROVIDERS, defaultProvider: env.agentProvider ?? 'claude' };
+  });
   app.post('/api/dispatch', async (req, reply) => {
-    const body = (req.body ?? {}) as { repoId?: string; task?: string; model?: string };
-    if (!body.repoId || !body.task) return reply.code(400).send({ error: 'repoId and task are required' });
+    const body = (req.body ?? {}) as { repoId?: string; task?: string; model?: string; provider?: string };
+    if (typeof body.repoId !== 'string' || !body.repoId.trim() || body.repoId.length > 512 || typeof body.task !== 'string' || !body.task.trim() || body.task.length > 100_000 || (body.model !== undefined && (typeof body.model !== 'string' || body.model.length > 128)) || (body.provider !== undefined && body.provider !== 'claude' && body.provider !== 'codex')) return reply.code(400).send({ error: 'Valid repoId, task and optional model/provider are required' });
+    const requestKey = req.headers['idempotency-key'];
+    if (requestKey !== undefined && (typeof requestKey !== 'string' || !requestKey.trim() || requestKey.length > 200)) return reply.code(400).send({ error: 'Invalid idempotency key' });
     try {
-      return runner.dispatch({ repoId: body.repoId, task: body.task, model: body.model });
+      return runner.dispatch({ repoId: body.repoId, task: body.task, model: body.model, provider: body.provider, idempotencyKey: typeof req.headers['idempotency-key'] === 'string' ? req.headers['idempotency-key'] : undefined });
     } catch (err) {
-      return reply.code(403).send({ error: (err as Error).message });
+      return reply.code((err as Error).message.startsWith('idempotency conflict') ? 409 : 403).send({ error: (err as Error).message });
     }
   });
 
@@ -606,6 +622,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     repoId: r.repoId,
     task: r.task,
     model: r.model,
+    provider: r.provider,
     status: r.status as 'queued' | 'running' | 'done' | 'failed',
     startedTs: r.startedTs,
     endedTs: r.endedTs,
@@ -616,6 +633,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     exitCode: r.exitCode,
     note: r.note,
     humanAction: r.humanAction as 'accepted' | 'corrected' | 'redone' | null,
+    workspacePath: r.workspacePath,
+    baseSha: r.baseSha,
+    branch: r.branch,
+    headSha: r.headSha,
+    diffDigest: r.diffDigest,
+    verifyVerdict: r.verifyVerdict,
   });
   app.get('/api/runs', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
@@ -678,6 +701,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         timelineState: runner.isLive(id) ? 'live' : timeline ? 'ended' : 'unavailable',
         timeline: timeline ?? [],
         resultText: row.resultText,
+        diagnostics: row.diagnostics,
       },
     };
   });
@@ -691,6 +715,11 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   // Human verdict on a finished run's work — the seed data the (parked) self-learning
   // analyzer will consume at ≥100 runs. Only a human sets this, only on finished runs.
+  const verifier = new Verifier(db, () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]);
+  app.post('/api/runs/:id/verify', async (req, reply) => {
+    try { return { evidence: await verifier.verify((req.params as { id: string }).id) }; }
+    catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
+  });
   app.post('/api/runs/:id/outcome', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     const id = (req.params as { id: string }).id;
@@ -700,6 +729,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!row) return reply.code(404).send({ error: 'unknown run' });
     if (row.status !== 'done' && row.status !== 'failed') {
       return reply.code(400).send({ error: 'judge the run after it finishes — it is still in flight' });
+    }
+    if (parsed.data === 'accepted' && row.engineVersion === 1) {
+      const target = req.body as { headSha?: string; diffDigest?: string };
+      if (row.verifyVerdict !== 'pass' || !row.workspacePath || !row.baseSha || target.headSha !== row.headSha || target.diffDigest !== row.diffDigest) return reply.code(409).send({ error: 'Acceptance requires verification and the exact reviewed revision and diff' });
+      const current = await workspaceEvidence(row.workspacePath, row.baseSha);
+      if (current.headSha !== row.headSha || current.diffDigest !== row.diffDigest) return reply.code(409).send({ error: 'Result changed after verification; approval is stale' });
     }
     db.update(runs).set({ humanAction: parsed.data }).where(eq(runs.id, id)).run();
     return { run: runRow({ ...row, humanAction: parsed.data }) };
@@ -843,7 +878,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     scheduler.register({ name: 'automations-tick', intervalMs: 60 * 60 * 1000, runOnBoot: true, run: () => automationEngine.tickScheduled() });
     // Auto-Review commit poll: review new commits on enabled repos (cheap rev-parse per repo;
     // the engine throttles per repo and skips honestly when no key is connected).
-    scheduler.register({ name: 'autoreview-commit-poll', intervalMs: 10 * 60 * 1000, runOnBoot: true, run: () => void autoReview.checkForCommits() });
+    scheduler.register({ name: 'autoreview-commit-poll', intervalMs: 10 * 60 * 1000, runOnBoot: true, run: () => autoReview.checkForCommits() });
     // Nightly WAL-safe backup — true catch-up: only fires if a day has actually elapsed.
     if (env.dbPath !== ':memory:') {
       const backupDir = join(dirname(env.dbPath), 'backups');
@@ -851,7 +886,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         name: 'db-backup',
         intervalMs: 24 * 60 * 60 * 1000,
         run: () => {
-          const r = backupDatabase(sqlite, backupDir);
+          const r = backupDatabase(sqlite, backupDir, { dataDir: dirname(env.dbPath) });
           app.log.info(`backup: ${r.rows} events → ${r.file}${r.rotatedOut.length ? ` (rotated ${r.rotatedOut.length})` : ''}`);
         },
       });
@@ -1215,8 +1250,9 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       sysmon?.stop();
       health?.stop();
       tokens.stop();
-      scheduler?.stop();
-      runner.stop();
+      await scheduler?.stop();
+      await runner.stop();
+      await stopProcesses();
       await app.close();
       sqlite.close();
     },

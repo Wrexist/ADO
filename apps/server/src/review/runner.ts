@@ -26,6 +26,12 @@ export class ReviewRunner {
 
   /** Begin a review, or an error if the repo isn't dispatchable (not in the scanner allow-list). */
   start(repoId: string): { run: ReviewRun } | { error: string } {
+    if ([...this.runs.values()].some((r) => r.repoId === repoId && r.status === 'running')) return { error: 'A review of this project is already running' };
+    for (const [id, run] of this.runs) {
+      if (this.runs.size < 100) break;
+      if (run.status !== 'running') this.runs.delete(id);
+    }
+    if (this.runs.size >= 100) return { error: 'Review capacity reached' };
     const cwd = this.cwdFor(repoId);
     if (!cwd) return { error: `repo '${repoId}' is not in the scanner allow-list — only scanned repos can be reviewed` };
     const run: ReviewRun = {

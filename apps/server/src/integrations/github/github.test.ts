@@ -7,13 +7,13 @@ import type { GhRelease, GhRepo, GhRun, GitHubClient } from './types';
 
 describe('github mappers (pure)', () => {
   it('maps run status/conclusion to the DATA_MAP CI bar', () => {
-    expect(ciFromRun({ workflowName: 'CI', status: 'queued', conclusion: null })).toMatchObject({ pct: 10, state: 'queued' });
-    expect(ciFromRun({ workflowName: 'CI', status: 'in_progress', conclusion: null })).toMatchObject({ pct: 50, state: 'running' });
+    expect(ciFromRun({ workflowName: 'CI', status: 'queued', conclusion: null })).toMatchObject({ pct: 0, state: 'queued' });
+    expect(ciFromRun({ workflowName: 'CI', status: 'in_progress', conclusion: null })).toMatchObject({ pct: 0, state: 'running' });
     expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: 'success' })).toMatchObject({ pct: 100, state: 'success' });
     expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: 'failure' })).toMatchObject({ state: 'failed' });
     // cancelled/skipped are terminal but NOT failures — never a false red bar
-    expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: 'cancelled' })).toMatchObject({ state: 'queued' });
-    expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: null })).toMatchObject({ state: 'queued' });
+    expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: 'cancelled' })).toMatchObject({ state: 'cancelled' });
+    expect(ciFromRun({ workflowName: 'CI', status: 'completed', conclusion: null })).toMatchObject({ state: 'unknown' });
   });
 
   it('normalizes language + infers category', () => {
@@ -52,7 +52,7 @@ describe('github sync (fake client)', () => {
     bus.publish({
       id: 'scan:sentinel', type: 'repo.upserted', ts: '2026-07-09T00:00:00.000Z',
       source: { kind: 'scanner', ref: '/dev/sentinel' },
-      payload: { repo: { id: 'sentinel', name: 'SENTINEL', category: 'game', status: 'active', description: 'Tactical defense game', branch: 'main', updatedTs: '2026-07-09T00:00:00.000Z' } },
+      payload: { repo: { id: 'sentinel', name: 'SENTINEL', localPath: '/dev/sentinel', githubFullName: 'wrexist/sentinel', category: 'game', status: 'active', description: 'Tactical defense game', branch: 'main', updatedTs: '2026-07-09T00:00:00.000Z' } },
     });
 
     const client = new FakeClient(
@@ -69,7 +69,8 @@ describe('github sync (fake client)', () => {
     expect(repo.stars).toBe(5); // enriched
     expect(repo.prs).toBe(2); // enriched
     expect(repo.ci).toMatchObject({ state: 'success', pct: 100 }); // enriched
-    expect(bus.snapshot().state.deployments.some((d) => d.id === 'sentinel-42')).toBe(true);
+    expect(bus.snapshot().state.deployments).toHaveLength(0);
+    expect(bus.snapshot().state.activity.some((d) => d.id === 'sentinel-42')).toBe(true);
     expect(bus.snapshot().state.health.github?.state).toBe('operational');
     sqlite.close();
   });
@@ -79,7 +80,7 @@ describe('github sync (fake client)', () => {
     const bus = new Bus(db);
     const client = new FakeClient([REPO('Bloom', { language: 'Swift' })]);
     await new GitHubSync(bus, client).sync();
-    const repo = bus.snapshot().state.repos.bloom;
+    const repo = Object.values(bus.snapshot().state.repos).find((r) => r.githubFullName === 'wrexist/bloom')!;
     expect(repo).toBeDefined();
     expect(repo.category).toBe('app'); // inferred from Swift
     expect(repo.stars).toBe(5);
@@ -93,7 +94,20 @@ describe('github sync (fake client)', () => {
     const sync = new GitHubSync(bus, client);
     await sync.sync();
     await sync.sync();
-    expect(bus.snapshot().state.deployments.filter((d) => d.id === 'atlas-7').length).toBe(1);
+    expect(bus.snapshot().state.deployments).toHaveLength(0);
+    expect(bus.snapshot().state.activity.filter((d) => d.detail.includes('Release v2')).length).toBe(1);
     sqlite.close();
   });
+});
+
+it('keeps same-name owners distinct and publishes actual CI failures once', async () => {
+  const { db, sqlite } = openDb(':memory:'); const bus = new Bus(db);
+  let failures = 0;
+  bus.subscribe((frame) => { if (frame.kind === 'evt' && frame.evt.type === 'build.updated' && frame.evt.payload.build.state === 'failed') failures++; });
+  const client = new FakeClient([REPO('app'), REPO('app', { owner: 'someone-else' })], { app: { id: 123, headSha: 'a'.repeat(40), branch: 'main', workflowName: 'CI', status: 'completed', conclusion: 'failure' } });
+  const sync = new GitHubSync(bus, client); await sync.sync(); await sync.sync();
+  expect(Object.keys(bus.snapshot().state.repos)).toHaveLength(2);
+  expect(failures).toBe(2); // one per owner, not per repeated poll
+  expect(Object.values(bus.snapshot().state.builds).every((b) => b.headSha === 'a'.repeat(40))).toBe(true);
+  sqlite.close();
 });

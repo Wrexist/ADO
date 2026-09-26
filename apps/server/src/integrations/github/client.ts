@@ -115,18 +115,23 @@ export class OctokitClient implements GitHubClient {
     };
   }
 
-  async latestRun(owner: string, name: string): Promise<GhRun | null> {
-    const data = await this.cond(`run:${owner}/${name}`, (etag) =>
+  async latestRun(owner: string, name: string, branch?: string): Promise<GhRun | null> {
+    const data = await this.cond(`run:${owner}/${name}:${branch ?? ''}`, (etag) =>
       this.octokit.actions.listWorkflowRunsForRepo({
         owner,
         repo: name,
         per_page: 1,
+        branch,
         headers: etag ? { 'if-none-match': etag } : {},
       }),
     );
     const run = data.workflow_runs?.[0];
     if (!run) return null;
     return {
+      id: run.id,
+      headSha: run.head_sha,
+      branch: run.head_branch ?? undefined,
+      startedAt: run.run_started_at ?? run.created_at,
       workflowName: run.name ?? 'CI',
       status: run.status ?? 'completed',
       conclusion: run.conclusion ?? null,

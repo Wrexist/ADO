@@ -146,8 +146,8 @@ export class AutoReviewEngine {
       this.publish(done, 'done');
 
       // Auto-reviewed a commit → advance the baseline so the poll doesn't re-review it.
-      if (collected.ref !== 'working-tree') {
-        this.deps.store.markReviewed(review.repoId, collected.ref, this.nowIso());
+      if (collected.ref !== 'working-tree' || collected.headSha) {
+        this.deps.store.markReviewed(review.repoId, collected.headSha ?? collected.ref, this.nowIso());
       }
       if (out.verdict !== 'clean' && this.deps.notify) {
         const major = out.findings.filter((f) => f.severity === 'major').length;

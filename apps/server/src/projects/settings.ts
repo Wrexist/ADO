@@ -14,19 +14,16 @@ export class ProjectSettingsStore {
   private data: Stored = {};
 
   constructor(private filePath: string) {
-    // ENOENT = fresh install; corruption throws (never silently reset); malformed rows drop.
+    // Invalid policy must not silently restore permissive catalog defaults.
     this.data = readJsonStoreRows(this.filePath, (row) => {
-      if (row === null || typeof row !== 'object' || Array.isArray(row)) return null;
+      if (row === null || typeof row !== 'object' || Array.isArray(row)) throw new Error('Invalid project policy');
       const deltas: Partial<Record<ProjectFeatureId, boolean>> = {};
       for (const [k, v] of Object.entries(row)) {
-        if (k in FEATURE_BY_ID && typeof v === 'boolean') deltas[k as ProjectFeatureId] = v;
+        if (!Object.hasOwn(FEATURE_BY_ID, k) || typeof v !== 'boolean') throw new Error('Invalid project policy');
+        deltas[k as ProjectFeatureId] = v;
       }
       return deltas;
     });
-  }
-
-  private persist(): void {
-    writeJsonStore(this.filePath, this.data);
   }
 
   /** The switch for one feature — stored value, else the catalog default. */
@@ -40,9 +37,11 @@ export class ProjectSettingsStore {
     // so future default changes reach this repo (the documented migration behavior).
     if (enabled === FEATURE_BY_ID[feature].defaultOn) delete next[feature];
     else next[feature] = enabled;
-    if (Object.keys(next).length === 0) delete this.data[repoId];
-    else this.data[repoId] = next;
-    this.persist();
+    const data = { ...this.data };
+    if (Object.keys(next).length === 0) delete data[repoId];
+    else Object.defineProperty(data, repoId, { value: next, enumerable: true, configurable: true, writable: true });
+    writeJsonStore(this.filePath, data);
+    this.data = data;
   }
 
   /** Full map for a repo (every catalog feature present, defaults applied). */

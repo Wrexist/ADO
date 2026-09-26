@@ -1,0 +1,741 @@
+{
+  "source": "ADO_Komplett_Underlag.md, reviewed 2026-09-26",
+  "note": "Source specifications are reference data. not_run means the complete acceptance scenario has not been demonstrated; related unit tests are not substitutes.",
+  "requirements": [
+    {
+      "id": "REQ01",
+      "title": "Entydig projekt- och repoidentitet",
+      "tests": [
+        "T01",
+        "T02"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ02",
+      "title": "Nästa steg och ärlig status",
+      "tests": [
+        "T03",
+        "T41"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ03",
+      "title": "Snabb idéinsamling",
+      "tests": [
+        "T04"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ04",
+      "title": "Verifierat resultat",
+      "tests": [
+        "T05",
+        "T06",
+        "T37"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ05",
+      "title": "Roadmap med beroenden",
+      "tests": [
+        "T07"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ06",
+      "title": "Planering med verklig kapacitet",
+      "tests": [
+        "T08"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ07",
+      "title": "Universe utan grafkrav",
+      "tests": [
+        "T09"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ08",
+      "title": "Versionsbundet projektminne",
+      "tests": [
+        "T10",
+        "T11"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ09",
+      "title": "En ägare av körningen",
+      "tests": [
+        "T12",
+        "T19",
+        "T44"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ10",
+      "title": "Isolering och skydd av original",
+      "tests": [
+        "T12",
+        "T13",
+        "T14"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ11",
+      "title": "Beständig körkö",
+      "tests": [
+        "T15",
+        "T16",
+        "T21",
+        "T43"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ12",
+      "title": "Idempotens och osäkra utfall",
+      "tests": [
+        "T16",
+        "T17",
+        "T18"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ13",
+      "title": "Pålitligt stopp",
+      "tests": [
+        "T20",
+        "T21",
+        "T31"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ14",
+      "title": "Begränsad och skyddad diagnostik",
+      "tests": [
+        "T22",
+        "T23"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ15",
+      "title": "Tekniskt verkställd åtkomst",
+      "tests": [
+        "T10",
+        "T14",
+        "T19",
+        "T23",
+        "T24",
+        "T25",
+        "T27",
+        "T29"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ16",
+      "title": "Specifika godkännanden",
+      "tests": [
+        "T06",
+        "T26"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ17",
+      "title": "Säker mobilåtkomst",
+      "tests": [
+        "T04",
+        "T27",
+        "T28",
+        "T29",
+        "T42"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ18",
+      "title": "Verkliga providerförmågor",
+      "tests": [
+        "T30",
+        "T31",
+        "T40"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ19",
+      "title": "Ärlig kostnads- och kvotkontroll",
+      "tests": [
+        "T32",
+        "T33"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ20",
+      "title": "Tydligt dataägarskap",
+      "tests": [
+        "T02",
+        "T18",
+        "T34"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ21",
+      "title": "Återställbar data",
+      "tests": [
+        "T24",
+        "T35",
+        "T36",
+        "T37"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ22",
+      "title": "Inga vilseledande mätvärden",
+      "tests": [
+        "T03",
+        "T05",
+        "T25",
+        "T33",
+        "T38",
+        "T43",
+        "T46"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ23",
+      "title": "Verifierad Windows-leverans",
+      "tests": [
+        "T39",
+        "T40",
+        "T44"
+      ],
+      "status": "pending_acceptance"
+    },
+    {
+      "id": "REQ24",
+      "title": "Mätbar användarnytta och användbarhet",
+      "tests": [
+        "T09",
+        "T41",
+        "T42",
+        "T45",
+        "T46"
+      ],
+      "status": "pending_acceptance"
+    }
+  ],
+  "tests": [
+    {
+      "id": "T01",
+      "title": "Två nästan identiska reponamn",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ01. **Status:** not_run.\n\n**Givet:** Två olika GitHub-repo-ID har liknande namn.\n\n**När:** Båda importeras.\n\n**Godkänt endast om:** Två separata identiteter behålls. Ingen task eller kontext flyttas mellan dem.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/scanner/scanner.test.ts",
+        "apps/server/src/integrations/github/github.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T02",
+      "title": "Ändrad standardbranch",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ01, REQ20. **Status:** not_run.\n\n**Givet:** Ett repos default branch heter Main eller en annan branch än main.\n\n**När:** Bas för ett nytt arbete väljs.\n\n**Godkänt endast om:** API:ts verifierade default branch används med exakt skiftläge och commit, aldrig en hårdkodad main.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T03",
+      "title": "Gammal CI-information",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ02, REQ22. **Status:** not_run.\n\n**Givet:** Senast kända gröna CI gäller en äldre commit.\n\n**När:** Projektkortet visar en nyare commit.\n\n**Godkänt endast om:** Den äldre körningen visas med SHA och ålder, inte som godkänd kontroll av nya koden.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T04",
+      "title": "Offline-idé",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ03, REQ17. **Status:** not_run.\n\n**Givet:** Mobilen saknar kontakt med värden.\n\n**När:** En idé skrivs och sparas lokalt.\n\n**Godkänt endast om:** UI visar osynkat utkast. Återanslutning skapar högst en serverpost med bekräftelse.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T05",
+      "title": "Exit 0 utan verifiering",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ04, REQ22. **Status:** not_run.\n\n**Givet:** Agenten avslutar med exit 0 men inga acceptanstester har körts.\n\n**När:** Körningen avslutas.\n\n**Godkänt endast om:** execution_status=succeeded men task_status=awaiting_review. Aldrig verifierat klar.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/lifecycle.test.ts",
+        "apps/server/src/runner/verification.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T06",
+      "title": "Fel commit i testbevis",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ04, REQ16. **Status:** not_run.\n\n**Givet:** Tester har passerat på commit A och koden ändras till B.\n\n**När:** Godkännande eller färdigmarkering begärs.\n\n**Godkänt endast om:** Beviset betraktas som utdaterat. Nya kontroller eller explicit dokumenterat undantag krävs.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/verification.test.ts",
+        "apps/server/src/runner/workspace.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T07",
+      "title": "Beroendecykel",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ05. **Status:** not_run.\n\n**Givet:** Task A beror på B.\n\n**När:** B uppdateras till att bero på A.\n\n**Godkänt endast om:** Transaktionen nekas och visar cykeln. Ingen halv uppdatering lämnas kvar.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T08",
+      "title": "Begränsat tidsfönster",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ06. **Status:** not_run.\n\n**Givet:** Användaren anger 30 minuter och en låst uppgift.\n\n**När:** Planeraren föreslår nästa arbete.\n\n**Godkänt endast om:** Förslaget respekterar fönstret och låset, visar osäker uppskattning och ändrar ingen kalender.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T09",
+      "title": "Karta utan mus",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ07, REQ24. **Status:** not_run.\n\n**Givet:** Samma portfölj finns i lista och Universe.\n\n**När:** Användaren navigerar med tangentbord och på mobil.\n\n**Godkänt endast om:** Alla projekt, samband och kritiska åtgärder är åtkomliga via listan utan panorering eller dragkrav.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T10",
+      "title": "Manipulerad projektkontext",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ08, REQ15. **Status:** not_run.\n\n**Givet:** Ett repo innehåller extern text som begär hemligheter eller andra projekts data.\n\n**När:** Kontextpaket byggs och en agent får texten.\n\n**Godkänt endast om:** Texten kan inte ändra policy, godkännanden eller tilldelade resurser. Canaryhemlighet exponeras inte.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T11",
+      "title": "Föråldrat minne",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ08. **Status:** not_run.\n\n**Givet:** Arkitekturanteckningens commit eller instruktionernas hash matchar inte aktuell bas.\n\n**När:** Task förbereds.\n\n**Godkänt endast om:** Kontexten markeras för ny kontroll och tidigare påstående behandlas inte som nyverifierad fakta.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T12",
+      "title": "Samtidiga skrivare",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ09, REQ10. **Status:** not_run.\n\n**Givet:** Två uppdrag mot samma repo och ett mot ett annat accepteras.\n\n**När:** Schedulern försöker starta dem.\n\n**Godkänt endast om:** Högst en skrivare i det första repot, högst två globalt. Det extra uppdraget väntar med tydlig anledning.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/lifecycle.test.ts",
+        "apps/server/src/runner/recovery.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T13",
+      "title": "Originalcheckout med osparade ändringar",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ10. **Status:** not_run.\n\n**Givet:** Originalcheckout har lokala ändringar, untracked-filer och ett godtyckligt aktuell-branch-val.\n\n**När:** Ett agentarbete förbereds och avbryts.\n\n**Godkänt endast om:** Originalets filer, index, branch, refs, hooks och config är oförändrade. Ingen automatisk stash, reset eller clean körs.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/workspace.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T14",
+      "title": "Utanför tilldelad filyta",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ10, REQ15. **Status:** not_run.\n\n**Givet:** En sandboxad körning försöker läsa canary i annat repo, hemlighetsmapp och via symlink/junction, samt skriva i originalrepots gemensamma Git-metadata.\n\n**När:** Åtkomstförsöken sker från agentens exekveringsverktyg.\n\n**Godkänt endast om:** Alla otillåtna åtkomster nekas av exekveringsgränsen, inte bara av en prompt. Annars förblir autonomt läge stängt.\n\n**Gäller:** before_enabling_sandboxed_write."
+    },
+    {
+      "id": "T15",
+      "title": "Krasch efter accepterad köpost",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ11. **Status:** not_run.\n\n**Givet:** Servern har kvitterat ett nytt jobb.\n\n**När:** Processen kraschar före spawn och startas om.\n\n**Godkänt endast om:** Jobbet finns kvar och kan återtas exakt en gång av en ny lease. Inga accepterade jobb försvinner.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/recovery.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T16",
+      "title": "Krasch efter spawn",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ11, REQ12. **Status:** not_run.\n\n**Givet:** En childprocess har startat men avslut har inte skrivits.\n\n**När:** Servern kraschar och startar om.\n\n**Godkänt endast om:** Processidentitet och lease avstäms. Ingen parallell ersättare startas utan fastställt säkert läge.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/recovery.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T17",
+      "title": "Dubbel dispatch",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ12. **Status:** not_run.\n\n**Givet:** Samma idempotensnyckel skickas två gånger med identiskt innehåll.\n\n**När:** Båda förfrågningarna behandlas.\n\n**Godkänt endast om:** Samma run-ID returneras. Nyckel med annat innehåll ger konflikt, inte ett nytt jobb.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/recovery.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T18",
+      "title": "Oklart externt utfall",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ12, REQ20. **Status:** not_run.\n\n**Givet:** En operation mot GitHub får timeout efter att motparten kan ha utfört den.\n\n**När:** Återförsök övervägs.\n\n**Godkänt endast om:** Det externa objektet söks via stabil identitet före nytt försök. Oklart resultat visas som unknown_outcome.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T19",
+      "title": "Avstängning medan jobbet väntar",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ09, REQ15. **Status:** not_run.\n\n**Givet:** Ett jobb ligger i kön.\n\n**När:** Projektets dispatch stängs av före en ledig slot.\n\n**Godkänt endast om:** Policyn kontrolleras igen före spawn och inget nytt arbete startar.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/lifecycle.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T20",
+      "title": "Process med barn och barnbarn",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ13. **Status:** not_run.\n\n**Givet:** Testprocessen startar två nivåer barn och ignorerar mjukt stopp.\n\n**När:** Cancel begärs och grace-perioden löper ut.\n\n**Godkänt endast om:** Hela tilldelade trädet stoppas eller läget markeras cancellation_unconfirmed och repolåset behålls.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/lib/processControl.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T21",
+      "title": "Förväxlad processidentitet",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ13, REQ11. **Status:** not_run.\n\n**Givet:** Ett gammalt PID har återanvänts av en annan process.\n\n**När:** Återställningsrutinen försöker stoppa den gamla körningen.\n\n**Godkänt endast om:** Den orelaterade processen lämnas orörd. PID räcker aldrig som ensam identitet.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T22",
+      "title": "Översvämmad stderr",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ14. **Status:** not_run.\n\n**Givet:** En process skriver mer stderr än pipebuffertens storlek och fortsätter länge.\n\n**När:** Runnern konsumerar loggarna.\n\n**Godkänt endast om:** Ingen pipe-deadlock. Begränsad redigerad ring/spool, förlustflagga när gräns nås och begriplig felorsak.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T23",
+      "title": "Hemlighet i felutdata",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ14, REQ15. **Status:** not_run.\n\n**Givet:** Canarytoken finns i stdout, stderr, URL och providerfel.\n\n**När:** Loggar, UI, export och felrapport skapas.\n\n**Godkänt endast om:** Canary saknas i alla exporterade ytor. Rådata lagras inte som oavsiktlig fallback.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/lib/redact.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T24",
+      "title": "Korrupt anslutningslager",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ15, REQ21. **Status:** not_run.\n\n**Givet:** Anslutningsfilen innehåller trasig JSON eller läsning nekas.\n\n**När:** Appen öppnas och en inställning försöker sparas.\n\n**Godkänt endast om:** Ingen tom store skrivs över originalet. Fel skiljs från ENOENT och återställningsväg visas.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/connections/connections.test.ts",
+        "apps/server/src/lib/persistence.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T25",
+      "title": "Token finns men fungerar inte",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ15, REQ22. **Status:** not_run.\n\n**Givet:** En anslutning har sparad men utgången credential.\n\n**När:** Status visas och verifieras.\n\n**Godkänt endast om:** Configured och authenticated skiljs. Credentialexistens räcker inte för Connected/Healthy.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T26",
+      "title": "Godkännande för gammal diff",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ16. **Status:** not_run.\n\n**Givet:** Användaren godkänner diffhash A.\n\n**När:** Agenten ändrar diffen eller en annan action begärs.\n\n**Godkänt endast om:** Godkännandet kan inte återanvändas. Servern avvisar operationen och ber om aktuellt specifikt beslut.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/verification.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T27",
+      "title": "Fientlig webb-origin",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ17, REQ15. **Status:** not_run.\n\n**Givet:** En annan webbplats anropar API/SSE, försöker fel Host och fabricerar proxyheaders.\n\n**När:** Läsning eller mutation begärs.\n\n**Godkänt endast om:** Känslig data och mutation nekas. Host, origin, session och betrodd proxygräns prövas separat.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/app.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T28",
+      "title": "Sovande eller stängd dator",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ17. **Status:** not_run.\n\n**Givet:** Värddatorn går i vila under användning från telefonen.\n\n**När:** Anslutningen försvinner.\n\n**Godkänt endast om:** Senast känt läge märks stale/offline. Telefonen påstår inte att ett ej kvitterat uppdrag körs.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T29",
+      "title": "Återkallad telefon",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ17, REQ15. **Status:** not_run.\n\n**Givet:** En tidigare parad enhet har en giltig session.\n\n**När:** Ägaren återkallar enheten.\n\n**Godkänt endast om:** Efter nästa auktorisationskontroll får den inte läsa, starta eller godkänna arbete. Cachehantering följer sekretesspolicyn.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T30",
+      "title": "Providerformat ändras",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ18. **Status:** not_run.\n\n**Givet:** En adapter får okänd protokollversion eller okänt obligatoriskt event.\n\n**När:** Körningen eller uppkoppling startar.\n\n**Godkänt endast om:** Inget schema gissas. Version eller capability avvisas, råfel redigeras och gränssnittet visar begränsningen.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/codex.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T31",
+      "title": "Provider saknar resume",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ18, REQ13. **Status:** not_run.\n\n**Givet:** Providerkonfigurationen saknar bevisat resumestöd.\n\n**När:** Run detalj öppnas efter avbrott.\n\n**Godkänt endast om:** Resume-knapp visas inte som fungerande. Retry skapar nytt försök med lineage och explicita risker.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/providers.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T32",
+      "title": "API-budget ej vald",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ19. **Status:** not_run.\n\n**Givet:** API-betalt autentiseringsläge har ingen användarvald budget.\n\n**När:** En betalande körning startas.\n\n**Godkänt endast om:** Start nekas med budgetval, ingen dold fallback från abonnemang till API-betalning.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/codex.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T33",
+      "title": "Användningsdata saknas",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ19, REQ22. **Status:** not_run.\n\n**Givet:** Provider levererar ingen usage eller prisunderlaget är gammalt.\n\n**När:** Kostnadsraden beräknas.\n\n**Godkänt endast om:** Okänd usage/kostnad visas som okänd. Uppskattning märks med datum/metod, aldrig fakturerat belopp.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T34",
+      "title": "GitHub otillgängligt",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R2. **Krav:** REQ20. **Status:** not_run.\n\n**Givet:** Det finns lokal roadmap och senast känd repo-/CI-data.\n\n**När:** API-anrop misslyckas eller rate-limit uppstår.\n\n**Godkänt endast om:** Lokal plan är kvar. Extern data får egen staletid, backoff följs och inga aggressiva parallella retries startar.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/integrations/github/github.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T35",
+      "title": "Skrivavbrott vid lagring",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ21. **Status:** not_run.\n\n**Givet:** Inställningslagring avbryts eller disk blir full.\n\n**När:** Nästa start läser lagringen.\n\n**Godkänt endast om:** Senast konsistent tillstånd återfås. Databasmigration/JSON-ersättning får inte ge ett tyst tomt projekt.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/lib/persistence.test.ts",
+        "apps/server/src/connections/connections.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T36",
+      "title": "Full restore drill",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R4. **Krav:** REQ21. **Status:** not_run.\n\n**Givet:** Backup innehåller databas, planer, runreferenser och manifest, men inga okrypterade providerhemligheter.\n\n**När:** Återställning görs i en separat tom datakatalog.\n\n**Godkänt endast om:** Integritet och referenser kontrolleras och appen öppnas med rätt data utan att starta gamla mutationer.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/backup/backup.test.ts"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T37",
+      "title": "Migration av gammalt done",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ21, REQ04. **Status:** not_run.\n\n**Givet:** Legacy runs har status done utan verifieringsbevis.\n\n**När:** Nytt schema införs i testkopian.\n\n**Godkänt endast om:** Historisk exekveringsframgång bevaras men task_verification blir unknown, inte automatiskt passed.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T38",
+      "title": "Turntak kontra framsteg",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ22. **Status:** not_run.\n\n**Givet:** Agenten har förbrukat 8 av 20 tillåtna turns.\n\n**När:** Körningskortet renderas.\n\n**Godkänt endast om:** Det står budget/turnförbrukning eller okänd framstegsgrad, aldrig att uppgiften är 40 procent klar.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T39",
+      "title": "Windows första installation och uppdatering",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R4. **Krav:** REQ23. **Status:** not_run.\n\n**Givet:** Ren stödd Windows-miljö och därefter befintlig användardata.\n\n**När:** Installerare, appstart och en versionsuppdatering provas.\n\n**Godkänt endast om:** Native-moduler laddas, token/bootstrap fungerar, data bevaras, signeringsstatus framgår och rollbackväg är dokumenterad.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T40",
+      "title": "Plattforms- och authinventering",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R0. **Krav:** REQ23, REQ18. **Status:** not_run.\n\n**Givet:** Den avsedda användardatorn och pilotrepo väljs explicit.\n\n**När:** Versioner, CLI-auth och en kontrollerad testkörning provas.\n\n**Godkänt endast om:** Stödd kombination dokumenteras utan att kopiera credentials. Saknad förmåga blir blockerare, inte antaget stöd.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "STATUS.md"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T41",
+      "title": "Praktisk nyttopilot",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R4. **Krav:** REQ24, REQ02. **Status:** not_run.\n\n**Givet:** Minst tio verkliga uppgifter från tre tydligt valda projekt genomförs över minst fem arbetstillfällen.\n\n**När:** Resultat jämförs med användarens befintliga sätt att arbeta.\n\n**Godkänt endast om:** Nettofriktion, omarbete, startsträcka och handpåläggning dokumenteras. Enbart appöppningar räknas inte som framgång.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T42",
+      "title": "Responsivitet och tillgänglighet",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R3. **Krav:** REQ24, REQ17. **Status:** not_run.\n\n**Givet:** Testdata innehåller tomt, laddning, fel, offline och lång text.\n\n**När:** Kärnflöden provas vid 390, 768 och 1536 px, tangentbord och 200 procent zoom.\n\n**Godkänt endast om:** Ingen obligatorisk horisontell scroll i kärnflöden, inga blockerande consolefel och inga färgberoende statusbetydelser.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "scripts/smoke.mjs"
+      ],
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+    },
+    {
+      "id": "T43",
+      "title": "SSE efter retention",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R1. **Krav:** REQ11, REQ22. **Status:** not_run.\n\n**Givet:** Klientens replaycursor är äldre än serverns bevarade eventintervall.\n\n**När:** Klienten återansluter.\n\n**Godkänt endast om:** Servern skickar ny auktoritativ snapshot och cursor. Inga tysta luckor maskeras som live.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T44",
+      "title": "Tungt verktyg och resursslås",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R4. **Krav:** REQ09, REQ23. **Status:** not_run.\n\n**Givet:** Ett verifierat Unity-pilotprojekt har redan Editor eller build igång.\n\n**När:** Ett andra inkompatibelt jobb schemaläggs.\n\n**Godkänt endast om:** Projekt-/verktygslås hindrar samtidig konflikt. Detta test är obligatoriskt innan Unity-runner marknadsförs som stödd.\n\n**Gäller:** before_enabling_unity_profile."
+    },
+    {
+      "id": "T45",
+      "title": "Vägval före vidare implementation",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R0. **Krav:** REQ24. **Status:** not_run.\n\n**Givet:** Befintlig ADO och ett enklare alternativ jämförs på samma tre uppgifter.\n\n**När:** Återuppta projekt, lämna avgränsat uppdrag och följa upp från mobilen provas där stöd finns.\n\n**Godkänt endast om:** Skillnader, manuella steg och luckor dokumenteras. Fortsätt endast de ADO-delar som ger verkligt mervärde. Frånvarande funktion räknas inte som provad.\n\n**Gäller:** always."
+    },
+    {
+      "id": "T46",
+      "title": "Begränsat skal- och responstest",
+      "acceptanceStatus": "not_run",
+      "specification": "**Grind:** R4. **Krav:** REQ24, REQ22. **Status:** not_run.\n\n**Givet:** 50 repo-metadataobjekt och 10 000 historiska events används på dokumenterad referensmaskin med warm lokal databas.\n\n**När:** Cached startsida öppnas och 30 definierade UI-handlingar genomförs utan externa API-latenser.\n\n**Godkänt endast om:** Föreslaget mål: första användbara lokala vy under 2 s och lokal återkoppling p95 under 200 ms. Ingen obunden logg-/minnestillväxt vid upprepning. Riktiga mätvärden och miljö bifogas.\n\n**Gäller:** always."
+    }
+  ],
+  "backlog": [
+    {
+      "id": "B01",
+      "title": "Fastställ baslinje och återhämtningskopia",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R0 · **Komplexitet:** small · **Beroenden:** inga.\n\nInventera den aktuella arbetskopian och versionerna. Spara bas-SHA och backup innan ändringar. Jämför med den granskade snapshoten.\n\n**Krav:** REQ21, REQ23. **Verifiering:** T40."
+    },
+    {
+      "id": "B02",
+      "title": "Återskapa befintlig verifiering och Windows-smoke",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R0 · **Komplexitet:** medium · **Beroenden:** B01.\n\nKör repoets befintliga verifiering och dokumentera vad som inte kan köras. Historisk CI ersätter inte lokala resultat.\n\n**Krav:** REQ23, REQ24. **Verifiering:** T40."
+    },
+    {
+      "id": "B03",
+      "title": "Besluta återbruk mot enklare arbetsflöde",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R0 · **Komplexitet:** small · **Beroenden:** B01, B02.\n\nJämför tre representativa arbetsflöden i ADO och befintlig agentarbetsyta. R4 tar den fulla nyttopiloten. Förankra begränsad målbild och stäng gamla dokumentkonflikter utan att fejka gamla pass.\n\n**Krav:** REQ24. **Verifiering:** T45."
+    },
+    {
+      "id": "B04",
+      "title": "Inför exekverings- och verifieringsstatus",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R1 · **Komplexitet:** medium · **Beroenden:** B03.\n\nInför separata statusbegrepp, migrationsmappning för gamla körningar och ärliga etiketter. AgentRun, Build och Task får inte blandas.\n\n**Krav:** REQ04, REQ22. **Verifiering:** T05, T06, T37, T38."
+    },
+    {
+      "id": "B05",
+      "title": "Säkra anslutningslagring och teknisk policy",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R1 · **Komplexitet:** medium · **Beroenden:** B03.\n\nStoppa catch-all datareset, gör lagring återställbar och ersätt plaintext där plattformsvault stöds. Testa konfigurerad kontra autentiserad och fail-closed vid policyfel.\n\n**Krav:** REQ15, REQ21, REQ22. **Verifiering:** T23, T24, T25, T35."
+    },
+    {
+      "id": "B06",
+      "title": "Bygg beständig kö med idempotens och leases",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R1 · **Komplexitet:** large · **Beroenden:** B04.\n\nDatabastransaktion för accepterat jobb, attempt, claim och outbox. Hantera kraschfönster och gammal cursor utan automatisk upprepning av externa sidoeffekter.\n\n**Krav:** REQ11, REQ12. **Verifiering:** T15, T16, T17, T18, T43."
+    },
+    {
+      "id": "B07",
+      "title": "Inför repoägarskap och isolerade arbetskopior",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R1 · **Komplexitet:** large · **Beroenden:** B05, B06.\n\nEn skrivare per repo. Policy omprövas vid claim/spawn. Original skyddas. Autonomt läge kräver verifierad sandboxgräns, annars förblir det avstängt.\n\n**Krav:** REQ09, REQ10, REQ15. **Verifiering:** T12, T13, T14, T19."
+    },
+    {
+      "id": "B08",
+      "title": "Gör diagnostik och processtopp pålitliga",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R1 · **Komplexitet:** large · **Beroenden:** B06, B07.\n\nBegränsa och redigera båda utströmmarna. Stoppa tilldelat processträd med verifiering och bevara lås när stopp inte bekräftats.\n\n**Krav:** REQ13, REQ14. **Verifiering:** T20, T21, T22, T23."
+    },
+    {
+      "id": "B09",
+      "title": "Bind godkännanden till exakt operation",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R1 · **Komplexitet:** medium · **Beroenden:** B04, B07, B08.\n\nSpara beslut med repo, SHA/diffhash, operation och policyversion. Invalidera vid ändring. Merge och deploy förblir manuella utanför pilotautonomi.\n\n**Krav:** REQ16, REQ04. **Verifiering:** T06, T26."
+    },
+    {
+      "id": "B10",
+      "title": "Skapa projekregister med källor och identiteter",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B09.\n\nBehåll scanners metadata. Lägg separata produkt-/repo-/checkout-identiteter och visa källans färskhet. Importera metadata, inte allt kodinnehåll.\n\n**Krav:** REQ01, REQ02, REQ20. **Verifiering:** T01, T02, T03, T34."
+    },
+    {
+      "id": "B11",
+      "title": "Inför uppgifter, inbox och roadmap",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10.\n\nLokala planer ägs av ADO. Länka GitHub Issues utan dubbelriktad statussynk. Milstolpar har utgångskriterier och taskberoenden valideras.\n\n**Krav:** REQ03, REQ05. **Verifiering:** T07."
+    },
+    {
+      "id": "B12",
+      "title": "Bygg versionsbundet kontextpaket",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11.\n\nAnvänd godkända instruktioner, källfiler/commit, blockerare och tidigare verifierade resultat. Begränsa indexeringen och läck inte andra projekt.\n\n**Krav:** REQ08, REQ15. **Verifiering:** T10, T11."
+    },
+    {
+      "id": "B13",
+      "title": "Fokusera Today och Project-vyerna",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11, B12.\n\nPrioritera behov av användarbeslut och nästa handling. Återanvänd befintliga komponenter. Ingen full designomskrivning innan flödestest.\n\n**Krav:** REQ02, REQ24. **Verifiering:** T03, T34."
+    },
+    {
+      "id": "B14",
+      "title": "Lägg till förklarbar planering och liten Universe",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B13.\n\nDeterministisk kvalificering och mänsklig prioritering först. AI skriver förslag, inte auktoritativa scheman. Grafen är en valfri läsvy.\n\n**Krav:** REQ06, REQ07, REQ24. **Verifiering:** T08, T09."
+    },
+    {
+      "id": "B15",
+      "title": "Inför privat mobilanslutning och sessionssäkerhet",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R3 · **Komplexitet:** large · **Beroenden:** B05, B09, B14.\n\nResponsiva kärnflöden, privat HTTPS, enhetsparning, återkallning och offlineutkast. Ingen rå loopbackserver eller långlivad URL-token publiceras.\n\n**Krav:** REQ17, REQ15, REQ03. **Verifiering:** T04, T27, T28, T29, T42."
+    },
+    {
+      "id": "B16",
+      "title": "Inför providerkontrakt och verifiera Codex-spår",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R3 · **Komplexitet:** large · **Beroenden:** B08, B09.\n\nBehåll härdad befintlig adapter. Prova dokumenterat app-server-gränssnitt med versionspinning. Aktivera endast bevisade förmågor, ingen automatisk betald fallback.\n\n**Krav:** REQ18, REQ19. **Verifiering:** T30, T31, T32, T33."
+    },
+    {
+      "id": "B17",
+      "title": "Slutför användnings-, kvot- och kostnadsvisning",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R3 · **Komplexitet:** small · **Beroenden:** B16.\n\nNoll, okänt, uppskattat och rapporterat skiljs. Budget före betalt läge. Ingen fast procentsats eller falsk faktureringsprecision.\n\n**Krav:** REQ19, REQ22. **Verifiering:** T32, T33."
+    },
+    {
+      "id": "B18",
+      "title": "Verifiera backup, migrering och återställning",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R4 · **Komplexitet:** medium · **Beroenden:** B06, B11, B12, B17.\n\nÅterställ på tom datakatalog, validera referenser och starta i säkert läge. Dokumentera förlustfönster för ej pushad kod separat från metadata.\n\n**Krav:** REQ21. **Verifiering:** T35, T36, T37."
+    },
+    {
+      "id": "B19",
+      "title": "Verifiera Windows-paket och verktygsresurser",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R4 · **Komplexitet:** large · **Beroenden:** B15, B16, B18.\n\nTesta avsedd Windowsinstallation, uppdatering, native-moduler och processadapter. Unity provas endast om det ska vara ett aktiverat supportpåstående.\n\n**Krav:** REQ23, REQ09. **Verifiering:** T39, T44."
+    },
+    {
+      "id": "B20",
+      "title": "Genomför nyttopilot och slutbeslut",
+      "status": "pending_acceptance",
+      "specification": "**Grind:** R4 · **Komplexitet:** medium · **Beroenden:** B13, B14, B15, B17, B18, B19.\n\nSamla riktiga resultat och handpåläggning över minst fem arbetstillfällen. Samtliga must-krav och aktiverade capabilities behöver bevis. Stoppa expansion om systemet inte minskar arbetet.\n\n**Krav:** REQ24, REQ02, REQ04. **Verifiering:** T41, T42, T46."
+    }
+  ]
+}

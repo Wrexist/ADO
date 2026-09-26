@@ -15,6 +15,10 @@ export interface GhRepo {
 }
 
 export interface GhRun {
+  id?: number;
+  headSha?: string;
+  branch?: string;
+  startedAt?: string;
   workflowName: string;
   status: string; // queued | in_progress | completed
   conclusion: string | null; // success | failure | cancelled | timed_out | null
@@ -42,6 +46,6 @@ export interface GitHubClient {
   openPrCount(owner: string, name: string): Promise<number>;
   /** The open PR whose head is `owner:branch`, or null when there is none. */
   openPrForBranch(owner: string, name: string, branch: string): Promise<GhPr | null>;
-  latestRun(owner: string, name: string): Promise<GhRun | null>;
+  latestRun(owner: string, name: string, branch?: string): Promise<GhRun | null>;
   listReleases(owner: string, name: string): Promise<GhRelease[]>;
 }

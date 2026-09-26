@@ -102,3 +102,9 @@ One line per learning. The nightly analyzer (parked, p5) consumes this file; kee
 - 2026-07-17: JSON-store trio (read/parse/persist) now has one shared helper: ENOENT is the only "fresh install" signal, corruption throws at boot (never silently resets user data), persist is tmp+rename atomic, and per-row validation drops bad rows in memory only. Apply it to any new store; the naive try/catch-empty pattern silently wipes data on the write after a bad read.
 - 2026-07-18: Porting someone else's prompt pack = translate the STEPS faithfully but re-ground the values in house conventions — Hormozi's "proof-loop injection" ships here as "real proof only, [NEEDS REAL PROOF] placeholders otherwise" and every marketing prompt self-declares as a single-shot draft; a prompt library entry that invites fabricated case studies would violate conv. 1 by proxy.
 - 2026-07-18: An exhaustive Record<Enum, X> beside a growing enum is a cheap completeness gate — adding the 'marketing' category failed typecheck at the icon map instead of silently rendering an iconless tab. Prefer Record over switch-with-default for per-variant UI maps.
+
+- 2026-09-27: Browser build-time environment variables are public; authenticate at runtime and test built assets for credential markers.
+- 2026-09-27: Stream EOF is not process exit; process and stream completion must both settle before releasing execution ownership.
+- 2026-09-27: Codex server request IDs can equal client request IDs; classify RPC requests by method before handling numeric responses.
+- 2026-09-27: Git worktrees preserve checkout state but do not prevent same-user filesystem access; report the execution boundary explicitly.
+- 2026-09-27: Source directories named like projects can be empty Git mirrors; choose pilot roots from actual source and package evidence.

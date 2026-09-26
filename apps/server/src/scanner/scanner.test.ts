@@ -95,3 +95,17 @@ describe('scanner (Prompt 2.2)', () => {
     sqlite.close();
   });
 });
+
+it('keeps colliding names distinct and stable across scanner restart', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'ado-identities-'));
+  const { db, sqlite } = openDb(':memory:'); const bus = new Bus(db);
+  try {
+    mkRepo(root, 'same name', { 'README.md': '# First' });
+    mkRepo(root, 'same-name', { 'README.md': '# Second' });
+    const first = new Scanner(bus, [root]); await first.start(); first.stop();
+    const identities = Object.values(bus.snapshot().state.repos).map((r) => [r.id, r.localPath]);
+    expect(identities).toHaveLength(2); expect(new Set(identities.map(([id]) => id)).size).toBe(2);
+    const second = new Scanner(bus, [root]); await second.start(); second.stop();
+    expect(Object.values(bus.snapshot().state.repos).map((r) => [r.id, r.localPath])).toEqual(identities);
+  } finally { sqlite.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10 }); }
+}, 120000);

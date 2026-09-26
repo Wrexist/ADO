@@ -149,6 +149,9 @@ export function projectStatus(repo: Repo): { kind: ProjectStatusKind; label: str
       return { kind: 'failed', label: 'Failed' };
     case 'success':
       return { kind: 'passing', label: 'Passing' };
+    case 'cancelled':
+    case 'unknown':
+      return null;
   }
 }
 

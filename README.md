@@ -55,11 +55,9 @@ Data flow: integrations + scanner + runner emit **typed events** → SQLite (his
 
 ## Status
 
-**Phase 6 — Hardening (in progress).** The dashboard is functional end-to-end on branch `claude/project-planning-goals-l1r23w`: live repo scanning, GitHub enrichment, system monitoring, a natural-language command center, headless agent dispatch, a Settings/Connections page for 36 services, and a model-optimized **Prompt Library**. Gates `p0`/`p1`/`p2`/`p3`(simulated)/`p4` are passed; `p2.5` (one week of real daily use) and the real-`claude -p` confirmation of `p3` are Isac's to close on a machine with credentials.
+**ControlOS recovery is in progress.** Read [STATUS.md](./STATUS.md) for current evidence and [docs/controlos](./docs/controlos/README.md) for the execution boundary and acceptance register. Older phase checkmarks below and in planning documents describe historical work; they do not certify the current release.
 
-Recently landed: the Prompt Library (`/prompts`) with per-model tuning + trained game/mobile/Steam/app agents, a catch-up job scheduler, and WAL-safe nightly DB backups.
-
-Current state is always in [`TASK.md`](./TASK.md); phase gates are in [`.claude/ops.yml`](./.claude/ops.yml).
+The recovery keeps the dashboard, SQLite/event contracts, scanner and existing integrations. It strengthens execution, credentials, backup, identity and test coverage before completing planning, context, private mobile access and real usage acceptance.
 
 ---
 
@@ -86,18 +84,19 @@ npm install
 npm run dev
 ```
 
-`npm run dev` auto-generates `.env` on first run with a fresh local `ACC_TOKEN` (and a
-matching `VITE_ACC_TOKEN`), so the server boots and the dashboard is live with zero setup.
+`npm run dev` auto-generates `.env` on first run with a fresh local `ACC_TOKEN`.
+Paste that key into the browser's connection screen. It stays in memory until reload;
+it is never included in the web build. The desktop app connects through its private runtime channel.
 Then open **Setup** in the app, or add your repos to `.env`:
 
 ```bash
 #   PROJECT_DIRS      — comma-separated dirs containing your repos to scan (then restart)
 #   GITHUB_TOKEN      — PAT with repo + actions:read   (optional; GitHub sync stays off until set)
 #   ANTHROPIC_API_KEY — LLM command parser + analyzer  (optional; heuristic parser used until set)
-# The auto-generated ACC_TOKEN / VITE_ACC_TOKEN already match — leave them as-is. Regenerate
+# Keep ACC_TOKEN local. Repair missing configuration
 # any time with:  node scripts/bootstrap-env.mjs  (never overwrites an existing token)
 
-npm run verify   # optional: typecheck · lint · test · build
+npm run verify   # required before shipping: typecheck · lint · test · build
 ```
 
 **Just want to see it?** `npm run start -w @ado/server -- --demo` seeds a deterministic
@@ -130,7 +129,7 @@ npm run smoke          # boots the --demo world, screenshots /command · /ops ·
 ```
 
 A stable render + zero-console-error gate (screenshots land in `smoke-shots/`). Requires
-`ACC_TOKEN` + `VITE_ACC_TOKEN` in `.env`.
+an installed Playwright Chromium browser. The smoke runner uses an isolated demo and temporary credentials.
 
 ---
 
@@ -149,7 +148,7 @@ The repo ships a Claude Code operating harness so any session (human or agent) s
 
 Bootstrap: `bash install.sh` (chmod hooks, validate config, auto-generate `.env` with a local token, `npm install`).
 
-**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so a change can't merge red. It runs on the Node 20.12 floor with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
+**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so failures are visible; branch protection must separately require those checks. It runs on Windows and Ubuntu with Node 22.12 and 24 with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
 
 ---
 

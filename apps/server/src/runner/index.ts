@@ -7,23 +7,32 @@
  * spawns get a turn cap + minimal env (in the Spawner). Registry survives restart: a
  * `running` row on boot is an orphan, reconciled to `failed`.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { Bus } from '../bus';
 import type { Db } from '../db';
-import { runs } from '../db/schema';
-import { parseStreamLine } from './adapter';
+import { executionLocks, runs } from '../db/schema';
+import { parseStreamLine, type AgentUpdate } from './adapter';
 import type { Spawner, SpawnHandle } from './spawner';
+import { createHash, randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
+import { redact } from '../lib/redact';
+import { prepareWorkspace, workspaceEvidence } from './workspace';
 
 export interface DispatchInput {
   repoId: string;
   task: string;
   model?: string;
+  provider?: string;
+  idempotencyKey?: string;
 }
 
 interface RunnerOpts {
   maxConcurrent?: number;
   turnCap?: number;
   timeoutMs?: number;
+  defaultProvider?: 'claude' | 'codex';
+  workspaceRoot?: string;
+  secrets?: () => Array<string | undefined>;
   /** repoId → absolute cwd (the allow-list; a dispatch outside it is rejected). */
   cwdFor: (repoId: string) => string | null;
   /**
@@ -55,16 +64,21 @@ export interface TimelineEntry {
 }
 
 export class Runner {
+  private readonly owner = randomUUID();
   private active = 0;
   private seq = 0; // guarantees unique run ids even for same-millisecond dispatches
   private queue: Array<{ id: string; input: DispatchInput }> = [];
   private handles = new Map<string, SpawnHandle>();
+  private stopped = false;
+  private jobs = new Set<Promise<void>>();
+  private busyDirectories = new Set<string>();
+  private activeRuns = new Set<string>();
   /** In-memory tool-by-tool timelines for runs started THIS boot (live observability).
    *  Bounded per run and pruned past a global cap; older runs honestly have none. */
   private timelines = new Map<string, TimelineEntry[]>();
   /** Runs the user killed from the dashboard — so the exit path records WHY it failed. */
   private killed = new Set<string>();
-  private opts: Required<Omit<RunnerOpts, 'cwdFor' | 'blockedReason' | 'onRunDone'>> & Pick<RunnerOpts, 'cwdFor' | 'blockedReason' | 'onRunDone'>;
+  private opts: Required<Pick<RunnerOpts, 'maxConcurrent' | 'turnCap' | 'timeoutMs'>> & RunnerOpts;
 
   constructor(
     private bus: Bus,
@@ -77,24 +91,27 @@ export class Runner {
   }
 
   /**
-   * On boot, any run still marked running OR queued is an orphan: a `running` row's
+   * Restore versioned queued jobs; never restart an attempt that might have spawned.
+   * Legacy runs remain explicit failures. Historically: a `running` row's
    * process died with the previous server, and the in-memory queue that owned the
    * `queued` rows is gone — neither can ever resolve itself → failed.
    */
   reconcileOrphans(): number {
     const orphans = this.db.select().from(runs).where(inArray(runs.status, ['running', 'queued'])).all();
     for (const o of orphans) {
-      this.db
-        .update(runs)
-        .set({ status: 'failed', endedTs: new Date().toISOString(), note: 'orphaned on boot' })
-        .where(eq(runs.id, o.id))
-        .run();
+      if (o.engineVersion === 1 && o.status === 'queued') {
+        if (!this.queue.some((q) => q.id === o.id)) this.queue.push({ id: o.id, input: { repoId: o.repoId, task: o.task, model: o.model === 'default' ? undefined : o.model, provider: o.provider } });
+        continue;
+      }
+      this.failRun(o.id, { repoId: o.repoId, task: o.task, model: o.model === 'default' ? undefined : o.model, provider: o.provider }, null, o.engineVersion === 1 ? 'interrupted; previous process outcome unknown; writer lock retained' : 'orphaned on boot');
     }
+    this.drainNext();
     return orphans.length;
   }
 
   /** Append to a run's live timeline (bounded ring; prunes the oldest runs' timelines). */
   private record(runId: string, kind: TimelineEntry['kind'], text: string): void {
+    text = redact(text, this.opts.secrets?.());
     let t = this.timelines.get(runId);
     if (!t) {
       t = [];
@@ -116,7 +133,7 @@ export class Runner {
 
   /** Is the run in flight right now (spawned or still queued)? */
   isLive(runId: string): boolean {
-    return this.handles.has(runId) || this.queue.some((q) => q.id === runId);
+    return this.activeRuns.has(runId) || this.queue.some((q) => q.id === runId);
   }
 
   /**
@@ -132,26 +149,38 @@ export class Runner {
       return true;
     }
     const handle = this.handles.get(runId);
-    if (!handle) return false;
+    if (!handle && !this.activeRuns.has(runId)) return false;
     this.killed.add(runId);
     this.record(runId, 'status', 'Kill requested from the dashboard');
     this.log(`runner: ${runId} killed from the dashboard`);
-    handle.kill();
+    handle?.kill();
     return true;
   }
 
   /** Accept a dispatch. Returns the runId, or throws if blocked/not allow-listed. */
   dispatch(input: DispatchInput): { runId: string } {
+    if (this.stopped) throw new Error('runner is stopping; no new dispatches accepted');
+    input = { ...input, provider: input.provider ?? this.opts.defaultProvider ?? 'claude' };
+    if (!['claude', 'codex'].includes(input.provider!)) throw new Error('Unsupported provider');
+    const requestHash = createHash('sha256').update(JSON.stringify([input.repoId, input.task, input.model ?? 'default', input.provider])).digest('hex');
+    if (input.idempotencyKey) {
+      if (input.idempotencyKey.length > 200) throw new Error('idempotency key too long');
+      const existing = this.db.select().from(runs).where(eq(runs.idempotencyKey, input.idempotencyKey)).get();
+      if (existing) {
+        if (existing.requestHash !== requestHash) throw new Error('idempotency conflict: request content differs');
+        return { runId: existing.id };
+      }
+    }
     const blocked = this.opts.blockedReason?.(input.repoId);
     if (blocked) throw new Error(blocked);
     const cwd = this.opts.cwdFor(input.repoId);
     if (!cwd) throw new Error(`repo '${input.repoId}' is not in the scanner allow-list`);
 
-    const runId = `run-${input.repoId}-${Date.now()}-${++this.seq}`;
+    const runId = `run-${input.repoId}-${Date.now()}-${++this.seq}-${randomUUID()}`;
     const now = new Date().toISOString();
     this.db
       .insert(runs)
-      .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', status: 'queued', startedTs: now })
+      .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', provider: input.provider, status: 'queued', startedTs: now, engineVersion: 1, idempotencyKey: input.idempotencyKey, requestHash })
       .run();
 
     // Reflect as a queued build immediately (backs the Build Queue), then let the
@@ -165,9 +194,21 @@ export class Runner {
 
   /** Start queued runs up to the concurrency limit; fail any whose cwd is no longer allowed. */
   private drainNext(): void {
-    while (this.active < this.opts.maxConcurrent) {
-      const next = this.queue.shift();
-      if (!next) return;
+    if (this.stopped) return;
+    while (this.active < this.opts.maxConcurrent && !this.stopped) {
+      // Skip a busy checkout so unrelated projects can proceed, while writers to the
+      // same checkout remain serialized even when they have different logical IDs.
+      const index = this.queue.findIndex((q) => {
+        const cwd = this.opts.cwdFor(q.input.repoId);
+        return !cwd || Boolean(this.opts.blockedReason?.(q.input.repoId)) || (!this.busyDirectories.has(this.resourceKey(q.input.repoId, cwd)) && !this.db.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(q.input.repoId, cwd))).get());
+      });
+      if (index < 0) return;
+      const [next] = this.queue.splice(index, 1);
+      const blocked = this.opts.blockedReason?.(next.input.repoId);
+      if (blocked) {
+        this.failRun(next.id, next.input, null, blocked);
+        continue;
+      }
       const cwd = this.opts.cwdFor(next.input.repoId);
       if (!cwd) {
         // Repo left the allow-list while queued — fail it honestly and keep draining
@@ -175,8 +216,28 @@ export class Runner {
         this.failRun(next.id, next.input, null, 'repo left the allow-list before it could run');
         continue;
       }
-      void this.run(next.id, next.input, cwd); // run() increments `active` synchronously
+      const claimed = this.db.transaction((tx) => {
+        if (tx.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(next.input.repoId, cwd))).get()) return false;
+        const updated = tx.update(runs).set({ status: 'running' }).where(and(eq(runs.id, next.id), eq(runs.status, 'queued'))).run();
+        if (!updated.changes) return false;
+        tx.insert(executionLocks).values({ resource: this.resourceKey(next.input.repoId, cwd), runId: next.id, owner: this.owner, acquiredTs: new Date().toISOString() }).run();
+        return true;
+      });
+      if (!claimed) {
+        this.queue.push(next);
+        return;
+      }
+      const job = this.run(next.id, next.input, cwd);
+      this.jobs.add(job);
+      void job.finally(() => this.jobs.delete(job));
     }
+  }
+
+  private resourceKey(repoId: string, cwd: string): string {
+    const remote = this.bus.snapshot().state.repos[repoId]?.githubFullName;
+    if (remote) return `github:${remote.toLowerCase()}`;
+    const path = resolve(cwd);
+    return process.platform === 'win32' ? path.toLowerCase() : path;
   }
 
   /** Mark a run failed end-to-end (DB + build + agent). Best-effort; never throws. */
@@ -208,30 +269,41 @@ export class Runner {
 
   private async run(runId: string, input: DispatchInput, cwd: string): Promise<void> {
     this.active++;
+    this.activeRuns.add(runId);
+    this.busyDirectories.add(this.resourceKey(input.repoId, cwd));
     const startedMs = Date.now();
     // The whole run is wrapped so ANY throw (spawn, DB write, a zod-invalid publish,
     // handle.done rejecting) still marks the run failed AND releases the slot. Before,
     // active-- lived past the last await with no catch: one throw leaked a slot forever
     // (and surfaced as an unhandledRejection), eventually wedging the runner.
     try {
-      await this.runBody(runId, input, cwd, startedMs);
+      const workspace = this.opts.workspaceRoot ? await prepareWorkspace(this.opts.workspaceRoot, cwd) : null;
+      if (workspace) this.db.update(runs).set({ workspacePath: workspace.path, baseSha: workspace.baseSha, branch: workspace.branch }).where(eq(runs.id, runId)).run();
+      if (this.stopped || this.killed.has(runId) || this.opts.blockedReason?.(input.repoId)) throw new Error('Run cancelled before process start');
+      await this.runBody(runId, input, workspace?.path ?? cwd, startedMs, workspace?.baseSha);
     } catch (err) {
       this.log(`runner: ${runId} crashed: ${(err as Error).message}`);
       this.failRun(runId, input, startedMs, (err as Error).message);
     } finally {
+      this.killed.delete(runId);
+      this.activeRuns.delete(runId);
+      this.db.delete(executionLocks).where(and(eq(executionLocks.runId, runId), eq(executionLocks.owner, this.owner))).run();
+      this.busyDirectories.delete(this.resourceKey(input.repoId, cwd));
       this.active--;
       this.drainNext();
     }
   }
 
-  private async runBody(runId: string, input: DispatchInput, cwd: string, startedMs: number): Promise<void> {
+  private async runBody(runId: string, input: DispatchInput, cwd: string, startedMs: number, baseSha?: string): Promise<void> {
     this.db.update(runs).set({ status: 'running' }).where(eq(runs.id, runId)).run();
 
     const agentId = runId;
-    let turns = 0;
+    let turns: number | null = null;
     let tokensIn: number | null = null;
     let tokensOut: number | null = null;
     let resultText: string | null = null;
+    let resultFailed = false;
+    let timedOut = false;
     let opaque = false;
     let statusLine = 'Starting…';
 
@@ -247,19 +319,25 @@ export class Runner {
     this.record(runId, 'status', 'Spawned');
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
     this.emitBuild(runId, input, 'running', startedMs);
-    upsertAgent('running', 0);
+    upsertAgent('running', null);
 
-    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model });
+    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider });
     this.handles.set(runId, handle);
 
     const timeout = setTimeout(() => {
+      timedOut = true;
       this.log(`runner: ${runId} exceeded ${this.opts.timeoutMs}ms — killing`);
       handle.kill();
     }, this.opts.timeoutMs);
+    timeout.unref();
 
-    try {
-      for await (const line of handle.lines) {
-        for (const u of parseStreamLine(line)) {
+    const normalized = async function* (): AsyncIterable<AgentUpdate> {
+      if (handle.updates) { yield* handle.updates; return; }
+      for await (const line of handle.lines) yield* parseStreamLine(line);
+    };
+    const consume = async () => {
+      for await (const u of normalized()) {
+        {
           if (u.kind === 'opaque') {
             opaque = true;
             statusLine = 'running (opaque)';
@@ -267,33 +345,46 @@ export class Runner {
           } else if (u.kind === 'started') {
             statusLine = 'Working…';
             this.record(runId, 'status', 'Agent started');
-            upsertAgent('running', pct(turns, this.opts.turnCap, opaque));
+            upsertAgent('running', null);
           } else if (u.kind === 'tool') {
-            turns++;
             statusLine = `Using ${u.name}…`;
             this.record(runId, 'tool', u.name);
-            upsertAgent('running', pct(turns, this.opts.turnCap, opaque));
+            upsertAgent('running', null);
           } else if (u.kind === 'progress') {
-            statusLine = u.text;
+            statusLine = redact(u.text, this.opts.secrets?.());
             this.record(runId, 'progress', u.text);
-            upsertAgent('running', pct(turns, this.opts.turnCap, opaque));
+            upsertAgent('running', null);
           } else if (u.kind === 'done') {
+            resultFailed ||= !u.ok;
             tokensIn = u.tokensIn;
             tokensOut = u.tokensOut;
-            turns = u.turns ?? turns;
+            turns = u.turns;
             resultText = u.resultText;
           }
         }
       }
+    };
+    let exitCode: number;
+    try {
+      // Both promises are observed immediately. EOF is not process exit: retain the
+      // timeout and stop handle until the process and stream have both settled.
+      [exitCode] = await Promise.all([handle.done, consume()]);
+    } catch (error) {
+      handle.kill();
+      await handle.done.catch(() => -1);
+      throw error;
     } finally {
       clearTimeout(timeout);
       this.handles.delete(runId);
     }
 
-    const exitCode = await handle.done;
-    const ok = exitCode === 0;
-    const wasKilled = this.killed.delete(runId);
-    statusLine = wasKilled ? 'Killed' : ok ? 'Completed' : 'Failed';
+    if (baseSha) {
+      const evidence = await workspaceEvidence(cwd, baseSha);
+      this.db.update(runs).set(evidence).where(eq(runs.id, runId)).run();
+    }
+    const wasKilled = this.killed.has(runId);
+    const ok = exitCode === 0 && !resultFailed && !timedOut && !wasKilled;
+    statusLine = timedOut ? 'Timed out' : wasKilled ? 'Killed' : ok ? 'Process completed · verification pending' : 'Failed';
     this.record(runId, 'status', statusLine);
     upsertAgent(ok ? 'done' : 'failed', ok ? 100 : null);
 
@@ -307,14 +398,15 @@ export class Runner {
         tokensOut,
         turns,
         exitCode,
-        note: wasKilled ? 'killed from the dashboard' : opaque ? 'opaque stream' : null,
-        resultText,
+        note: timedOut ? 'wall-clock timeout' : wasKilled ? 'killed from the dashboard' : resultFailed ? 'agent reported an error' : opaque ? 'opaque stream' : null,
+        resultText: resultText ? redact(resultText, this.opts.secrets?.()) : null,
+        diagnostics: handle.diagnostics ? redact(handle.diagnostics(), this.opts.secrets?.()).slice(-4000) : null,
       })
       .where(eq(runs.id, runId))
       .run();
 
     this.emitBuild(runId, input, ok ? 'success' : 'failed', startedMs);
-    this.emitActivity(`act:${runId}:end`, input.repoId, ok ? `Task completed: ${input.task}` : `Task failed: ${input.task}`, ok ? 'success' : 'danger', ok ? 'check' : 'bell');
+    this.emitActivity(`act:${runId}:end`, input.repoId, ok ? `Agent process completed (unverified): ${input.task}` : `Task failed: ${input.task}`, ok ? 'success' : 'danger', ok ? 'check' : 'bell');
     // Tag the repo with the agent IDS that touched it (avatar stack) via enrichment.
     // Must be runIds, not the display name: state.agents is keyed by agentId (===runId),
     // so the project page's `state.agents[aid]` and the avatar stack only resolve for a
@@ -359,6 +451,7 @@ export class Runner {
           repo: input.repoId,
           jobLabel: input.task.slice(0, 48),
           branch: 'agent',
+          kind: 'agent',
           state,
           startedTs: startedMs ? new Date(startedMs).toISOString() : null,
           elapsedSec: startedMs ? Math.round((Date.now() - startedMs) / 1000) : null,
@@ -367,13 +460,16 @@ export class Runner {
     });
   }
 
-  stop(): void {
-    for (const h of this.handles.values()) h.kill();
+  async stop(): Promise<void> {
+    this.stopped = true;
+    for (const id of this.activeRuns) this.killed.add(id);
+    for (const q of this.queue.splice(0)) {
+      this.failRun(q.id, q.input, null, 'cancelled before start: server stopping');
+    }
+    for (const [id, handle] of this.handles) {
+      this.killed.add(id);
+      handle.kill();
+    }
+    await Promise.allSettled([...this.jobs]);
   }
-}
-
-/** Progress from real turns vs the cap (documented, not invented); null when opaque. */
-function pct(turns: number, cap: number, opaque: boolean): number | null {
-  if (opaque) return null;
-  return Math.min(95, Math.round((turns / cap) * 100));
 }

@@ -5,8 +5,7 @@
  * project without editing .env or restarting: the app persists the dir here and rebuilds the
  * scanner live (mirror of the GitHub connect-live path).
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readJsonValue, writeJsonStore } from '../lib/jsonStore';
 
 export class ProjectDirsStore {
   private dirs: string[] = [];
@@ -16,17 +15,14 @@ export class ProjectDirsStore {
   }
 
   private load(): void {
-    try {
-      const parsed = JSON.parse(readFileSync(this.filePath, 'utf8')) as unknown;
-      this.dirs = Array.isArray(parsed) ? parsed.filter((d): d is string => typeof d === 'string') : [];
-    } catch {
-      this.dirs = []; // no file yet — fine
-    }
+    const parsed = readJsonValue(this.filePath);
+    if (parsed === undefined) return;
+    if (!Array.isArray(parsed) || parsed.some((d) => typeof d !== 'string')) throw new Error('Invalid project directories; refusing to overwrite the store');
+    this.dirs = parsed;
   }
 
   private persist(): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(this.dirs, null, 2));
+    writeJsonStore(this.filePath, this.dirs);
   }
 
   list(): string[] {

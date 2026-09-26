@@ -95,7 +95,7 @@ function ConnectorCard({
         <StatusDot
           dotAfter
           tone={connected ? 'success' : 'muted'}
-          label={connected ? 'Connected' : 'Not set'}
+          label={connected ? 'Key saved - not verified' : 'Not set'}
         />
       </div>
 
@@ -183,7 +183,7 @@ export function SettingsPage() {
             Keys are stored in a gitignored file on your machine (mode 600) and never sent back to the browser.
           </span>
           <span className="text-label text-text3">
-            {connectedCount} of {CONNECTORS.length} connected
+            {connectedCount} of {CONNECTORS.length} credentials configured
           </span>
         </div>
 
@@ -201,7 +201,7 @@ export function SettingsPage() {
 
         {error ? (
           <Card className="mt-6 border-danger/25 bg-danger/10 p-4 text-body text-danger">
-            Couldn’t reach the server ({error}). Start the server and set <span className="font-mono">VITE_ACC_TOKEN</span> in <span className="font-mono">.env</span>.
+            Couldn’t reach the server ({error}). Start the server and set <span className="font-mono">ACC_TOKEN</span> in <span className="font-mono">.env</span>.
           </Card>
         ) : null}
 

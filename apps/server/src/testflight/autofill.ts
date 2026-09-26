@@ -10,11 +10,13 @@
  * it can't find are simply absent, never invented.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative as nativeRelative, sep } from 'node:path';
 import type { IosAppFacts, TestFlightAutofill } from '@ado/shared';
 
 const IGNORE = new Set(['node_modules', '.git', 'dist', 'build', 'DerivedData', 'Pods', '.vite']);
 const MAX_PBXPROJ_BYTES = 4 * 1024 * 1024;
+// Public project paths use portable separators on every host.
+const relative = (from: string, to: string) => nativeRelative(from, to).split(sep).join('/');
 
 function dirsIn(root: string): string[] {
   try {

@@ -258,7 +258,7 @@ export function SetupPage() {
       {error ? (
         <Card className="mt-6 border-danger/25 bg-danger/10 p-4 text-body text-danger">
           Couldn’t reach the server ({error}). Start the server and set{' '}
-          <span className="font-mono">VITE_ACC_TOKEN</span> in <span className="font-mono">.env</span>.
+          <span className="font-mono">ACC_TOKEN</span> in <span className="font-mono">.env</span>.
         </Card>
       ) : null}
 

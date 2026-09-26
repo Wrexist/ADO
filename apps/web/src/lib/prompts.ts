@@ -30,11 +30,12 @@ export async function dispatchPrompt(
   repoId: string,
   task: string,
   model?: string,
+  provider?: 'claude' | 'codex',
 ): Promise<{ runId: string }> {
   const res = await fetch(`${SERVER_URL}/api/dispatch`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ repoId, task, model }),
+    body: JSON.stringify({ repoId, task, model, provider }),
   });
   if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? `dispatch failed (${res.status})`);
   return (await res.json()) as { runId: string };

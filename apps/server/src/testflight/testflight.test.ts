@@ -292,12 +292,12 @@ describe('testflightRunDone (verified deploy.recorded)', () => {
     return { bus, hook, cleanup: () => { sqlite.close(); rmSync(dir, { recursive: true, force: true }); } };
   }
 
-  it('records a REAL deploy only from a verified, bundle-matched uploaded marker', () => {
+  it('records an upload claim as activity, without inventing independent deployment verification', () => {
     const t = setup();
     t.hook('run-tf-1', { repoId: 'bloom', ok: true, resultText: 'Done.\nTESTFLIGHT_UPLOADED com.wrexist.bloom 1.5.0 (59)' });
     const deploys = t.bus.snapshot().state.deployments;
-    expect(deploys).toHaveLength(1);
-    expect(deploys[0]).toMatchObject({ name: 'Bloom', env: 'testflight', ok: true, repoId: 'bloom' });
+    expect(deploys).toHaveLength(0);
+    expect(t.bus.snapshot().state.activity[0].detail).toContain('Confirmation from App Store Connect');
     t.cleanup();
   });
 

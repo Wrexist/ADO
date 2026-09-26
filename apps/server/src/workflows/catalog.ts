@@ -13,6 +13,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { WorkflowMeta, WorkflowPhase } from '@ado/shared';
+import JSON5 from 'json5';
 
 // Preferred display order = the lifecycle (understand → plan → review → gate). Unknowns last.
 const ORDER = ['understand', 'ship-feature', 'review', 'audit', 'harden', 'verify-gate'];
@@ -46,7 +47,7 @@ export function extractMeta(src: string, file: string): WorkflowMeta | null {
 
   let obj: unknown;
   try {
-    obj = new Function(`return (${src.slice(open, end + 1)});`)();
+    obj = JSON5.parse(src.slice(open, end + 1));
   } catch {
     return null;
   }
@@ -98,6 +99,7 @@ export function readWorkflows(dir: string): WorkflowMeta[] {
  * repo root or from apps/server). Walk up from both cwd and this module's dir.
  */
 export function findWorkflowsDir(): string | null {
+  if (process.env.ACC_WORKFLOWS_DIR && existsSync(process.env.ACC_WORKFLOWS_DIR)) return process.env.ACC_WORKFLOWS_DIR;
   const starts = [process.cwd(), dirname(fileURLToPath(import.meta.url))];
   for (const start of starts) {
     let cur = resolve(start);

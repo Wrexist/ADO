@@ -9,7 +9,7 @@
  * (honest state) instead of throwing.
  */
 import type { Bus } from '../../bus';
-import { categoryFromLanguage, ciFromRun, slug, toLanguage } from './map';
+import { categoryFromLanguage, ciFromRun, toLanguage } from './map';
 import type { GitHubClient } from './types';
 
 const BASE_INTERVAL_MS = 60_000;
@@ -31,15 +31,18 @@ export class GitHubSync {
     const now = () => new Date().toISOString();
     const repos = await this.client.listRepos();
     let enriched = 0;
+    let degraded = false;
 
     for (const gh of repos) {
-      const id = slug(gh.name);
-      const exists = this.bus.snapshot().state.repos[id] !== undefined;
+      const fullName = `${gh.owner}/${gh.name}`.toLowerCase();
+      const matched = Object.values(this.bus.snapshot().state.repos).find((r) => r.githubFullName === fullName && r.localPath);
+      const id = matched?.id ?? `github-${Buffer.from(fullName).toString('base64url')}`;
+      const exists = Boolean(matched);
 
       // Create a base repo only when the scanner didn't (avoids clobbering its fields).
       if (!exists) {
         this.bus.publish({
-          id: `gh-base:${id}`,
+          id: `gh-base:${id}:${gh.pushedAt}:${gh.description}:${gh.defaultBranch}`,
           type: 'repo.upserted',
           ts: now(),
           source: { kind: 'github', ref: `${gh.owner}/${gh.name}` },
@@ -52,6 +55,7 @@ export class GitHubSync {
               description: gh.description ?? '',
               branch: gh.defaultBranch,
               updatedTs: gh.pushedAt ?? now(),
+              githubFullName: fullName,
             },
           },
         });
@@ -59,8 +63,8 @@ export class GitHubSync {
 
       // Enrich: stars, language, PR count, latest CI. Each sub-call is best-effort.
       const [prs, run] = await Promise.all([
-        this.client.openPrCount(gh.owner, gh.name).catch(() => undefined),
-        this.client.latestRun(gh.owner, gh.name).catch(() => null),
+        this.client.openPrCount(gh.owner, gh.name).catch(() => { degraded = true; return undefined; }),
+        this.client.latestRun(gh.owner, gh.name, gh.defaultBranch).catch(() => { degraded = true; return null; }),
       ]);
 
       const patch: Record<string, unknown> = {
@@ -69,6 +73,21 @@ export class GitHubSync {
       };
       if (typeof prs === 'number') patch.prs = prs;
       if (run) patch.ci = ciFromRun(run);
+      if (run?.id && run.headSha && run.branch) {
+        const state = ciFromRun(run).state;
+        // Only actual completed successes/failures trigger automation. Unknown or
+        // cancelled outcomes are recorded as activity, never queued forever.
+        if (run.status !== 'completed' || ['success', 'failure', 'timed_out'].includes(run.conclusion ?? '')) {
+          this.bus.publish({
+            id: `gh-run:${fullName}:${run.id}:${run.status}:${run.conclusion}`,
+            type: 'build.updated', ts: now(), source: { kind: 'github', ref: fullName },
+            payload: { build: { id: `gh-run:${fullName}:${run.id}`, repo: id,
+              jobLabel: run.workflowName, branch: run.branch, headSha: run.headSha,
+              workflowRunId: run.id, kind: 'ci', state,
+              startedTs: run.startedAt ?? null, elapsedSec: null } },
+          });
+        }
+      }
 
       // Emit ONLY when the patch actually changes something. Keying the id on pushedAt
       // was wrong twice over: PR/CI change without a push (repeat id → dedup drops the
@@ -95,20 +114,20 @@ export class GitHubSync {
       }
 
       // Releases → deployments (idempotent by release id).
-      const releases = await this.client.listReleases(gh.owner, gh.name).catch(() => []);
+      const releases = await this.client.listReleases(gh.owner, gh.name).catch(() => { degraded = true; return []; });
       for (const rel of releases) {
         this.bus.publish({
           id: `gh-release:${id}:${rel.id}`,
-          type: 'deploy.recorded',
+          type: 'activity.appended',
           ts: rel.publishedAt ?? now(),
           source: { kind: 'github', ref: `${gh.owner}/${gh.name}#${rel.id}` },
           payload: {
-            deployment: {
+            item: {
               id: `${id}-${rel.id}`,
-              name: gh.name,
-              env: 'production',
+              title: gh.name,
+              detail: `Release ${rel.tag} published on GitHub (deployment not verified)`,
+              icon: 'github', tone: 'info',
               ts: rel.publishedAt ?? now(),
-              ok: true,
               repoId: id,
             },
           },
@@ -116,7 +135,7 @@ export class GitHubSync {
       }
     }
 
-    this.emitHealth('operational');
+    this.emitHealth(degraded ? 'degraded' : 'operational');
     return enriched;
   }
 

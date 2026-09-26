@@ -1,5 +1,5 @@
 /**
- * Deploy-outcome watcher — turns a FINISHED deploy run into a real deploy.recorded event,
+ * Deploy-outcome watcher: upload claims await independent confirmation.
  * but only from evidence: the agent's final message must contain the exact outcome marker
  * (TESTFLIGHT_UPLOADED <bundleId> <version> (<build>) or TESTFLIGHT_FAILED <step>), and an
  * uploaded marker must name the template's own bundle id. A run that finished without a
@@ -41,6 +41,17 @@ export function testflightRunDone(deps: WatchDeps): (runId: string, info: { repo
 
     const ok = marker.status === 'uploaded';
     const ts = new Date().toISOString();
+    if (ok) {
+      deps.bus.publish({
+        id: `tf-upload-claim:${runId}`, type: 'activity.appended', ts,
+        source: { kind: 'runner', ref: runId },
+        payload: { item: { id: `tf-upload-claim:${runId}`, title: deps.repoName(profile.repoId),
+          detail: 'Agent reported a TestFlight upload. Confirmation from App Store Connect is still required.',
+          ts, repoId: profile.repoId, icon: 'rocket', tone: 'warning' } },
+      });
+      log(`testflight: upload claimed by ${runId}; awaiting independent App Store Connect evidence`);
+      return;
+    }
     deps.bus.publish({
       id: `tf-deploy:${runId}`,
       type: 'deploy.recorded',
@@ -57,10 +68,6 @@ export function testflightRunDone(deps: WatchDeps): (runId: string, info: { repo
         },
       },
     });
-    log(
-      ok
-        ? `testflight: verified upload for ${profile.bundleId} ${marker.marketingVersion} (${marker.buildNumber}) — deploy recorded`
-        : `testflight: deploy failed at "${marker.step}" — failure recorded`,
-    );
+    log(`testflight: deploy failed at "${marker.step}" - failure recorded`);
   };
 }

@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export interface Env {
+  agentProvider?: 'claude' | 'codex';
   port: number;
   webOrigin: string;
   accToken: string;
@@ -59,6 +60,7 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
 
   const demo = overrides.demo ?? process.argv.includes('--demo');
   return {
+    agentProvider: overrides.agentProvider ?? (process.env.ACC_AGENT_PROVIDER === 'codex' ? 'codex' : 'claude'),
     port: overrides.port ?? Number(process.env.PORT ?? 8787),
     webOrigin: overrides.webOrigin ?? process.env.WEB_ORIGIN ?? 'http://localhost:5173',
     accToken,

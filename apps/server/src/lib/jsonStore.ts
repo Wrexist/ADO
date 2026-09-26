@@ -6,16 +6,27 @@
  * Stores may pass a per-row validator to drop malformed rows (kept only in memory — the file
  * is untouched until the next real write, so nothing is destroyed silently).
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync, rmSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
 
 /** Parse a store file into a plain object map. null = file absent (fresh). Corruption throws. */
 export function readJsonStore(filePath: string): Record<string, unknown> | null {
+  const parsed = readJsonValue(filePath);
+  if (parsed === undefined) return null;
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${filePath} does not contain a JSON object — refusing to silently reset it`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+/** undefined alone denotes absence; JSON null is data and must be validated. */
+export function readJsonValue(filePath: string): unknown {
   let raw: string;
   try {
     raw = readFileSync(filePath, 'utf8');
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
     throw err; // permissions etc. — surface it, never treat as empty
   }
   let parsed: unknown;
@@ -24,10 +35,7 @@ export function readJsonStore(filePath: string): Record<string, unknown> | null 
   } catch (err) {
     throw new Error(`${filePath} is corrupted (${(err as Error).message}) — fix or remove the file; refusing to silently reset it`);
   }
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error(`${filePath} does not contain a JSON object — fix or remove the file; refusing to silently reset it`);
-  }
-  return parsed as Record<string, unknown>;
+  return parsed;
 }
 
 /**
@@ -53,7 +61,9 @@ export function readJsonStoreRows<T>(
 /** Atomic persist: write a sibling tmp file, then rename over the target. */
 export function writeJsonStore(filePath: string, value: unknown): void {
   mkdirSync(dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.tmp`;
-  writeFileSync(tmp, JSON.stringify(value, null, 2));
-  renameSync(tmp, filePath);
+  const tmp = `${filePath}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(tmp, JSON.stringify(value, null, 2), { flag: 'wx', mode: 0o600 });
+    renameSync(tmp, filePath);
+  } finally { rmSync(tmp, { force: true }); }
 }

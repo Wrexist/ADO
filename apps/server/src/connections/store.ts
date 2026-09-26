@@ -6,13 +6,19 @@
  * Resolution order for any integration: stored value → .env fallback. So existing .env
  * keys keep working, and the Settings page overrides them per-connector.
  */
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readJsonStore, writeJsonStore } from '../lib/jsonStore';
 import { CONNECTOR_BY_ID, type ConnectionStatus } from '@ado/shared';
+
+export interface SecretCodec {
+  id: string;
+  encrypt(value: string): string;
+  decrypt(value: string): string;
+}
 
 interface StoredConn {
   value: string;
   updatedTs: string;
+  encoding?: string;
 }
 
 export class ConnectionsStore {
@@ -21,26 +27,36 @@ export class ConnectionsStore {
   constructor(
     private filePath: string,
     private envFallback: (id: string) => string | undefined = () => undefined,
+    private codec?: SecretCodec,
   ) {
     this.load();
   }
 
   private load(): void {
-    try {
-      this.data = JSON.parse(readFileSync(this.filePath, 'utf8')) as Record<string, StoredConn>;
-    } catch {
-      this.data = {}; // no file yet — fine
+    const rows = readJsonStore(this.filePath) ?? {};
+    const decoded: Record<string, StoredConn> = {};
+    let needsMigration = false;
+    for (const [id, row] of Object.entries(rows)) {
+      const value = row as Partial<StoredConn> | null;
+      if (!value || typeof value.value !== 'string' || typeof value.updatedTs !== 'string') {
+        throw new Error(`Invalid connection '${id}'; refusing to overwrite the store`);
+      }
+      if (value.encoding && value.encoding !== this.codec?.id) throw new Error('This credential store requires its original OS key provider');
+      decoded[id] = { value: value.encoding ? this.codec!.decrypt(value.value) : value.value, updatedTs: value.updatedTs };
+      needsMigration ||= !value.encoding;
     }
+    if (this.codec && needsMigration) this.persist(decoded);
+    this.data = decoded;
   }
 
-  private persist(): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
-    try {
-      chmodSync(this.filePath, 0o600); // owner-only — secrets on disk
-    } catch {
-      /* non-POSIX — best effort */
-    }
+  private persist(data: Record<string, StoredConn>): void {
+    const encoded = Object.fromEntries(Object.entries(data).map(([id, row]) => {
+      if (!this.codec) return [id, row];
+      const value = this.codec.encrypt(row.value);
+      if (this.codec.decrypt(value) !== row.value) throw new Error('Credential encryption round-trip failed; original store preserved');
+      return [id, { ...row, value, encoding: this.codec.id }];
+    }));
+    writeJsonStore(this.filePath, encoded);
   }
 
   /** The value an integration should use: stored wins, else .env fallback. */
@@ -52,13 +68,15 @@ export class ConnectionsStore {
     if (!CONNECTOR_BY_ID[id]) throw new Error(`unknown connector '${id}'`);
     const trimmed = value.trim();
     if (!trimmed) throw new Error('value is empty');
-    this.data[id] = { value: trimmed, updatedTs: new Date().toISOString() };
-    this.persist();
+    const next = { ...this.data, [id]: { value: trimmed, updatedTs: new Date().toISOString() } };
+    this.persist(next);
+    this.data = next;
   }
 
   remove(id: string): void {
-    delete this.data[id];
-    this.persist();
+    const next = { ...this.data }; delete next[id];
+    this.persist(next);
+    this.data = next;
   }
 
   /** Public status for one connector — masked, never the secret. */

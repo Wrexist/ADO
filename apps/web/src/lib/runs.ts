@@ -33,11 +33,11 @@ export async function fetchRunStats(days = 7): Promise<RunStats> {
 }
 
 /** Record what happened to a finished run's work — feeds the (parked) self-learning loop. */
-export async function setRunOutcome(id: string, action: RunHumanAction): Promise<AgentRun> {
+export async function setRunOutcome(id: string, action: RunHumanAction, target?: { headSha?: string | null; diffDigest?: string | null }): Promise<AgentRun> {
   const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/outcome`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action, ...target }),
   });
   if (!res.ok) throw new Error(await bodyError(res, `outcome failed (${res.status})`));
   return AgentRun.parse(((await res.json()) as { run: unknown }).run);
@@ -51,4 +51,9 @@ export async function killRun(id: string): Promise<void> {
     body: '{}',
   });
   if (!res.ok) throw new Error(await bodyError(res, `kill failed (${res.status})`));
+}
+
+export async function verifyRun(id: string): Promise<void> {
+  const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/verify`, { method: 'POST', headers: headers(), body: '{}' });
+  if (!res.ok) throw new Error(await bodyError(res, 'Verification failed'));
 }

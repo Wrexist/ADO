@@ -8,7 +8,9 @@
  * openTasks); it never sends `agents`/`ci`/`stars` — those are enrichment from the
  * runner (P3) and GitHub (2.3), merged by the reducer.
  */
-import { lstatSync, readdirSync, watch, type FSWatcher } from 'node:fs';
+import { lstatSync, readdirSync, realpathSync, watch, type FSWatcher } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readGitLink } from '../projects/github';
 import { basename, join } from 'node:path';
 import type { RepoCategory } from '@ado/shared';
 import type { Bus } from '../bus';
@@ -89,9 +91,18 @@ export class Scanner {
 
   private async scanRepo(dir: string): Promise<void> {
     try {
+      dir = realpathSync(dir);
       const git = await readGit(dir);
+      const link = await readGitLink(dir);
       const ops = parseOps(dir);
-      const id = slug(basename(dir));
+      const localPath = process.platform === 'win32' ? dir.toLowerCase() : dir;
+      const known = Object.values(this.bus.snapshot().state.repos);
+      const existing = known.find((r) => r.localPath === localPath);
+      const base = slug(basename(dir)) || 'repo';
+      const claimed = known.find((r) => r.id === base);
+      const id = existing?.id ?? (claimed?.localPath && claimed.localPath !== localPath
+        ? `${base}-${createHash('sha256').update(localPath).digest('hex').slice(0, 16)}`
+        : base);
       this.idToDir.set(id, dir);
       // Unique id per emit: the bus dedups on event id, so a stable `scan:${id}` would
       // drop every rescan after the first (openTasks/status/branch would freeze forever).
@@ -112,6 +123,8 @@ export class Scanner {
             description: parseDescription(dir),
             branch: git.branch,
             updatedTs: git.lastCommitTs ?? ts,
+            localPath,
+            githubFullName: link.github ? `${link.github.owner}/${link.github.repo}`.toLowerCase() : undefined,
             openTasks: parseOpenTasks(dir),
           },
         },

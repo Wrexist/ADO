@@ -10,6 +10,7 @@
 import { spawn } from 'node:child_process';
 import { PassThrough } from 'node:stream';
 import { createInterface } from 'node:readline';
+import { commandFor, processEnv, supervise } from './processControl';
 
 export interface MergedProc {
   lines: AsyncIterable<string>;
@@ -17,13 +18,11 @@ export interface MergedProc {
   kill: () => void;
 }
 
-function minimalEnv(): NodeJS.ProcessEnv {
-  const { PATH, HOME, USER, LANG, TERM, TMPDIR, DISPLAY, BROWSER } = process.env;
-  return { PATH, HOME, USER, LANG, TERM, TMPDIR, DISPLAY, BROWSER };
-}
 
 export function spawnMerged(cmd: string, args: string[], cwd?: string): MergedProc {
-  const child = spawn(cmd, args, { cwd, env: minimalEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
+  const executable = commandFor(cmd, args);
+  const child = spawn(executable.command, executable.args, { cwd, env: processEnv(), windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
+  const kill = supervise(child);
   const merged = new PassThrough();
   child.stdout.pipe(merged, { end: false });
   child.stderr.pipe(merged, { end: false });
@@ -41,5 +40,5 @@ export function spawnMerged(cmd: string, args: string[], cwd?: string): MergedPr
     child.on('close', (code) => resolve(code ?? -1));
     child.on('error', () => resolve(-1));
   });
-  return { lines: rl, done, kill: () => child.kill('SIGTERM') };
+  return { lines: rl, done, kill };
 }

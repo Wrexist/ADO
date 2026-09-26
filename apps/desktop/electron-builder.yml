@@ -8,8 +8,8 @@ executableName: ai-control-center
 
 # electron-builder needs an EXACT electron version to fetch platform binaries; in a monorepo
 # it can't always read it from the hoisted node_modules, so state it here. MUST match the
-# pinned "electron" version in package.json (both are 36.9.5) — bump them together on upgrade.
-electronVersion: 36.9.5
+# pinned "electron" version in package.json — bump them together on upgrade.
+electronVersion: 44.4.5
 
 directories:
   output: release
@@ -25,6 +25,8 @@ extraResources:
     to: web
   - from: ../server/drizzle
     to: drizzle
+  - from: ../../.claude/workflows
+    to: workflows
 
 asar: true
 # Native module: must live outside the asar to be dlopen-able; electron-builder also

@@ -1,66 +1,63 @@
-/**
- * SSE client. Fresh connect → snapshot frame replaces the store; reconnect → the
- * browser sends Last-Event-ID automatically and the server replays only the gap.
- * While disconnected the UI flags itself reconnecting/stale — pre-sleep values are
- * never silently presented as live (council S5).
- */
+/** Header-authenticated SSE with reconnect cursor; credentials never enter a URL. */
 import { parseEvent, parseSnapshot, Sample } from '@ado/shared';
 import { ACC_TOKEN, SERVER_URL } from '../lib/config';
 import { useBus } from '../store/bus';
 
-let started = false;
-
+let connection: AbortController | null = null;
+export function stopBus(): void {
+  connection?.abort(); connection = null;
+  useBus.getState().setConnection('offline');
+}
 export function startBus(): void {
-  if (started) return;
-  started = true;
-
+  if (connection || !ACC_TOKEN) return;
+  const controller = new AbortController(); connection = controller;
+  const token = ACC_TOKEN;
   const { applySnapshot, applyEvent, applySample, setConnection } = useBus.getState();
-
-  if (!ACC_TOKEN) {
-    // No token configured (no .env yet) — honest offline, no fake data.
-    setConnection('offline');
-    return;
-  }
-
-  const es = new EventSource(`${SERVER_URL}/events?token=${encodeURIComponent(ACC_TOKEN)}`);
-
-  es.onopen = () => setConnection('live');
-  es.onerror = () => setConnection('reconnecting'); // EventSource retries itself
-
-  // Every frame is validated at the boundary (convention 12: unstable interfaces via
-  // validated adapters). A malformed frame is dropped and logged — never thrown out of
-  // the listener (which would silently kill the handler and strand the UI on live).
-  const onFrame = (label: string, handle: (data: string, id: string) => void) => (e: Event) => {
-    const msg = e as MessageEvent<string>;
-    try {
-      handle(msg.data, msg.lastEventId);
-    } catch (err) {
-      console.error(`bus: dropped malformed ${label} frame`, err);
+  void (async () => {
+    let cursor = '';
+    while (!controller.signal.aborted) {
+      try {
+        const response = await fetch(`${SERVER_URL}/events`, {
+          headers: { 'x-acc-token': token, ...(cursor ? { 'last-event-id': cursor } : {}) }, signal: controller.signal,
+        });
+        if (!response.ok || !response.body) throw new Error('Event connection unavailable');
+        setConnection('live');
+        const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+        let pending = '';
+        try {
+          while (!controller.signal.aborted) {
+            const { value, done } = await reader.read(); if (done) break;
+            pending += value;
+            if (pending.length > 16 * 1024 * 1024) throw new Error('Event frame too large');
+            let boundary: number;
+            while ((boundary = pending.indexOf('\n\n')) >= 0) {
+              const frame = pending.slice(0, boundary); pending = pending.slice(boundary + 2);
+              let event = ''; let id = ''; const data: string[] = [];
+              for (const line of frame.split('\n')) {
+                if (line.startsWith('event:')) event = line.slice(6).trim();
+                else if (line.startsWith('id:')) id = line.slice(3).trim();
+                else if (line.startsWith('data:')) data.push(line.slice(5).trimStart());
+              }
+              if (!data.length) continue;
+              const parsed: unknown = JSON.parse(data.join('\n'));
+              if (event === 'snapshot') applySnapshot(parseSnapshot(parsed));
+              else if (event === 'evt') applyEvent(Number(id), parseEvent(parsed));
+              else if (event === 'sample') applySample(Sample.parse(parsed));
+              if (id) cursor = id;
+            }
+          }
+        } finally { await reader.cancel().catch(() => {}); }
+      } catch { /* abort and transient errors share the reconnect path */ }
+      if (controller.signal.aborted) return;
+      setConnection('reconnecting');
+      await new Promise<void>((resolve) => {
+        const done = () => { clearTimeout(timer); controller.signal.removeEventListener('abort', done); resolve(); };
+        const timer = setTimeout(done, 2000); controller.signal.addEventListener('abort', done, { once: true });
+      });
     }
-  };
-
-  es.addEventListener('snapshot', onFrame('snapshot', (data) => {
-    applySnapshot(parseSnapshot(JSON.parse(data)));
-    setConnection('live');
-  }));
-
-  es.addEventListener('evt', onFrame('evt', (data, id) => {
-    applyEvent(Number(id), parseEvent(JSON.parse(data)));
-  }));
-
-  // Transient sysmon samples — folded into state, no seq checkpoint. Zod-validated like
-  // the durable frames (was the one channel bypassing validation).
-  es.addEventListener('sample', onFrame('sample', (data) => {
-    applySample(Sample.parse(JSON.parse(data)));
-  }));
-
-  // App-open logging — feeds the p2.5 daily-driver gate. Fire-and-forget.
-  const sessionId = crypto.randomUUID();
+  })();
   void fetch(`${SERVER_URL}/api/app-open`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN },
-    body: JSON.stringify({ sessionId }),
-  }).catch(() => {
-    /* server down — the connection state already says so */
-  });
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-acc-token': token },
+    body: JSON.stringify({ sessionId: crypto.randomUUID() }), signal: controller.signal,
+  }).catch(() => {});
 }

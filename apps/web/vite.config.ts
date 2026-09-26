@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   // VITE_* vars come from the repo-root .env (single env file for server + web)
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
+  envPrefix: ['VITE_SERVER_URL'],
   resolve: {
     alias: {
       // resolve the shared workspace package straight from source
