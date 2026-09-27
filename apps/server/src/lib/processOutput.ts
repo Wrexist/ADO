@@ -54,7 +54,7 @@ export function boundedDiagnostics(input: Readable, secrets: Array<string | unde
   let pending = ''; let discarding = false; let truncated = false;
   const lines: string[] = []; let size = 0;
   const append = (line: string) => {
-    const safe = redact(line, secrets);
+    const safe = redact(line, secrets).trimEnd();
     if (safe.length > 3500) { truncated = true; return; }
     while (size + safe.length + 1 > 3500 && lines.length) { size -= lines.shift()!.length + 1; truncated = true; }
     lines.push(safe); size += safe.length + 1;
@@ -66,7 +66,7 @@ export function boundedDiagnostics(input: Readable, secrets: Array<string | unde
         if (pending.length + part.length > 8192) { pending = ''; discarding = true; truncated = true; }
         else pending += part;
       }
-      if (complete) { if (!discarding) append(pending.trimEnd()); pending = ''; discarding = false; }
+      if (complete) { if (!discarding) append(pending); pending = ''; discarding = false; }
     }
   };
   input.on('data', (chunk: Buffer) => accept(decoder.write(chunk)));

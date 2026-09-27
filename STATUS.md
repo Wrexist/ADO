@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## Diagnostik maskeras före trimning
+
+Hela `npm run verify` passerade på Windows x64 / Node 22.18.0 / npm 11.7.0: typkontroll, lint, 390 tester i 85 filer och byggning. Logg: `controlos-diagnostic-redaction-verify.log`.
+
+Ett reproducerat sekretessfel är rättat: stderr trimmade tidigare avslutande blanksteg före maskeringen, vilket kunde lämna kvar en del av ett känt känsligt värde. Komplett diagnostikrad maskeras nu först. Regressionen misslyckades före rättningen och passerar efteråt.
+
+En riktig lokal Node-barnprocess genom ClaudeSpawner provar stdout, verktygsnamn, stderr uppdelad över skrivningar, kodad URL och providerfel genom körmotorn. Resultat/diagnostik i SQLite, händelser, prenumerationsramar, snapshot, tidslinje och körloggar saknar kanarievärdet. En separat kontroll av den sparade fixturdatabasens bytes fann heller ingen kanariemarkör. Barnprocessen är en offlinefixtur; ingen modell eller användarcredential används. [Omfattning och kvarvarande luckor](docs/controlos/redaction-evidence.md).
+
+17 riktade tester passerade. Loggar: `controlos-diagnostic-redaction-before.log` (förväntat fel före rättning) och `controlos-diagnostic-redaction-focused.log` (godkänd). T23 och full R1 är fortsatt öppna; alla UI-, export- och rapportytor är ännu inte verifierade. 15/46 fullständiga scenarier är fortsatt lokalt godkända. Följande avsnitt är historiska kontrollpunkter.
+
 ## T37: historiskt done är inte verifierat resultat
 
 API:t kräver nu verifieringsbevis för samma körning, Git-revision, innehållshash och omdöme innan ett oberoende verifieringsresultat visas. Ett äldre sparat pass/fail räcker inte. Historiska exekveringsresultat och mänskliga omdömen bevaras i databasen.

@@ -24,6 +24,21 @@ Local Windows evidence (Node 22.18.0):
   failure returns a redacted response and incident snapshot.
 - `lib/redact.test.ts`: configured literal/encoded secrets, common token formats
   and a malformed-surrogate secret do not bypass or crash redaction.
+- `lib/processOutput.test.ts`: configured values with trailing whitespace are
+  masked before diagnostic whitespace is trimmed. The regression failed before
+  the fix because trimming first retained a recognizable credential fragment.
+- `runner/redaction.test.ts`: a real local Node child launched through
+  `ClaudeSpawner` emits canaries in stdout, tool names, stderr split across
+  writes, an encoded URL and a failed provider result. The production runner
+  stores redacted diagnostics/results in a disk-backed SQLite profile; event
+  rows, subscriber frames, snapshots, timeline and runner logs contain no canary.
+  This is an offline process fixture, not an authenticated Claude/model call.
+
+The diagnostic-order fix passed 17 focused tests in 3 files. Local logs:
+`controlos-diagnostic-redaction-before.log` (expected failure) and
+`controlos-diagnostic-redaction-focused.log` (pass). The synthetic child fixture
+and its database remain under `controlos-child-redaction-*` in the temporary
+directory for inspection. No user credential or project was used.
 
 T23 remains **not_run** as a complete acceptance scenario. The tests do not yet
 certify every auxiliary runner, integration, existing log, export, report or UI

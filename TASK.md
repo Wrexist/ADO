@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Redact stderr before whitespace trimming and exercise real local child stdout/stderr/provider errors through ClaudeSpawner, runner, SQLite and event publication; full T23 export/UI acceptance remains open.
+
 - [x] Preserve historical execution success through pre-verifier schema migration and reopen; require bound evidence before exposing an independent verification verdict through list/detail APIs.
 
 - [x] Review OpenShip at a pinned source revision and implement neutral light/dark appearance, persistent theme choice, readable contrast and consistent detail-page navigation; see `docs/controlos/openship-design-review.md`.

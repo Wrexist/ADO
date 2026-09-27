@@ -2,6 +2,14 @@ import { PassThrough } from 'node:stream';
 import { expect, it } from 'vitest';
 import { boundedDiagnostics, boundedLines } from './processOutput';
 
+it('redacts configured credentials before trimming diagnostic whitespace', async () => {
+  const stream = new PassThrough();
+  const text = boundedDiagnostics(stream, ['canary-with-trailing-space \t']);
+  stream.end('provider rejected canary-with-trailing-space \t\r\n');
+  await new Promise<void>((resolve) => stream.on('end', resolve));
+  expect(text()).toBe('provider rejected [redacted]');
+});
+
 it('rejects unbroken oversized stdout and continues draining without retaining it', async () => {
   const stream = new PassThrough(); let stopped = 0;
   const lines = boundedLines(stream, () => stopped++, 32, 64);

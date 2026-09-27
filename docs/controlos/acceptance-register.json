@@ -895,9 +895,10 @@
         "apps/server/src/runner/redaction.test.ts",
         "apps/server/src/runner/codex.test.ts",
         "apps/server/src/incidents/redaction.test.ts",
-        "docs/controlos/redaction-evidence.md"
+        "docs/controlos/redaction-evidence.md",
+        "apps/server/src/lib/processOutput.test.ts"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. A real local child through ClaudeSpawner now covers stdout, split stderr, encoded URL and provider failure through disk-backed runner storage and event publication. A reproduced trim-before-redact leak for whitespace-suffixed configured values is fixed. Full UI/export/report coverage remains unaccepted."
     },
     {
       "id": "T24",

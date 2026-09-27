@@ -5,8 +5,46 @@ import { Bus } from '../bus';
 import { Runner } from './index';
 import { parseStreamLine } from './adapter';
 import { codexUpdate } from './codex';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ClaudeSpawner } from './spawner';
 
 const secret = 'CANARY/private value?&"tail';
+
+it('redacts real child stdout, stderr and provider failure before runner storage and publication', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-child-redaction-'));
+  const child = join(root, 'fixture.cjs');
+  const credential = 'CANARY-whitespace-sensitive \t';
+  writeFileSync(child, `
+const secret = ${JSON.stringify(credential)};
+const emit = (message) => process.stdout.write(JSON.stringify(message)+'\\n');
+emit({type:'system',subtype:'init'});
+emit({type:'assistant',message:{content:[{type:'text',text:'stdout '+secret},{type:'tool_use',name:secret}]}});
+process.stderr.write('stderr '+secret.slice(0, 12));
+process.stderr.write(secret.slice(12)+'\\r\\n');
+process.stderr.write('https://example.invalid/?value='+encodeURIComponent(secret)+'\\n');
+emit({type:'result',is_error:true,result:'provider error '+secret});
+process.exitCode=1;
+`);
+  const { db, sqlite } = openDb(join(root, 'fixture.sqlite'));
+  const bus = new Bus(db), frames: unknown[] = [], logs: string[] = [];
+  bus.subscribe((frame) => frames.push(frame));
+  const runner = new Runner(bus, db, new ClaudeSpawner(() => ({ command: process.execPath, args: [child] })),
+    { cwdFor: () => root, secrets: () => [credential] }, (line) => logs.push(line));
+  try {
+    const run = runner.dispatch({ repoId: 'canary-fixture', task: 'Offline child output fixture' });
+    await expect.poll(() => runner.isLive(run.runId), { timeout: 15000 }).toBe(false);
+    const row = db.select().from(runs).all()[0];
+    expect(row).toMatchObject({ status: 'failed', exitCode: 1 });
+    expect(row.diagnostics).toContain('stderr [redacted]');
+    expect(row.diagnostics).toContain('value=[redacted]');
+    expect(row.resultText).toBe('provider error [redacted]');
+    const exposed = JSON.stringify({ row, events: db.select().from(events).all(), frames, snapshot: bus.snapshot(), timeline: runner.timeline(run.runId), logs });
+    expect(exposed).not.toContain('CANARY');
+    expect(exposed).toContain('[redacted]');
+  } finally { await runner.stop(); sqlite.close(); }
+});
 it('redacts before progress/result truncation in both adapters', () => {
   const text = ('x'.repeat(70) + secret).padEnd(3990, 'x') + secret;
   const updates = [

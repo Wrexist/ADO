@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-27: Redact exact configured values before trimming diagnostic whitespace; trimming can turn a known secret into an unrecognized fragment. Exercise stdout/stderr through a real local child as well as adapter fixtures.
+
 - 2026-07-12: Per-model prompt tuning is cheaply done as a preamble + optional per-model variant over one shared `body` — avoids duplicating every prompt per AI while still shaping output for the selected model.
 - 2026-07-12: Specialized "agents" are best modeled as dispatch profiles (system preamble + verifiable loop + exit check), not new runtime types — they compose with existing prompts via a render helper and need no runner changes.
 - 2026-07-12: Custom user data (prompts) follows the same secure pattern as secrets — gitignored JSON under data/, token-gated CRUD, built-ins served from the client bundle so the API payload stays small.
