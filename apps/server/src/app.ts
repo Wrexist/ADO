@@ -785,19 +785,23 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     const rows = db.select().from(runs).where(gte(runs.startedTs, cutoff)).all();
 
     const byStatus = { queued: 0, running: 0, done: 0, failed: 0 };
-    const slice = () => ({ runs: 0, tokensIn: 0, tokensOut: 0 });
+    const slice = () => ({ runs: 0, tokensIn: 0, tokensOut: 0, runsWithInputUsage: 0, runsWithOutputUsage: 0 });
     const byRepo = new Map<string, ReturnType<typeof slice>>();
     const byModel = new Map<string, ReturnType<typeof slice>>();
-    let tokensIn = 0, tokensOut = 0, totalDurationMs = 0, runsWithoutUsage = 0;
+    let tokensIn = 0, tokensOut = 0, totalDurationMs = 0, runsWithoutUsage = 0, runsWithInputUsage = 0, runsWithOutputUsage = 0;
     for (const r of rows) {
       if (r.status in byStatus) byStatus[r.status as keyof typeof byStatus] += 1;
       if (r.tokensIn == null && r.tokensOut == null) runsWithoutUsage += 1;
+      if (r.tokensIn != null) runsWithInputUsage += 1;
+      if (r.tokensOut != null) runsWithOutputUsage += 1;
       tokensIn += r.tokensIn ?? 0;
       tokensOut += r.tokensOut ?? 0;
       totalDurationMs += r.durationMs ?? 0;
       for (const [map, key] of [[byRepo, r.repoId], [byModel, r.model]] as const) {
         const s = map.get(key) ?? slice();
         s.runs += 1;
+        if (r.tokensIn != null) s.runsWithInputUsage += 1;
+        if (r.tokensOut != null) s.runsWithOutputUsage += 1;
         s.tokensIn += r.tokensIn ?? 0;
         s.tokensOut += r.tokensOut ?? 0;
         map.set(key, s);
@@ -811,7 +815,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return {
       stats: {
         windowDays: days, total: rows.length, byStatus,
-        tokensIn, tokensOut, totalDurationMs, runsWithoutUsage,
+        tokensIn, tokensOut, totalDurationMs, runsWithoutUsage, runsWithInputUsage, runsWithOutputUsage,
         byRepo: top(byRepo), byModel: top(byModel),
       },
     };

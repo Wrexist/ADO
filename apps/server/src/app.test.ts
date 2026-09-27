@@ -309,7 +309,7 @@ describe('run log + live run control API (persisted history, honest timeline sta
       tokensOut: 680,
       runsWithoutUsage: 0,
     });
-    expect(stats.byRepo).toEqual([{ key: 'sentinel', runs: 2, tokensIn: 2400, tokensOut: 680 }]);
+    expect(stats.byRepo).toEqual([{ key: 'sentinel', runs: 2, tokensIn: 2400, tokensOut: 680, runsWithInputUsage: 2, runsWithOutputUsage: 2 }]);
     expect(stats.byModel.map((s) => s.key).sort()).toEqual(['default', 'sonnet']);
   });
 

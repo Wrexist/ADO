@@ -1058,7 +1058,16 @@
       "id": "T33",
       "title": "Användningsdata saknas",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R3. **Krav:** REQ19, REQ22. **Status:** not_run.\n\n**Givet:** Provider levererar ingen usage eller prisunderlaget är gammalt.\n\n**När:** Kostnadsraden beräknas.\n\n**Godkänt endast om:** Okänd usage/kostnad visas som okänd. Uppskattning märks med datum/metod, aldrig fakturerat belopp.\n\n**Gäller:** always."
+      "specification": "**Grind:** R3. **Krav:** REQ19, REQ22. **Status:** not_run.\n\n**Givet:** Provider levererar ingen usage eller prisunderlaget är gammalt.\n\n**När:** Kostnadsraden beräknas.\n\n**Godkänt endast om:** Okänd usage/kostnad visas som okänd. Uppskattning märks med datum/metod, aldrig fakturerat belopp.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runUsage.test.ts",
+        "apps/web/src/lib/usage.test.ts",
+        "apps/web/src/pages/AnalyticsPage.tsx",
+        "docs/controlos/usage-reporting.md",
+        "scripts/probe-usage.mts",
+        "docs/controlos/usage-ui-evidence.json"
+      ],
+      "coverageNote": "Synthetic disk-backed API and built browser evidence now distinguishes absent, partial and explicitly reported zero usage per input/output direction and repository/model, including restart and date-window exclusion. Analytics labels incomplete sums, historical coverage and unknown cost. Full provider/pricing acceptance remains not_run."
     },
     {
       "id": "T34",

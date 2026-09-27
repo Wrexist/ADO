@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Analytics: okänd användning skiljs från noll
+
+Tokenstatistik redovisar nu antalet körningar med rapporterade input-/outputvärden för hela tidsfönstret och varje repo/modell. Analytics visar Unknown när värden saknas, märker ofullständiga summor som partial och behåller uttryckligt rapporterade nollor. Kostnad anges som okänd utan verifierat pris-/fakturaunderlag. Historiska tokenkurvor beskriver sin okända täckning. Inga historiska räknare skrivs om.
+
+Slutligt `npm run verify` passerade med typkontroll, lint, 416 tester i 90 filer och byggning. API-testet kontrollerar också omstart och tidsfönster. Byggt browserprov genom riktigt API passerade vid 1536/390 px med DEMO-data, utan horisontell overflow eller sidfel; bilderna granskades. Underlag: `docs/controlos/usage-reporting.md` och `usage-ui-evidence.json`. Loggar: `controlos-usage-verify-final.log` och `controlos-usage-probe-final.log`.
+
+Den första fullkörningen hade ett fel i automationshistorikens befintliga post-commit-test (`controlos-usage-verify.log`). Samma test passerade separat och hela slutkörningen passerade utan ändring av automationskoden. Orsaken är inte fastställd och betraktas inte som åtgärdad; felloggen är bevarad. T33 och de fulla grindarna är fortsatt öppna, med 16/46 lokalt godkända scenarier.
+
 ## Today: kvarhållna skrivlås gäller även nya uppgifter i samma repo
 
 Today utesluter nu uppgifter vars registrerade repo omfattas av ett kvarhållet skrivlås, även när uppgiften saknar en egen tidigare körning. Okänd låsägare eller saknad/felkopplad verifieringspost ger en uttrycklig anledning och utesluter repobundna förslag. Oberoende repor kan fortfarande föreslås när omfattningen är känd. Detta använder registrerad metadata; färsk filsystemsidentitet och körmotorns startkontroller är fortfarande separata.

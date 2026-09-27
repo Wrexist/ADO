@@ -7,6 +7,7 @@ import { activeAgentCount, statDelta, weekDelta } from '../lib/selectors';
 import { ENV_LABEL } from '../views/ops/maps';
 import { approxTokens, durationLabel } from '../lib/time';
 import { fetchRunStats } from '../lib/runs';
+import { usageLabel } from '../lib/usage';
 
 const CAT_LABEL: Record<RepoCategory, string> = {
   game: 'Games',
@@ -21,17 +22,15 @@ const CAT_LABEL: Record<RepoCategory, string> = {
  *  `display` overrides the printed number (e.g. "134K" for token sums) without changing the bar math. */
 function Bar({ label, count, max, tone = 'bg-primary', display }: { label: string; count: number; max: number; tone?: string; display?: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-24 shrink-0 truncate text-label text-text2">{label}</span>
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-elevated">
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="w-24 shrink-0 break-words text-label text-text2">{label}</span>
+      <div className="h-2 min-w-8 flex-1 overflow-hidden rounded-full bg-elevated">
         <div className={cx('h-full rounded-full', tone)} style={{ width: count > 0 && max > 0 ? `${Math.max(4, (100 * count) / max)}%` : '0%' }} />
       </div>
-      <span className={cx('shrink-0 text-right text-label tabular-nums text-text3', display ? 'w-14' : 'w-8')}>{display ?? count}</span>
+      <span className="max-w-full text-right text-label tabular-nums text-text3">{display ?? count}</span>
     </div>
   );
 }
-
-const fmtTok = (n: number): string => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
 
 /**
  * Analytics — portfolio + delivery numbers DERIVED from stored events (repos, builds,
@@ -79,10 +78,10 @@ export function AnalyticsPage() {
   return (
     <PageShell
       title="Analytics"
-      subtitle="Portfolio and delivery metrics, rolled up from the same stored events the dashboards render — nothing estimated."
+      subtitle="Stored portfolio and run data. Missing usage stays unknown; session estimates are labelled separately."
     >
       {/* headline roll-ups */}
-      <div className="mt-6 grid grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Repositories"
           value={String(repos.length)}
@@ -114,7 +113,7 @@ export function AnalyticsPage() {
         />
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-4">
+      <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* repositories by category */}
         <Card className="p-5">
           <SectionHeader title="Repositories by type" />
@@ -164,7 +163,7 @@ export function AnalyticsPage() {
           {runTokenSeries.length >= 2 ? (
             <>
               <MiniArea points={runTokenSeries} tone="warning" width={480} height={80} responsive className="mt-4" />
-              <p className="mt-2 text-label text-text3">Exact trailing-7-day token sums from the run log, snapshotted daily.</p>
+              <p className="mt-2 text-label text-text3">Reported trailing-7-day token sums, snapshotted daily. Historical coverage is unknown; missing counters are not included.</p>
             </>
           ) : tokenSeries.length >= 2 ? (
             <>
@@ -189,7 +188,7 @@ export function AnalyticsPage() {
           <p className="text-label text-text3">No agent runs in this window — dispatch one and the roll-up populates.</p>
         </Card>
       ) : (
-        <div className="mt-3 grid grid-cols-2 gap-4">
+        <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card className="p-5">
             <SectionHeader title="Run outcomes" />
             <div className="mt-4 flex flex-col gap-2.5">
@@ -212,16 +211,18 @@ export function AnalyticsPage() {
             <div className="mt-4 flex flex-col gap-1.5 text-body text-text2">
               <p><span className="font-semibold text-text1">{runStats.total}</span> runs · <span className="font-semibold text-text1">{durationLabel(Math.round(runStats.totalDurationMs / 1000))}</span> total agent time</p>
               <p>
-                <span className="font-semibold text-text1">{fmtTok(runStats.tokensIn)}</span> tokens in · <span className="font-semibold text-text1">{fmtTok(runStats.tokensOut)}</span> out
+                <span className="font-semibold text-text1">{usageLabel(runStats.tokensIn, runStats.runsWithInputUsage, runStats.total)}</span> tokens in · <span className="font-semibold text-text1">{usageLabel(runStats.tokensOut, runStats.runsWithOutputUsage, runStats.total)}</span> out
               </p>
               {runStats.runsWithoutUsage > 0 ? (
                 <p className="text-label text-text3">{runStats.runsWithoutUsage} run{runStats.runsWithoutUsage === 1 ? '' : 's'} reported no usage data (counted, not estimated).</p>
               ) : null}
+              <p className="text-label text-text3">Input usage reported by {runStats.runsWithInputUsage}/{runStats.total} runs; output usage by {runStats.runsWithOutputUsage}/{runStats.total}. Missing counters are excluded from sums.</p>
+              <p className="text-label text-text3">Cost: unknown. No verified price or billing data is available.</p>
             </div>
           </Card>
 
           <Card className="p-5">
-            <SectionHeader title="Tokens by project" />
+            <SectionHeader title="Reported tokens by project" />
             <div className="mt-4 flex flex-col gap-2.5">
               {(() => {
                 const max = Math.max(1, ...runStats.byRepo.map((s) => s.tokensIn + s.tokensOut));
@@ -231,7 +232,7 @@ export function AnalyticsPage() {
                     label={state.repos[s.key]?.name ?? s.key}
                     count={s.tokensIn + s.tokensOut}
                     max={max}
-                    display={fmtTok(s.tokensIn + s.tokensOut)}
+                    display={usageLabel(s.tokensIn + s.tokensOut, s.runsWithInputUsage + s.runsWithOutputUsage, s.runs * 2)}
                   />
                 ));
               })()}
@@ -239,12 +240,12 @@ export function AnalyticsPage() {
           </Card>
 
           <Card className="p-5">
-            <SectionHeader title="Tokens by model" />
+            <SectionHeader title="Reported tokens by model" />
             <div className="mt-4 flex flex-col gap-2.5">
               {(() => {
                 const max = Math.max(1, ...runStats.byModel.map((s) => s.tokensIn + s.tokensOut));
                 return runStats.byModel.map((s) => (
-                  <Bar key={s.key} label={s.key} count={s.tokensIn + s.tokensOut} max={max} display={fmtTok(s.tokensIn + s.tokensOut)} tone="bg-info" />
+                  <Bar key={s.key} label={s.key} count={s.tokensIn + s.tokensOut} max={max} display={usageLabel(s.tokensIn + s.tokensOut, s.runsWithInputUsage + s.runsWithOutputUsage, s.runs * 2)} tone="bg-info" />
                 ));
               })()}
             </div>
