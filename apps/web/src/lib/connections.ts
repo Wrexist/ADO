@@ -4,6 +4,12 @@ import { ACC_TOKEN, SERVER_URL } from './config';
 
 const headers = () => ({ 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN });
 
+export async function verifyConnection(id: string): Promise<ConnectionStatus> {
+  const res = await fetch(`${SERVER_URL}/api/connections/${encodeURIComponent(id)}/verify`, { method: 'POST', headers: headers(), body: '{}' });
+  if (!res.ok) throw new Error(`Verification failed (${res.status})`);
+  return ConnectionStatus.parse(((await res.json()) as { status: unknown }).status);
+}
+
 export async function fetchConnections(): Promise<ConnectionStatus[]> {
   const res = await fetch(`${SERVER_URL}/api/connections`, { headers: headers() });
   if (!res.ok) throw new Error(`connections: ${res.status}`);

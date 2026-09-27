@@ -469,7 +469,7 @@
           "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "f63618df52c09c2be2c92196908e5cebb468158b43ba3fe428ee38149675147c"
+          "scripts/smoke.mjs": "0a08b683f9d97dcbceddd9fe93806f12c95d9080be3b121e388ecdbf6f322ae3"
         }
       }
     },
@@ -504,7 +504,12 @@
       "id": "T25",
       "title": "Token finns men fungerar inte",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ15, REQ22. **Status:** not_run.\n\n**Givet:** En anslutning har sparad men utgången credential.\n\n**När:** Status visas och verifieras.\n\n**Godkänt endast om:** Configured och authenticated skiljs. Credentialexistens räcker inte för Connected/Healthy.\n\n**Gäller:** always."
+      "specification": "**Grind:** R1. **Krav:** REQ15, REQ22. **Status:** not_run.\n\n**Givet:** En anslutning har sparad men utgången credential.\n\n**När:** Status visas och verifieras.\n\n**Godkänt endast om:** Configured och authenticated skiljs. Credentialexistens räcker inte för Connected/Healthy.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/connections/verification.test.ts",
+        "scripts/smoke.mjs",
+        "docs/controlos/connection-verification.md"
+      ]
     },
     {
       "id": "T26",
@@ -667,7 +672,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "09259a34d20b594cd5107a0775a3ab3306104b16ede1e411dfd87b5f98cd825c",
+          "apps/server/src/app.ts": "0dba74f943c998bbc012de3cf69ff2943d6e4ecd2250b65c3dae5aafeb31d40e",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

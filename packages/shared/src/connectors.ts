@@ -124,7 +124,10 @@ export const CONNECTOR_BY_ID: Record<string, Connector> = Object.fromEntries(
 /** Status the server returns per connector — NEVER the secret itself. */
 export const ConnectionStatus = z.object({
   id: z.string(),
-  connected: z.boolean(),
+  configured: z.boolean(),
+  authentication: z.enum(['unverified', 'verified', 'rejected', 'unavailable', 'unsupported', 'stale']),
+  checkedTs: z.string().nullable(),
+  verificationMessage: z.string().nullable(),
   hint: z.string().nullable(), // e.g. "••••4f2a" — last 4 chars only
   updatedTs: z.string().nullable(),
 });

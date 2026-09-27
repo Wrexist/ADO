@@ -46,6 +46,7 @@ describe('server security + bus (gate p2 criteria)', () => {
   });
 
   it('requires owner authentication to recheck process receipts and never offers a force unlock', async () => {
+    expect((await srv.app.inject({ method: 'POST', url: '/api/connections/github/verify', headers: HOST_OK, payload: {} })).statusCode).toBe(401);
     const url = '/api/runs/missing/reconcile';
     expect((await srv.app.inject({ method: 'POST', url, headers: HOST_OK, payload: {} })).statusCode).toBe(401);
     const response = await srv.app.inject({ method: 'POST', url, headers: { ...HOST_OK, 'x-acc-token': 'test-token' }, payload: { force: true } });

@@ -9,7 +9,7 @@ import {
 } from '@ado/shared';
 import { Button, Card, Chip, Icon, StatusDot, cx, type IconName } from '../kit';
 import { PageShell } from '../chrome/PageShell';
-import { fetchConnections, removeConnection, saveConnection } from '../lib/connections';
+import { fetchConnections, removeConnection, saveConnection, verifyConnection } from '../lib/connections';
 
 const ICON: Record<string, IconName> = {
   // source
@@ -45,7 +45,8 @@ function ConnectorCard({
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const connected = status?.connected ?? false;
+  const connected = status?.configured ?? false;
+  const verified = status?.authentication === 'verified';
 
   const save = async () => {
     if (!value.trim()) return;
@@ -77,7 +78,7 @@ function ConnectorCard({
 
   return (
     <Card className="flex flex-col gap-3 p-5">
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-tile bg-elevated text-text2">
           <Icon name={ICON[c.id] ?? 'integrations'} size={18} />
         </span>
@@ -85,18 +86,18 @@ function ConnectorCard({
           <div className="flex items-center gap-2">
             <p className="truncate text-body font-semibold text-text1">{c.name}</p>
             {c.wired ? (
-              <Chip tone="success" size="sm">Active</Chip>
+              <Chip size="sm">Available</Chip>
             ) : (
               <Chip size="sm">Preview</Chip>
             )}
           </div>
           <p className="mt-0.5 text-label text-text2">{c.blurb}</p>
         </div>
-        <StatusDot
+        <div className="w-full"><StatusDot
           dotAfter
-          tone={connected ? 'success' : 'muted'}
-          label={connected ? 'Key saved - not verified' : 'Not set'}
-        />
+          tone={verified ? 'success' : 'muted'}
+          label={!connected ? 'Not set' : verified ? 'Verified recently' : status?.authentication === 'rejected' ? 'Credential rejected' : status?.authentication === 'stale' ? 'Check expired' : 'Configured · not verified'}
+        /></div>
       </div>
 
       {connected && status?.hint ? (
@@ -117,7 +118,7 @@ function ConnectorCard({
           className="h-9 min-w-0 flex-1 rounded-tile border-none bg-elevated px-3 font-mono text-body text-text1 placeholder:font-sans placeholder:text-text3 focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
         <Button size="sm" onClick={() => void save()} disabled={busy || !value.trim()}>
-          {connected ? 'Update' : c.wired ? 'Connect' : 'Save key'}
+          {connected ? 'Update' : 'Save key'}
         </Button>
         {connected ? (
           <Button size="sm" variant="ghost" onClick={() => void disconnect()} disabled={busy}>
@@ -125,6 +126,13 @@ function ConnectorCard({
           </Button>
         ) : null}
       </div>
+      {connected && <div className="flex flex-wrap items-center gap-2 text-label text-text3">
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
+          setBusy(true); setMsg(null);
+          void verifyConnection(c.id).then(onChanged).catch((error: Error) => setMsg(error.message)).finally(() => setBusy(false));
+        }}>Verify {c.name}</Button>
+        <span>{status?.verificationMessage ?? 'Saving a key does not verify access.'}{status?.checkedTs ? ` Checked ${new Date(status.checkedTs).toLocaleString()}.` : ''}</span>
+      </div>}
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-label text-text3">{c.docsHint ?? `Paste your ${c.keyLabel.toLowerCase()}.`}</span>
@@ -149,10 +157,14 @@ export function SettingsPage() {
   const [query, setQuery] = useState('');
 
   useEffect(() => {
-    fetchConnections()
+    const refresh = () => { void fetchConnections()
       .then((list) => setStatuses(Object.fromEntries(list.map((s) => [s.id, s]))))
       .catch((e) => setError((e as Error).message))
-      .finally(() => setLoaded(true));
+      .finally(() => setLoaded(true)); };
+    refresh();
+    const timer = setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
   }, []);
 
   const byGroup = useMemo(() => {
@@ -165,7 +177,7 @@ export function SettingsPage() {
     return map;
   }, []);
 
-  const connectedCount = Object.values(statuses).filter((s) => s.connected).length;
+  const connectedCount = Object.values(statuses).filter((s) => s.configured).length;
 
   return (
     <PageShell
@@ -180,7 +192,7 @@ export function SettingsPage() {
       <div className="mt-4 flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-success/25 bg-success/10 px-3 py-1.5 text-label text-success">
             <Icon name="lock" size={13} />
-            Keys are stored in a gitignored file on your machine (mode 600) and never sent back to the browser.
+            Keys stay on this machine. Desktop encrypts them with your OS account; CLI profiles use protected files.
           </span>
           <span className="text-label text-text3">
             {connectedCount} of {CONNECTORS.length} credentials configured
@@ -228,7 +240,7 @@ export function SettingsPage() {
                   <p className="text-label text-text3">Live now — connecting these does real work in the dashboard.</p>
                 </div>
                 {active.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4">{active.map(card)}</div>
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">{active.map(card)}</div>
                 ) : (
                   <p className="text-label text-text3">No active integrations match “{query}”.</p>
                 )}
@@ -253,7 +265,7 @@ export function SettingsPage() {
                             <h3 className="text-body font-semibold text-text1">{group.title}</h3>
                             <p className="text-label text-text3">{group.blurb}</p>
                           </div>
-                          <div className="grid grid-cols-2 gap-4">{items.map(card)}</div>
+                          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">{items.map(card)}</div>
                         </section>
                       );
                     })}

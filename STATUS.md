@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: konfiguration skild från verifierad anslutning
+
+Anslutningsstatus skiljer nu sparad nyckel från autentisering. GitHub har en manuell, läsande kontroll med tidsstämpel, tiosekundersgräns och nekade omdirigeringar. Utgångna/avvisade nycklar, otillgänglig kontroll och saknat verifieringsstöd visas separat. Nyckelbyte och omstart ogiltigförklarar resultatet; efter fem minuter blir det inaktuellt. Inställningskorten har också fått läsbar mobilbredd.
+
+Slutlig `npm run verify` passerade på Windows med 295 tester i 51 filer, typkontroll, lint och byggning. Den första körningen fick två timeouter i befintliga processflödestester under samtidiga kontroller; båda passerade separat och i omkörningen utan samtidiga native-/webbläsartester. `npm run smoke` passerade med märkta credential-fixtures vid 1536/390 px; native-migreringen passerade igen. Loggar: `controlos-connections-final-verify.log`, `controlos-connections-final-smoke.log`, `controlos-connections-native.log` samt den första körningens `controlos-connections-verify.log` (ignorerade).
+
+Ingen riktig GitHub-nyckel verifierades. Full T25 är fortfarande öppen tillsammans med R1–R4. Se [kontrakt och testgränser](docs/controlos/connection-verification.md). Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: avbrottstålig Windows-kryptering av nyckelfiler
 
 Ett nytt native-test visade att den tidigare Electron-krypteringen kunde klara round-trip i samma process men misslyckas efter ett omedelbart processavslut i en ny profil. Windows desktop använder därför nu en separat DPAPI-hjälpprocess för varje credential. Värden går via privata pipes, inte argument. Läsbara äldre Electron-nycklar migreras; tomma, trasiga eller oläsbara tokenfiler ersätts inte längre med en ny nyckel.

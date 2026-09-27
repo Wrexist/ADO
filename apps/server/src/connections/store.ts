@@ -1,13 +1,14 @@
 /**
  * Connections store — the ONLY place secrets are persisted, in a gitignored JSON file
  * under data/ (same trust model as .env: local-first, 127.0.0.1, file mode 600). Secrets
- * are NEVER returned to the client: callers get a masked hint + connected flag only.
+ * are NEVER returned to the client: callers get a masked hint and separate configuration/check states.
  *
  * Resolution order for any integration: stored value → .env fallback. So existing .env
  * keys keep working, and the Settings page overrides them per-connector.
  */
 import { readJsonStore, writeJsonStore } from '../lib/jsonStore';
 import { CONNECTOR_BY_ID, type ConnectionStatus } from '@ado/shared';
+import { createHash } from 'node:crypto';
 
 export interface SecretCodec {
   id: string;
@@ -24,11 +25,15 @@ interface StoredConn {
 
 export class ConnectionsStore {
   private data: Record<string, StoredConn> = {};
+  private checks = new Map<string, { fingerprint: string; at: number; state: ConnectionStatus['authentication']; message: string }>();
+  private revisions = new Map<string, number>();
 
   constructor(
     private filePath: string,
     private envFallback: (id: string) => string | undefined = () => undefined,
     private codec?: SecretCodec,
+    private fetchImpl: typeof fetch = fetch,
+    private now: () => number = Date.now,
   ) {
     this.load();
   }
@@ -75,12 +80,14 @@ export class ConnectionsStore {
     const next = { ...this.data, [id]: { value: trimmed, updatedTs: new Date().toISOString() } };
     this.persist(next);
     this.data = next;
+    this.checks.delete(id); this.revisions.set(id, (this.revisions.get(id) ?? 0) + 1);
   }
 
   remove(id: string): void {
     const next = { ...this.data }; delete next[id];
     this.persist(next);
     this.data = next;
+    this.checks.delete(id); this.revisions.set(id, (this.revisions.get(id) ?? 0) + 1);
   }
 
   /** Public status for one connector — masked, never the secret. */
@@ -88,12 +95,39 @@ export class ConnectionsStore {
     const stored = this.data[id];
     const envVal = this.envFallback(id);
     const value = stored?.value || envVal;
+    const check = this.checks.get(id);
+    const matching = value && check?.fingerprint === this.fingerprint(value) ? check : undefined;
     return {
       id,
-      connected: Boolean(value),
-      hint: value ? `••••${value.slice(-4)}` : null,
+      configured: Boolean(value),
+      authentication: matching ? this.now() - matching.at > 300000 ? 'stale' : matching.state : 'unverified',
+      checkedTs: matching ? new Date(matching.at).toISOString() : null,
+      verificationMessage: matching?.message ?? null,
+      hint: value ? value.length > 4 ? `••••${value.slice(-4)}` : '••••' : null,
       updatedTs: stored?.updatedTs ?? (envVal ? 'from .env' : null),
     };
+  }
+
+  private fingerprint(value: string): string { return createHash('sha256').update(value).digest('hex'); }
+
+  /** Explicit read-only check. A saved key alone never authenticates a connector. */
+  async verify(id: string): Promise<ConnectionStatus> {
+    if (!Object.hasOwn(CONNECTOR_BY_ID, id)) throw new Error('unknown connector');
+    const value = this.resolve(id);
+    if (!value) return this.status(id);
+    const revision = (this.revisions.get(id) ?? 0) + 1; this.revisions.set(id, revision);
+    let state: ConnectionStatus['authentication'] = 'unsupported';
+    let message = 'No credential verification is implemented for this connector.';
+    if (id === 'github') {
+      try {
+        const response = await this.fetchImpl('https://api.github.com/user', { redirect: 'error', signal: AbortSignal.timeout(10000), headers: { authorization: `Bearer ${value}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2026-03-10' } });
+        state = response.status === 200 ? 'verified' : response.status === 401 ? 'rejected' : 'unavailable';
+        message = state === 'verified' ? 'GitHub accepted this credential. Repository permissions were not checked.' : state === 'rejected' ? 'GitHub rejected this credential.' : 'GitHub verification was inconclusive; retry later.';
+        await response.body?.cancel();
+      } catch { state = 'unavailable'; message = 'GitHub could not be verified; check connectivity and retry.'; }
+    }
+    if (this.revisions.get(id) === revision && this.resolve(id) === value) this.checks.set(id, { fingerprint: this.fingerprint(value), at: this.now(), state, message });
+    return this.status(id);
   }
 
   /** Status for every connector in the catalog. */

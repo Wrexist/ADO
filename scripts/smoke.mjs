@@ -60,6 +60,28 @@ try {
     await page.screenshot({ path: join(out, `mobile-${route.slice(1)}.png`), fullPage: true });
   }
   const desktop = await browser.newPage();
+  // Credential state fixture: no real provider request or saved credential.
+  const connectionFixture = { id: 'github', configured: true, authentication: 'unverified', checkedTs: null,
+    verificationMessage: 'DEMO credential fixture', hint: '••••demo', updatedTs: null };
+  await page.route('**/api/connections**', async (route) => {
+    if (new URL(route.request().url()).pathname.endsWith('/verify')) {
+      connectionFixture.authentication = 'rejected';
+      connectionFixture.checkedTs = new Date().toISOString();
+      connectionFixture.verificationMessage = 'DEMO: GitHub rejected this credential.';
+      await route.fulfill({ json: { status: connectionFixture } });
+    } else await route.fulfill({ json: { connections: [connectionFixture] } });
+  });
+  for (const width of [1536, 390]) {
+    connectionFixture.authentication = 'unverified';
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto(base + '/settings'); await pair();
+    await page.getByLabel('Filter services').fill('github');
+    await page.getByText('Configured · not verified', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Verify GitHub', exact: true }).click();
+    await page.getByText('Credential rejected', { exact: true }).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Credential verification mobile overflow');
+    await page.screenshot({ path: join(out, `credential-rejected-${width}.png`), fullPage: true });
+  }
   // Explicit API fixtures: exercise terminal process-stop UI without starting an agent.
   const runFixture = {
     id: 'demo-stop', repoId: 'demo-process-fixture', task: 'DEMO: process stop confirmation', model: 'fixture', provider: 'codex', status: 'failed',

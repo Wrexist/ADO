@@ -920,6 +920,11 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!requireToken(req, reply)) return undefined;
     return { connections: connections.statusAll() };
   });
+  app.post('/api/connections/:id/verify', async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    if (!Object.hasOwn(CONNECTOR_BY_ID, id)) return reply.code(404).send({ error: 'unknown connector' });
+    return { status: await connections.verify(id) };
+  });
   app.post('/api/connections/:id', async (req, reply) => {
     const id = (req.params as { id: string }).id;
     if (!CONNECTOR_BY_ID[id]) return reply.code(404).send({ error: 'unknown connector' });
@@ -1151,7 +1156,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return typeof v === 'string' && v.trim().length > 0;
   };
   const probeCtx: ProbeContext = {
-    connectionConnected: (id) => connections.status(id).connected,
+    connectionConnected: (id) => connections.status(id).configured,
     envHas,
   };
   let setupResults: ProbeResult[] = [];
