@@ -13,7 +13,7 @@ Arbetet fortsätter i samma ADO-projekt från `bb19caba68c1cda13249c8d722a9b6647
 - Desktop krypterar anslutningsnycklar och sin åtkomstnyckel med operativsystemets nyckelskydd. CLI-profiler använder fortfarande skyddade klartextfiler. Samma OS-användare är fortfarande en gemensam tillitsgräns.
 - Repoidentiteter skiljer lokala sökvägar och GitHub owner/name. CI, agentresultat och påstådd TestFlight-uppladdning redovisas tydligare som olika källor.
 - Mobilanpassade kärnvyer och ett experimentellt Codex-gränssnitt finns. Codex kräver befintlig ChatGPT-inloggning och har ingen automatisk API-betalningsfallback.
-- CI-definitionen kör verifiering på Windows/Ubuntu och Node 22.12/24. Aktuella fjärrkörningar och obligatoriska merge-regler är inte bevisade av lokala tester.
+- CI-definitionen kör verifiering på Windows/Ubuntu och Node 22.18/24. Aktuella fjärrkörningar och obligatoriska merge-regler är inte bevisade av lokala tester.
 
 ## Kontrollresultat
 
@@ -21,7 +21,7 @@ Miljö: Windows, Node 22.18.0, npm 11.7.0.
 
 | Kontroll | Resultat och begränsning |
 |---|---|
-| `npm run verify` | Godkänd: typkontroll, lint, 249 tester och byggning. Inkluderar policyregression, felaktiga dispatchfält samt innehållskontroll av binära filer och filnamn med inledande blanksteg. |
+| `npm run verify` | Godkänd: typkontroll, lint, 250 tester och byggning. Inkluderar policyregression, felaktiga dispatchfält samt innehållskontroll av binära filer och filnamn med inledande blanksteg. |
 | `npm run smoke` | Godkänd: byggd webb utan testhemlighet, rätt/fel nyckel, frånkoppling, omladdning, desktop-runtime och 1536/390-pixelvyer. Bilderna använder uttryckligen demodata. |
 | Codex-protokoll | Fem offlinefall passerade: lyckad körning, nekad approval med kolliderande RPC-ID, API-konto nekas, trasig JSON nekas, stopp. |
 | Installerad Codex | CLI 0.157.0 svarade på initialize/account-read och rapporterade ChatGPT-konto. Ingen riktig modelluppgift genomförd. |
@@ -52,3 +52,7 @@ Alla 24 krav, 20 arbetsdelar och 46 fullständiga acceptansscenarier finns i `do
 ## Återbruk
 
 Behåll React-vyerna, komponentbiblioteket, SQLite, händelsekontrakten, lokala scanners och de integrationer som har verkliga källor. Fortsätt avgränsa körmotor, verifiering och behörigheter bakom tydliga gränssnitt. Ersätt historiska fasnummer som statuskälla med kontroller knutna till version och miljö. Bygg planeringsdomänen separat från agentkörningar; lägg inte task-status ovanpå processens exitkod.
+
+## Windows runtime-korrigering
+
+Den första CI-matrisen upptäckte två fel på Windows/Node 22.12, medan Node 24 och båda Ubuntu-jobben passerade. Ett lokalt test med kontrollsummaverifierad Node 22.12 återgav orsaken: lstat rapporterade dev=0 och fstat samma fils verkliga volym-ID. Node 22.18 gav matchande värden. Stödet kräver därför Node 22.18+ i 22-serien eller Node 24.11+, med tydligt startfel på äldre versioner. Filidentitetskontrollen har behållits strikt. [Libuv 1.51:s ändringslogg](https://raw.githubusercontent.com/libuv/libuv/v1.51.0/ChangeLog) dokumenterar rättningen av volymnumret. CI-matrisen körs om på den deklarerade lägstanivån.

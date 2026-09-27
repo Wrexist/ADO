@@ -78,6 +78,8 @@ and it still drives the same local-first server — nothing moves to a cloud.
 
 ## Quickstart (from source)
 
+Requires Node 22.18+ in the 22.x line, or Node 24.11+. Older Windows runtimes cannot reliably support the strict file identity checks.
+
 ```bash
 # 1. Install, then run — that's it (http://localhost:5173)
 npm install
@@ -148,7 +150,7 @@ The repo ships a Claude Code operating harness so any session (human or agent) s
 
 Bootstrap: `bash install.sh` (chmod hooks, validate config, auto-generate `.env` with a local token, `npm install`).
 
-**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so failures are visible; branch protection must separately require those checks. It runs on Windows and Ubuntu with Node 22.12 and 24 with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
+**CI** — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) mirrors the local gate (`npm run verify`: typecheck · lint · test · build) on every PR and push to `main`, so failures are visible; branch protection must separately require those checks. It runs on Windows and Ubuntu with Node 22.18 and 24 with a read-only token and needs no secrets (the visual `smoke` stays a local gate — CI won't fake a pass for a step it can't honestly run).
 
 ---
 

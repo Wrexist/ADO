@@ -35,19 +35,20 @@ function parseProjectDirs(raw: string | undefined): string[] {
   return raw.split(',').map(expandHome).filter(Boolean);
 }
 
+export function assertSupportedRuntime(version = process.versions.node): void {
+  const [major, minor] = version.split('.').map(Number);
+  if (!((major === 22 && minor >= 18) || (major === 24 && minor >= 11) || major > 24)) {
+    throw new Error(`ControlOS requires Node 22.18+ (22.x) or 24.11+. Running ${version}. Older Windows runtimes report inconsistent file identities; the file-write guard must remain strict.`);
+  }
+}
+
 export function loadEnv(overrides: Partial<Env> = {}): Env {
+  assertSupportedRuntime();
   const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
   const envFile = join(root, '.env');
   if (existsSync(envFile)) {
-    // Built-in dotenv (no dependency); never logs values. Added in Node 20.12 / 21.7 —
-    // guard so a Node in the declared >=20.12 floor that's actually older fails with a
-    // clear, actionable message instead of a cryptic "process.loadEnvFile is not a function".
-    if (typeof process.loadEnvFile !== 'function') {
-      throw new Error(
-        `This server needs Node >=20.12 for the built-in .env loader (process.loadEnvFile); running ${process.version}. ` +
-          'Upgrade Node, or export the .env values into the environment before starting.',
-      );
-    }
+    // Built-in dotenv; never logs values. The supported runtime includes this API.
+    if (typeof process.loadEnvFile !== 'function') throw new Error('Runtime does not provide process.loadEnvFile; use a supported Node installation.');
     process.loadEnvFile(envFile);
   }
 

@@ -8,6 +8,7 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] Implement runtime browser pairing, guarded task-file writes, queue recovery/idempotency, repository writer ownership, isolated Git results and content-bound verification.
 - [x] Add storage corruption checks, backup/restore validation, desktop OS credential encryption and safer process handling.
 - [x] Implement responsive core views and an experimental Codex protocol adapter with offline regression tests.
+- [x] Reproduce the Windows/Node 22.12 file identity incompatibility; require a corrected runtime without weakening the guard.
 - [ ] Complete R1 crash/process-identity, sandbox and native credential acceptance; interrupted writers remain quarantined.
 - [ ] Complete R2 planning, inbox, roadmap, context, Today and Universe domain work.
 - [ ] Complete R3 private mobile sessions, live provider acceptance and quota handling.
