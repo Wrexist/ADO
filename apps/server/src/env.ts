@@ -4,6 +4,7 @@
  * localhost is not a trust boundary (convention 9).
  */
 import { existsSync } from 'node:fs';
+import { CONTROL_OS_RUNTIME, supportsControlOSRuntime } from '@ado/shared';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -36,9 +37,8 @@ function parseProjectDirs(raw: string | undefined): string[] {
 }
 
 export function assertSupportedRuntime(version = process.versions.node): void {
-  const [major, minor] = version.split('.').map(Number);
-  if (!((major === 22 && minor >= 18) || (major === 24 && minor >= 11) || major > 24)) {
-    throw new Error(`ControlOS requires Node 22.18+ (22.x) or 24.11+. Running ${version}. Older Windows runtimes report inconsistent file identities; the file-write guard must remain strict.`);
+  if (!supportsControlOSRuntime(version)) {
+    throw new Error(`ControlOS requires ${CONTROL_OS_RUNTIME}. Running ${version}. Older Windows runtimes report inconsistent file identities; the file-write guard must remain strict.`);
   }
 }
 

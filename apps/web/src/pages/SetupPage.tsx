@@ -297,29 +297,27 @@ export function SetupPage() {
         <section>
           <div className="mb-3">
             <h2 className="text-section font-semibold text-text1">Desktop app</h2>
-            <p className="text-label text-text3">One download instead of git + npm — the same dashboard as an installable app.</p>
+            <p className="text-label text-text3">Windows packaging is under validation.</p>
           </div>
           <Card className="p-5">
             <div className="flex flex-wrap items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-tile bg-elevated text-text2">
                 <Icon name="rocket" size={18} />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[min(100%,16rem)] flex-1">
                 <p className="text-body font-medium text-text1">AI Control Center for Windows</p>
                 <p className="text-label text-text3">
-                  Download the installer (ACC-Setup-…exe), run it, and the dashboard opens — no
-                  terminal, no npm. Data lives in your Windows user folder; the app auto-updates
-                  from new releases.
+                  Installer availability, signing and update migration have not been verified
+                  for this version. Check the release notes before choosing an artifact.
                 </p>
               </div>
               <Button size="sm" variant="outline" onClick={() => window.open('https://github.com/Wrexist/ADO/releases/latest', '_blank', 'noopener')}>
-                Download for Windows ↗
+                View releases ↗
               </Button>
             </div>
             <p className="mt-3 text-label text-warning">
-              The build is currently unsigned, so Windows SmartScreen shows a prompt on first
-              launch — click “More info → Run anyway”. Signing (Azure Artifact Signing) is
-              documented in docs/DESKTOP.md and drops into the same pipeline.
+              A release link is not evidence of a tested installation or update. Local development
+              checks do not certify a published Windows build.
             </p>
           </Card>
         </section>

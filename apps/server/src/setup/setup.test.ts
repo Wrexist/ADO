@@ -13,6 +13,14 @@ const CTX = (over: Partial<ProbeContext> = {}): ProbeContext => ({
 const CAPS = (over: Partial<Capabilities> = {}): Capabilities => ({ code: false, brew: false, claude: false, ...over });
 
 describe('setup probe — honest detection', () => {
+  it('checks the actual server runtime against the startup contract, not a Node executable on PATH', async () => {
+    for (const runtimeVersion of ['20.19.0', '22.12.0', '22.17.0', '23.0.0', '24.10.0', '25.bad', '22.18.0-rc.1']) {
+      expect(await probeOne(REQUIREMENT_BY_ID.node, CTX({ runtimeVersion }), TS, CAPS())).toMatchObject({ status: 'manual', version: runtimeVersion, installable: false, detail: expect.stringContaining('Unsupported') });
+    }
+    for (const runtimeVersion of ['22.18.0', '22.23.0', '24.11.0', '25.0.0']) {
+      expect(await probeOne(REQUIREMENT_BY_ID.node, CTX({ runtimeVersion }), TS, CAPS())).toMatchObject({ status: 'installed', version: runtimeVersion });
+    }
+  });
   it('detects an installed command with a version (node is always present in the test runner)', async () => {
     const r = await probeOne(REQUIREMENT_BY_ID.node, CTX(), TS, CAPS());
     expect(r.status).toBe('installed');

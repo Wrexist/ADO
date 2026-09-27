@@ -8,13 +8,14 @@
  * with a minimal env allow-list and a short timeout, so probing is safe and can't hang boot.
  */
 import { spawn } from 'node:child_process';
-import { REQUIREMENTS, type ConnectionStatus, type ProbeResult, type Requirement } from '@ado/shared';
+import { CONTROL_OS_RUNTIME, supportsControlOSRuntime, REQUIREMENTS, type ConnectionStatus, type ProbeResult, type Requirement } from '@ado/shared';
 
 export interface ProbeContext {
   /** Configuration is not authentication; checks may expire between reads. */
   connectionStatus: (id: string) => Pick<ConnectionStatus, 'configured' | 'authentication' | 'checkedTs'>;
   /** Does the running server have this env var set (non-empty)? */
   envHas: (name: string) => boolean;
+  runtimeVersion?: string;
 }
 
 /** Minimal env for a probe child — never the dashboard's secrets. */
@@ -133,6 +134,13 @@ export async function probeOne(
   const base = { id: req.id, checkedTs };
   const installable = installableFor(req, caps);
   const d = req.detect;
+
+  if (d.via === 'server-runtime') {
+    const version = ctx.runtimeVersion ?? process.versions.node;
+    const supported = supportsControlOSRuntime(version);
+    return { ...base, status: supported ? 'installed' : 'manual', version,
+      detail: supported ? 'Running server runtime meets the declared minimum.' : `Unsupported running server runtime. Requires ${CONTROL_OS_RUNTIME}; restart with a supported runtime.`, installable: false };
+  }
 
   if (d.via === 'manual') {
     return { ...base, status: 'manual', version: null, detail: null, installable };

@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: gemensam runtimekontroll och versionsbunden installationsstatus
+
+Setup och serverstart delar nu versionsregeln i `packages/shared/src/runtime.ts`: Node 22.18+ i 22-serien eller 24.11+. Felaktiga och förhandsversioner nekas. Setup läser den körande serverns runtime, inklusive Electron, i stället för att prova en annan Node-binär på PATH. En äldre version visas som åtgärdskrävande och får inte Ready-status. Den tidigare guiden för Node 20 har ersatts med projektets provade lägstanivå. Kontrollen gäller inte automatiskt andra byggskal eller providerprocesser.
+
+Setup och README skiljer nu release-definitionen från bevis på publicerad installer, signering och uppdateringsmigrering. Länken visar releases utan att påstå att en viss installer är verifierad. Installationskortets mobilradbrytning har också rättats. Nästa större desktopsteg är provning av den paketerade appen och en separat full profil; detta genomfördes inte i denna etapp.
+
+`npm run verify` passerade: typkontroll, lint, 355 tester i 71 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Hela `npm run smoke` passerade med en uttrycklig DEMO-fixture för nekad Node 22.12 och installationsstatus vid 1536/390 px. Bilderna har granskats. Loggar: `controlos-setup-runtime-focused.log`, `controlos-setup-runtime-verify.log` och `controlos-setup-runtime-smoke.log` (ignorerade). Chunkvarningen kvarstår, cirka 560 kB före gzip.
+
+13 av 46 fullständiga scenarier är fortsatt lokalt godkända. Fulla R1–R4-grindar är öppna. Ingen modell, pilotagent, merge, publicering eller installer kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: verifieringsstatus även i Setup
 
 Setup räknar inte längre en sparad GitHub-nyckel som installerad/redo. Konfigurerad, nyligen verifierad, nekad, utgången och otillgänglig verifiering hålls isär. Varje Setup-svar läser anslutningsstatus på nytt; cache för maskinens verktyg kan inte hålla kvar ett gammalt grönt anslutningsresultat. Vyn hämtar lokal status var 15:e sekund och vid fokus utan automatisk providerverifiering. Verifierat betyder endast godkänt credential vid det stödda anropet, inte verifierade repobehörigheter. Setup anger också runtime-parning i stället för att lägga åtkomstnyckeln i webbbygget.

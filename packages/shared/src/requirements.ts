@@ -12,11 +12,13 @@
  * client never sends a command string (allow-list, CLAUDE.md convention 10/§V2).
  */
 import { z } from 'zod';
+import { CONTROL_OS_RUNTIME } from './runtime';
 
 export type ReqCategory = 'runtime' | 'cli' | 'extension' | 'app' | 'account' | 'config';
 
 /** How the server detects whether a requirement is already satisfied. */
 export type DetectSpec =
+  | { via: 'server-runtime' }
   | { via: 'command'; command: string; args?: string[]; versionRe?: string }
   | { via: 'vscode-ext'; extensionId: string }
   | { via: 'connection'; connectionId: string }
@@ -77,17 +79,17 @@ export const REQUIREMENTS: Requirement[] = [
   // ── Core runtime ────────────────────────────────────────────────────────────
   R({
     id: 'node',
-    name: 'Node.js 20.12+',
+    name: CONTROL_OS_RUNTIME,
     category: 'runtime',
     required: true,
     blurb: 'JavaScript runtime.',
-    why: 'Runs the dashboard server and builds the web app. The monorepo targets Node 20.12+ (built-in .env loader).',
-    detect: { via: 'command', command: 'node', args: ['--version'], versionRe: 'v?(\\d+\\.\\d+\\.\\d+)' },
+    why: 'Checks the running server runtime, including the embedded desktop runtime. Older versions can report inconsistent file identities on Windows. A different Node executable on PATH is not evidence for this process.',
+    detect: { via: 'server-runtime' },
     install: { via: 'manual' },
     docsUrl: 'https://nodejs.org/en/download',
     commands: [
-      { label: 'macOS (Homebrew)', command: 'brew install node@20' },
-      { label: 'nvm (any OS)', command: 'nvm install 20 && nvm use 20' },
+      { label: 'nvm: install the tested minimum', command: 'nvm install 22.18.0' },
+      { label: 'nvm: select it before restarting the server', command: 'nvm use 22.18.0' },
     ],
   }),
   R({

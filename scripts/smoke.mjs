@@ -161,11 +161,16 @@ try {
     await page.screenshot({ path: join(out, `connection-recovery-${width}.png`), fullPage: true });
   }
   const setupCredential = { id: 'github-token', status: 'configured', version: null, detail: 'DEMO: Credential rejected. Update it in Connections and verify again.', installable: false, checkedTs: new Date().toISOString() };
-  await page.route('**/api/setup**', (route) => route.fulfill({ json: { results: [setupCredential] } }));
+  const setupRuntime = { id: 'node', status: 'manual', version: '22.12.0', detail: 'DEMO: Unsupported running server runtime. Requires Node 22.18+ (22.x) or 24.11+; restart with a supported runtime.', installable: false, checkedTs: new Date().toISOString() };
+  await page.route('**/api/setup**', (route) => route.fulfill({ json: { results: [setupCredential, setupRuntime] } }));
   for (const width of [1536, 390]) {
     setupCredential.status = 'configured'; setupCredential.detail = 'DEMO: Credential rejected. Update it in Connections and verify again.';
     await page.setViewportSize({ width, height: 1024 });
     await page.goto(base + '/setup'); await pair();
+    await page.getByText('Node 22.18+ (22.x) or 24.11+', { exact: true }).waitFor();
+    await page.getByText('Note: ' + setupRuntime.detail, { exact: true }).waitFor();
+    await page.getByText('Windows packaging is under validation.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'View releases', exact: false }).waitFor();
     await page.getByText('Configured · not verified', { exact: true }).waitFor();
     await page.getByText('Note: ' + setupCredential.detail, { exact: true }).waitFor();
     setupCredential.status = 'verified'; setupCredential.detail = 'DEMO: Credential accepted. Repository permissions were not checked.';

@@ -61,24 +61,23 @@ The recovery keeps the dashboard, SQLite/event contracts, scanner and existing i
 
 ---
 
-## Download the desktop app (Windows)
+## Windows desktop packaging
 
-No terminal required: grab **`ACC-Setup-<version>.exe`** from
-**[the latest release](https://github.com/Wrexist/ADO/releases/latest)**, run it, and the
-dashboard opens. The installer is built and published by
-[`release.yml`](./.github/workflows/release.yml) (on a `v*` tag, or a manual "Run workflow");
-the app keeps itself updated from new releases. Your data lives in your Windows user folder,
-and it still drives the same local-first server — nothing moves to a cloud.
-
-> Honest note: the build is currently **unsigned**, so Windows SmartScreen asks for
-> "More info → Run anyway" the first time. The signing path (Azure Artifact Signing) is
-> documented in [`docs/DESKTOP.md`](./docs/DESKTOP.md). macOS/Linux installers are not built
-> today — the wrapper is cross-platform, so they can be re-enabled in `release.yml` +
-> `electron-builder.yml` when wanted.
+The Electron wrapper and [release definition](./.github/workflows/release.yml) exist.
+Installer availability, signing, update behavior and full profile migration have not
+been accepted for this revision. [View release artifacts](https://github.com/Wrexist/ADO/releases/latest)
+and their version-specific evidence before choosing a build. A workflow definition
+or successful local build does not establish a published, tested installer.
+The remaining release work is recorded in [docs/DESKTOP.md](./docs/DESKTOP.md).
 
 ## Quickstart (from source)
 
 Requires Node 22.18+ in the 22.x line, or Node 24.11+. Older Windows runtimes cannot reliably support the strict file identity checks.
+
+Setup and server startup share the same runtime predicate. Setup checks the running
+server's version (including Electron's embedded Node), not another executable on
+PATH. Unsupported or malformed versions cannot receive Ready status. This does not
+certify that a separate build shell or provider process uses the same runtime.
 
 ```bash
 # 1. Install, then run — that's it (http://localhost:5173)
