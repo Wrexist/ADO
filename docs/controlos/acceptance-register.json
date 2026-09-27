@@ -1006,9 +1006,10 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R3. **Krav:** REQ18. **Status:** not_run.\n\n**Givet:** En adapter får okänd protokollversion eller okänt obligatoriskt event.\n\n**När:** Körningen eller uppkoppling startar.\n\n**Godkänt endast om:** Inget schema gissas. Version eller capability avvisas, råfel redigeras och gränssnittet visar begränsningen.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/runner/codex.test.ts"
+        "apps/server/src/runner/codex.test.ts",
+        "docs/controlos/codex-lifecycle.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. Codex lifecycle validation now rejects missing/conflicting thread/turn identities and unsupported or non-string completion statuses, with seven real local child-process rejection fixtures and a valid notification-before-reply control. Initial five fixtures reproduced failures before the fix. Negotiated version/capability and full UI acceptance remain unverified."
     },
     {
       "id": "T31",

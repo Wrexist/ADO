@@ -66,7 +66,9 @@ export class CodexSpawner implements Spawner {
             if (stopped) { shutdown(); break; }
             send({ id: 3, method: 'turn/start', params: { threadId, input: [{ type: 'text', text: opts.prompt }], sandboxPolicy: { type: 'workspaceWrite', writableRoots: [opts.cwd], networkAccess: false }, approvalPolicy: 'on-request' } });
           } else if (message.id === 3 && !message.method) {
-            const id = object(result.turn).id; if (typeof id === 'string') turnId = id;
+            const id = object(result.turn).id;
+            if (!threadId || typeof id !== 'string' || !id || (turnId && turnId !== id)) throw new Error('Codex turn response is incompatible');
+            turnId = id;
           } else if (message.id !== undefined && typeof message.method === 'string') {
             // Fail closed. No provider request can silently grant session-wide permissions.
             if (message.method === 'item/commandExecution/requestApproval' || message.method === 'item/fileChange/requestApproval') send({ id: message.id, result: { decision: 'decline' } });
@@ -75,6 +77,13 @@ export class CodexSpawner implements Spawner {
             else { send({ id: message.id, error: { code: -32601, message: 'Interactive request is not supported by this adapter' } }); kill(); }
             yield { kind: 'progress', text: 'Permission escalation declined; current adapter keeps its original scope.' };
           } else if (typeof message.method === 'string') {
+            // Lifecycle notifications are required evidence, not optional telemetry.
+            // Never finish a different turn or infer success from an unbound frame.
+            if (message.method === 'turn/started' || message.method === 'turn/completed') {
+              const turn = object(params.turn);
+              if (!threadId || params.threadId !== threadId || typeof turn.id !== 'string' || !turn.id || (turnId && turn.id !== turnId)) throw new Error('Codex turn lifecycle identity is incompatible');
+              if (message.method === 'turn/completed' && (!turnId || typeof turn.status !== 'string' || !['completed', 'failed', 'interrupted'].includes(turn.status))) throw new Error('Codex turn completion is incompatible');
+            }
             if (params.threadId && params.threadId !== threadId) continue;
             const item = object(params.item);
             if (message.method === 'turn/started') { const id = object(params.turn).id; if (typeof id === 'string') turnId = id; }

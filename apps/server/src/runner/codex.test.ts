@@ -7,7 +7,7 @@ import type { AgentUpdate } from './adapter';
 
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); });
-function fixture(mode: 'success' | 'approval' | 'api' | 'invalid' | 'stop' | 'oversized' | 'stderr' | 'canary' | 'provider-error') {
+function fixture(mode: 'success' | 'approval' | 'api' | 'invalid' | 'stop' | 'oversized' | 'stderr' | 'canary' | 'provider-error' | 'missing-turn' | 'wrong-turn' | 'missing-thread' | 'unknown-status' | 'early-completion' | 'notification-first' | 'conflicting-start' | 'array-status') {
   const cwd = mkdtempSync(join(tmpdir(), 'ado-codex-protocol-')); dirs.push(cwd);
   const file = join(cwd, 'fake.cjs');
   writeFileSync(file, `
@@ -20,7 +20,7 @@ function finish() {
   const text = mode==='canary' ? ('x'.repeat(70)+'canary-private-value').padEnd(3990,'x')+'canary-private-value' : 'fixture completed';
   output({method:'item/completed', params:{threadId:'thread',item:{type:'agentMessage',text}}});
   output({method:'thread/tokenUsage/updated', params:{threadId:'thread',tokenUsage:{total:{inputTokens:12,outputTokens:7}}}});
-  output({method:'turn/completed',params:{threadId:'thread',turn:{id:'turn',status:'completed'}}});
+  output({method:'turn/completed',params:{threadId:mode==='missing-thread'?undefined:'thread',turn:{id:mode==='wrong-turn'?'other-turn':'turn',status:mode==='unknown-status'?'future-canary-private-value':mode==='array-status'?['completed']:'completed'}}});
 }
 input.on('line', (line) => {
   const m = JSON.parse(line);
@@ -32,8 +32,10 @@ input.on('line', (line) => {
   }
   if (m.method === 'turn/start') {
     if (m.params.sandboxPolicy.networkAccess !== false) process.exit(10);
-    output({id:m.id,result:{turn:{id:'turn'}}});
-    output({method:'turn/started',params:{threadId:'thread',turn:{id:'turn'}}});
+    if (mode === 'early-completion') { finish(); return; }
+    if (mode === 'notification-first') output({method:'turn/started',params:{threadId:'thread',turn:{id:'turn'}}});
+    output({id:m.id,result:{turn:mode==='missing-turn'?{}:{id:'turn'}}});
+    output({method:'turn/started',params:{threadId:'thread',turn:{id:mode==='conflicting-start'?'other-turn':'turn'}}});
     if (mode === 'invalid') { process.stdout.write('invalid json\\n'); return; }
     if (mode === 'provider-error') { output({id:3,error:{message:'provider canary-private-value'}}); return; }
     if (mode === 'oversized') { process.stdout.write('x'.repeat(5*1024*1024)); return; }
@@ -57,6 +59,14 @@ input.on('line', (line) => {
 }
 
 describe('Codex app-server boundary (offline protocol fixture)', () => {
+  it.each(['missing-turn', 'wrong-turn', 'missing-thread', 'unknown-status', 'early-completion', 'conflicting-start', 'array-status'] as const)('rejects incompatible lifecycle %s without success or raw payload', async (mode) => {
+    const handle = fixture(mode); const updates: AgentUpdate[] = [];
+    for await (const update of handle.updates!) updates.push(update);
+    expect(await handle.done).not.toBe(0);
+    expect(updates.some((u) => u.kind === 'done' && u.ok)).toBe(false);
+    expect(handle.diagnostics!()).toContain('incompatible');
+    expect(JSON.stringify({ updates, diagnostics: handle.diagnostics!() })).not.toContain('canary-private-value');
+  });
   it.each(['canary', 'provider-error'] as const)('redacts %s before publishing or shortening provider text', async (mode) => {
     const handle = fixture(mode); const updates: AgentUpdate[] = [];
     for await (const update of handle.updates!) updates.push(update);
@@ -66,7 +76,7 @@ describe('Codex app-server boundary (offline protocol fixture)', () => {
     expect(exposed).not.toContain('canary-private');
     expect(exposed).toContain('[redacted]');
   });
-  it.each(['success', 'approval', 'stderr'] as const)('completes %s with normalized evidence and denies approval', async (mode) => {
+  it.each(['success', 'approval', 'stderr', 'notification-first'] as const)('completes %s with normalized evidence and denies approval', async (mode) => {
     const handle = fixture(mode); const updates: AgentUpdate[] = [];
     for await (const update of handle.updates!) updates.push(update);
     expect(await handle.done).toBe(0);

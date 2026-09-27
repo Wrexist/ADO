@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## Codex kräver matchande livscykel
+
+`npm run verify` passerade på Windows x64 / Node 22.18.0 / npm 11.7.0: typkontroll, lint, 398 tester i 85 filer och byggning. Logg: `controlos-codex-lifecycle-verify.log`.
+
+Codex-adaptern avvisar nu start-/sluthändelser utan matchande tråd- och turnidentitet samt slutstatus med okänt värde eller fel datatyp. Startnotifikation före svaret stöds när identiteterna stämmer. Fel ger generisk diagnostik och stopp av den ägda processen; rå providertext återges inte.
+
+Fem nya felprov misslyckades före rättningen. Den utökade sviten med 17 verkliga lokala barnprocessprov passerade, inklusive sju avvisningsfall, giltig ordningsvariation, stopp, nekad approval och API-konto. Detta är offlineprotokollprov, ingen modellkörning. Loggar: `controlos-codex-lifecycle-before.log` och `controlos-codex-lifecycle-focused.log`. [Kontrakt och begränsningar](docs/controlos/codex-lifecycle.md).
+
+T30 är fortsatt öppet: versions-/kapabilitetsförhandling, framtida obligatoriska event och hela UI-flödet är inte verifierade. 15/46 scenarier är fortsatt lokalt godkända; R1–R4 är öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## Diagnostik maskeras före trimning
 
 Hela `npm run verify` passerade på Windows x64 / Node 22.18.0 / npm 11.7.0: typkontroll, lint, 390 tester i 85 filer och byggning. Logg: `controlos-diagnostic-redaction-verify.log`.
