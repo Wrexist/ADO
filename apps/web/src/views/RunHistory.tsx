@@ -142,6 +142,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   return (
     <div className="mt-3 border-t pt-3">
       <p className="whitespace-pre-wrap break-words rounded-tile bg-elevated px-3 py-2 text-label text-text2">{detail.task}</p>
+      {detail.status === 'queued' && detail.waitingReason && <p role="status" className="mt-2 text-label text-warning">{detail.waitingReason}</p>}
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-text3">
         <span>{detail.provider ?? 'claude'} · model: {detail.model}</span>
@@ -323,6 +324,12 @@ export function RunHistory({ repoId }: { repoId?: string }) {
       });
   };
   useEffect(refresh, [repoId]);
+  const pending = rows?.some((row) => row.status === 'queued' || row.status === 'running') ?? false;
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setInterval(refresh, 2000);
+    return () => clearInterval(timer);
+  }, [repoId, pending]);
 
   // Deep link (?run=<id>): expand that run and bring it into view — only if it's actually in
   // the list. Re-arms when the target id changes (e.g. picking another run from the palette).
@@ -370,6 +377,7 @@ export function RunHistory({ repoId }: { repoId?: string }) {
                 <Chip tone={STATUS_TONE[r.status]} size="sm" dot>{r.status}</Chip>
                 <Icon name="chevronDown" size={14} className={cx('shrink-0 text-text3 transition-transform duration-150 ease-soft', openId === r.id ? 'rotate-180' : '')} />
               </button>
+              {r.status === 'queued' && r.waitingReason && openId !== r.id && <p className="mt-1 break-words text-label text-warning">{r.waitingReason}</p>}
               {openId === r.id ? <RunDetailBody runId={r.id} onChanged={refresh} /> : null}
             </div>
           ))}

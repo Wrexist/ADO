@@ -142,3 +142,30 @@ it('retains active task and writer lock without a success event when terminal pe
     expect(h.sqlite.prepare("SELECT count(*) AS n FROM events WHERE type='agent.upserted' AND json_extract(payload,'$.agent.status')='done'").get()).toEqual({ n: 0 });
   } finally { await runner.stop(); await h.close(); }
 }, 120000);
+
+it('rolls back run, task, build and agent failure together when the final agent event cannot be stored', async () => {
+  const h = await fixture();
+  const runner = h.runner({ spawn() { throw new Error('fixture uncertain launch'); } });
+  try {
+    h.sqlite.exec("CREATE TRIGGER reject_failed_agent BEFORE INSERT ON events WHEN NEW.type='agent.upserted' AND json_extract(NEW.payload,'$.agent.status')='failed' BEGIN SELECT RAISE(ABORT,'fixture agent outbox failure'); END");
+    const task = h.plan().saveTask(h.input('Atomic failure'));
+    const { runId } = runner.dispatchTask(task.id, h.request(task.version));
+    await until(() => !runner.isLive(runId));
+    expect(h.plan().snapshot().tasks[0].status).toBe('active');
+    expect(h.plan().snapshot().executions[0].state).toBe('running');
+    expect(h.db.select().from(runs).all()[0].status).toBe('running');
+    expect(h.db.select().from(executionLocks).all()).toHaveLength(1);
+    expect(h.sqlite.prepare("SELECT count(*) AS n FROM events WHERE type='build.updated' AND json_extract(payload,'$.build.state')='failed'").get()).toEqual({ n: 0 });
+    const before = new Bus(h.db); before.replayFromDb(() => {});
+    expect(before.snapshot().state.agents[runId].status).toBe('running');
+    expect(before.snapshot().state.builds[runId].state).toBe('running');
+    h.sqlite.exec('DROP TRIGGER reject_failed_agent');
+    runner.reconcileOrphans();
+    const after = new Bus(h.db); after.replayFromDb(() => {});
+    expect(after.snapshot().state.agents[runId].status).toBe('failed');
+    expect(after.snapshot().state.builds[runId].state).toBe('failed');
+    expect(h.plan().snapshot().tasks[0].status).toBe('blocked');
+    expect(h.db.select().from(runs).all()[0]).toMatchObject({ status: 'failed', processTermination: 'unconfirmed' });
+    expect(h.db.select().from(executionLocks).all()).toHaveLength(1);
+  } finally { await runner.stop(); await h.close(); }
+}, 120000);

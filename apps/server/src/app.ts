@@ -697,6 +697,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     turns: r.turns,
     exitCode: r.exitCode,
     processTermination: r.processTermination,
+    waitingReason: r.status === 'queued' ? runner.waitingReason(r.id) : null,
     note: r.note,
     humanAction: r.humanAction as 'accepted' | 'corrected' | 'redone' | null,
     workspacePath: r.workspacePath,

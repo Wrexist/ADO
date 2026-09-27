@@ -304,18 +304,18 @@
           "apps/server/drizzle/0012_task_executions.sql": "4b5ed01e7db78d83cffa70d952ec569b87495a91bac97b15931f65c8588a18a4",
           "apps/server/src/runner/taskExecution.ts": "e1bf687e4f15b04f194225994ea8536da38e1187cb2878f64d5c6a034d2e91f8",
           "apps/server/src/runner/taskExecutionApi.test.ts": "56f247db96cd4bcf566aed64a44e01329bcdb5ae3cc5ffd7d869f602981572f2",
-          "apps/server/src/runner/taskExecution.test.ts": "b3bf3edcee002ec71b933447734f45c5b286e267ed8bff6ac86d99b6f12e653b",
-          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
+          "apps/server/src/runner/taskExecution.test.ts": "b1529bf315525063e62ea50db5e23f2014a4414579916c30a423588dfd449954",
+          "apps/server/src/runner/index.ts": "68a96921a5b017085f5e6efbc0c4711133c3e879dd58c40b21984c59fffd1866",
           "apps/server/src/runner/workspace.ts": "735cd32b7729206f58fc08acd6c4c6b0e994af65b07bff5be93558382e1c88a0",
           "apps/server/src/projects/checkoutIdentity.ts": "d84e47e4b798f80e916d9367e7ff626437ed66a266c03e1f368c56795bbaccd2",
           "apps/server/src/projects/registry.ts": "5b1d98bd7d00c65f9a74b6025ea961a67c2c6e1d02fcd6c2f8b66fed2e00f132",
           "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
-          "apps/server/src/app.ts": "8fb0371dc4e49951321be8530afed9f92096d00478d3ae6e2d0edffa550067bc",
+          "apps/server/src/app.ts": "ff46eca0340be481687bacf735d259cd95f91264641a6faf2ac8c4f0c745d6f4",
           "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
-          "packages/shared/src/runs.ts": "b7b221c3a38a63a63472705fc4ba0e2574407909a30b0607fb816a91bd61a15c",
+          "packages/shared/src/runs.ts": "204262ad6af9c4dacd52e17081f2a3d19848acabacca14b2918da5cfc2837a55",
           "apps/web/src/pages/PlanningPage.tsx": "4f7a03d1bdd17556dc2aa8cf6b92e6da2f7195a428971356abbd7302ec2e6121",
           "scripts/smoke-task-execution.mjs": "f19a73e3ffa84f5b85f73ee69b09b9a763da64eeaf6ebc16c5e316a0f15f2a6d",
-          "scripts/smoke.mjs": "9216bfca21605d02e42a220cd0269bbe78f46b1bf8384f7211e412f6fd41b80f",
+          "scripts/smoke.mjs": "26f5d3e8ad439925a3e41786e46dc8648e33c7ef5589c5ceb1d08d5454f967bd",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "8dc5a402ba9862e6c10c74e6284a1002d418b0f91c274536723c8052d44144ea",
           "apps/server/src/runner/verificationOwnership.test.ts": "2916550cca3553471a77f9ae47e5337743e080c1b6b9149f19653c444943479a",
@@ -323,9 +323,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify",
-          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
+          "command": "npm run verify; npm run smoke",
+          "result": "Typecheck, lint, 342 tests in 66 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Full desktop/mobile smoke passed at 1536/390 pixels, including dynamic repository/capacity waiting reasons and queued/running/done polling. Browser run fixtures are explicitly DEMO data; queue screenshots inspected."
         }
       }
     },
@@ -363,15 +363,15 @@
           "apps/server/src/runner/taskReview.ts": "9ce2e48c6a29812ae9015bf761fe7582198b234e6cfd292701f8ff6d58c1a905",
           "apps/server/src/runner/taskReviewApi.test.ts": "0990bdc372662b35472afa16401dff06b7ad95bf8623d1048a9bb9a8325443d9",
           "apps/server/src/runner/taskReviewMigration.test.ts": "efb231baa436d6bb624d0922585a5196f9af2fdc485c83f876db146aeef69895",
-          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
+          "apps/server/src/runner/index.ts": "68a96921a5b017085f5e6efbc0c4711133c3e879dd58c40b21984c59fffd1866",
           "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
-          "apps/server/src/app.ts": "8fb0371dc4e49951321be8530afed9f92096d00478d3ae6e2d0edffa550067bc",
+          "apps/server/src/app.ts": "ff46eca0340be481687bacf735d259cd95f91264641a6faf2ac8c4f0c745d6f4",
           "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
-          "packages/shared/src/runs.ts": "b7b221c3a38a63a63472705fc4ba0e2574407909a30b0607fb816a91bd61a15c",
+          "packages/shared/src/runs.ts": "204262ad6af9c4dacd52e17081f2a3d19848acabacca14b2918da5cfc2837a55",
           "apps/web/src/pages/PlanningPage.tsx": "4f7a03d1bdd17556dc2aa8cf6b92e6da2f7195a428971356abbd7302ec2e6121",
           "apps/web/src/pages/TaskCriterionReview.tsx": "2c350e7773a56d456f8429c67cf893e72a7f820e1a50bd2d08d729b38e74a738",
           "scripts/smoke-task-review.mjs": "64e3e3b46ba9bf844beba6fbaa257e89f1d7410637b87e561233017e99acbb1c",
-          "scripts/smoke.mjs": "9216bfca21605d02e42a220cd0269bbe78f46b1bf8384f7211e412f6fd41b80f",
+          "scripts/smoke.mjs": "26f5d3e8ad439925a3e41786e46dc8648e33c7ef5589c5ceb1d08d5454f967bd",
           "apps/server/drizzle/0014_task_reopenings.sql": "3b52b18bcdddeb6213bcc620e87da2c18bfac60eeecf545cfc7b0dcdf42bc740",
           "apps/server/src/runner/taskReopening.ts": "eb3877238efe240639e360a2397a5a5a613326ade01d6cc36b60d0e0bdbeb882",
           "apps/web/src/pages/TaskReopeningPanel.tsx": "8df0db1c514ac42e3fa19ce32b8a00f64614402af0a3388c26508492d185479c",
@@ -383,9 +383,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify",
-          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
+          "command": "npm run verify; npm run smoke",
+          "result": "Typecheck, lint, 342 tests in 66 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Full desktop/mobile smoke passed at 1536/390 pixels, including dynamic repository/capacity waiting reasons and queued/running/done polling. Browser run fixtures are explicitly DEMO data; queue screenshots inspected."
         }
       }
     },
@@ -412,15 +412,15 @@
           "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
           "apps/server/src/projects/planning.test.ts": "e3e333860109c94f26cf93c91fff83d6e04dba04809277bc7beffdbd908a547e",
           "apps/server/src/projects/planningApi.test.ts": "190fc8ecd3070b038b85f9cc6f91ec21113e3db1044dfd168580edf75d27c71e",
-          "apps/server/src/app.ts": "8fb0371dc4e49951321be8530afed9f92096d00478d3ae6e2d0edffa550067bc",
+          "apps/server/src/app.ts": "ff46eca0340be481687bacf735d259cd95f91264641a6faf2ac8c4f0c745d6f4",
           "apps/web/src/pages/PlanningPage.tsx": "4f7a03d1bdd17556dc2aa8cf6b92e6da2f7195a428971356abbd7302ec2e6121",
           "scripts/smoke-planning.mjs": "9eab7b15f2a4aae7ff3478db32b4688a03d36366cf8d12025d7aa66a24d8a3ae"
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify",
-          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
+          "command": "npm run verify; npm run smoke",
+          "result": "Typecheck, lint, 342 tests in 66 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Full desktop/mobile smoke passed at 1536/390 pixels, including dynamic repository/capacity waiting reasons and queued/running/done polling. Browser run fixtures are explicitly DEMO data; queue screenshots inspected."
         }
       }
     },
@@ -459,9 +459,12 @@
         "apps/server/src/runner/verificationOwnership.test.ts",
         "docs/controlos/verification-processes.md",
         "apps/server/src/runner/spawnFailure.test.ts",
-        "apps/server/src/lib/processLaunch.test.ts"
+        "apps/server/src/lib/processLaunch.test.ts",
+        "apps/server/src/runner/queueAcceptance.test.ts",
+        "scripts/smoke.mjs",
+        "docs/controlos/task-execution.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "The normal authenticated queue scenario is covered by real Node processes in temporary Git worktrees, including unregistered siblings, two default agent slots and current waiting reasons. Full T12 remains open: global admission must also account for quarantined processes and verification ownership."
     },
     {
       "id": "T13",
@@ -554,7 +557,7 @@
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "apps/server/src/lib/ownedProcess.ts": "986d1a4b8bcb6f67625e2c6c90625080bba36ccf2ea0129d0dfc840d8f5aa29e",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
+          "apps/server/src/runner/index.ts": "68a96921a5b017085f5e6efbc0c4711133c3e879dd58c40b21984c59fffd1866",
           "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "8dc5a402ba9862e6c10c74e6284a1002d418b0f91c274536723c8052d44144ea",
@@ -563,9 +566,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify",
-          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
+          "command": "npm run verify; npm run smoke",
+          "result": "Typecheck, lint, 342 tests in 66 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Full desktop/mobile smoke passed at 1536/390 pixels, including dynamic repository/capacity waiting reasons and queued/running/done polling. Browser run fixtures are explicitly DEMO data; queue screenshots inspected."
         }
       }
     },
@@ -606,10 +609,10 @@
           "apps/server/src/runner/codex.test.ts": "50f8a3f42f1033ded56733a17a791fcd5c02dbb450afd1f5bef59c83d34270c5",
           "apps/server/src/runner/spawner.ts": "6c216be8c7b73004c8fdb2ca3fe0335dcfda8d310e310e7d9d09609906544008",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
+          "apps/server/src/runner/index.ts": "68a96921a5b017085f5e6efbc0c4711133c3e879dd58c40b21984c59fffd1866",
           "apps/server/src/lib/ownedProcess.ts": "986d1a4b8bcb6f67625e2c6c90625080bba36ccf2ea0129d0dfc840d8f5aa29e",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "9216bfca21605d02e42a220cd0269bbe78f46b1bf8384f7211e412f6fd41b80f",
+          "scripts/smoke.mjs": "26f5d3e8ad439925a3e41786e46dc8648e33c7ef5589c5ceb1d08d5454f967bd",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "8dc5a402ba9862e6c10c74e6284a1002d418b0f91c274536723c8052d44144ea",
           "apps/server/src/runner/verificationOwnership.test.ts": "2916550cca3553471a77f9ae47e5337743e080c1b6b9149f19653c444943479a",
@@ -617,9 +620,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify",
-          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
+          "command": "npm run verify; npm run smoke",
+          "result": "Typecheck, lint, 342 tests in 66 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Full desktop/mobile smoke passed at 1536/390 pixels, including dynamic repository/capacity waiting reasons and queued/running/done polling. Browser run fixtures are explicitly DEMO data; queue screenshots inspected."
         }
       }
     },
@@ -832,15 +835,15 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "8fb0371dc4e49951321be8530afed9f92096d00478d3ae6e2d0edffa550067bc",
+          "apps/server/src/app.ts": "ff46eca0340be481687bacf735d259cd95f91264641a6faf2ac8c4f0c745d6f4",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify",
-          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
+          "command": "npm run verify; npm run smoke",
+          "result": "Typecheck, lint, 342 tests in 66 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Full desktop/mobile smoke passed at 1536/390 pixels, including dynamic repository/capacity waiting reasons and queued/running/done polling. Browser run fixtures are explicitly DEMO data; queue screenshots inspected."
         }
       }
     },

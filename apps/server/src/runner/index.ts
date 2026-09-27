@@ -18,7 +18,7 @@ import { TaskReviewStore } from './taskReview';
 import { parseStreamLine, type AgentUpdate } from './adapter';
 import type { Spawner, SpawnHandle } from './spawner';
 import { createHash, randomUUID } from 'node:crypto';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { redact } from '../lib/redact';
 import { prepareWorkspace, workspaceEvidence } from './workspace';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
@@ -60,7 +60,7 @@ interface RunnerOpts {
   onRunDone?: (runId: string, info: { repoId: string; ok: boolean; resultText: string | null }) => void;
 }
 
-const DEFAULTS = { maxConcurrent: 3, turnCap: 20, timeoutMs: 15 * 60_000 };
+const DEFAULTS = { maxConcurrent: 2, turnCap: 20, timeoutMs: 15 * 60_000 };
 /** How many recent agent ids to keep on a repo for the avatar stack (newest first). */
 const REPO_AGENT_CAP = 5;
 
@@ -264,6 +264,21 @@ export class Runner {
   /** Start queued runs up to the concurrency limit; fail any whose cwd is no longer allowed. */
   wake(): void { this.drainNext(); }
 
+  /** Derived from current policy/ownership, never retained as a stale run note. */
+  waitingReason(runId: string): string | null {
+    const run = this.db.select().from(runs).where(eq(runs.id, runId)).get();
+    if (!run || run.status !== 'queued') return null;
+    if (this.stopped) return 'Agent host is stopping.';
+    const blocked = this.opts.blockedReason?.(run.repoId);
+    if (blocked) return redact(blocked, this.opts.secrets?.());
+    const cwd = this.opts.cwdFor(run.repoId);
+    if (!cwd) return 'Repository checkout is unavailable.';
+    const resource = this.resourceKey(run.repoId, cwd);
+    if (this.busyDirectories.has(resource) || this.db.select().from(executionLocks).where(eq(executionLocks.resource, resource)).get() || this.repositoryBusy(run.repoId, cwd)) return 'Waiting for the current or quarantined writer in this repository.';
+    if (this.active >= this.opts.maxConcurrent) return `Waiting for an agent execution slot (limit ${this.opts.maxConcurrent}).`;
+    return 'Waiting for the queued job to be claimed.';
+  }
+
   private drainNext(): void {
     if (this.stopped || this.draining) return;
     this.draining = true;
@@ -330,23 +345,30 @@ export class Runner {
     return process.platform === 'win32' ? path.toLowerCase() : path;
   }
 
-  /** Preserve legacy lock keys, and additionally serialize registered sibling checkouts. */
+  /** Preserve legacy keys; registration is not required for physical Git ownership. */
   private repositoryBusy(repoId: string, cwd: string) {
     if (verificationBlocks(this.db, repoId, cwd, this.resourceKey(repoId, cwd))) return true;
     const path = process.platform === 'win32' ? resolve(cwd).toLowerCase() : resolve(cwd);
     const all = this.db.select().from(portfolioCheckouts).all();
     const checkout = all.find((c) => c.sourceId === repoId || c.canonicalPath === path);
-    if (!checkout) return false;
-    const siblings = all.filter((c) => c.repositoryId === checkout.repositoryId);
+    let actualIdentity: string | undefined;
+    try { actualIdentity = commonGitIdentity(cwd); } catch { /* registered unknown scope remains conservative below */ }
+    // Synthetic/non-Git adapters still use their canonical directory resource.
+    // Production worktree preparation refuses a checkout without a Git baseline.
+    if (!checkout && !actualIdentity) return false;
+    const siblings = checkout ? all.filter((c) => c.repositoryId === checkout.repositoryId) : [];
     for (const lock of this.db.select().from(executionLocks).all()) {
       const binding = this.taskExecutions.get(lock.runId);
-      if (binding) { if (siblings.some((c) => c.id === binding.checkoutId)) return true; continue; }
+      if (binding && siblings.some((c) => c.id === binding.checkoutId)) return true;
       const owner = this.db.select().from(runs).where(eq(runs.id, lock.runId)).get();
-      if (!owner) return true;
+      if (!owner || owner.repoId === repoId) return true;
       if (siblings.some((c) => c.sourceId === owner.repoId || c.canonicalPath === lock.resource)) return true;
-      const ownerPath = owner.workspacePath ?? this.opts.cwdFor(owner.repoId) ?? this.bus.snapshot().state.repos[owner.repoId]?.localPath;
+      const ownerPath = owner.workspacePath ?? this.opts.cwdFor(owner.repoId) ?? this.bus.snapshot().state.repos[owner.repoId]?.localPath ?? (isAbsolute(lock.resource) ? lock.resource : undefined);
       if (!ownerPath) return true;
-      try { if (siblings.some((c) => c.gitIdentity === commonGitIdentity(ownerPath))) return true; }
+      try {
+        const ownerIdentity = commonGitIdentity(ownerPath);
+        if (!actualIdentity || actualIdentity === ownerIdentity || siblings.some((c) => c.gitIdentity === ownerIdentity)) return true;
+      }
       catch { return true; } // Cannot prove the old writer owns a different repository.
     }
     return false;
@@ -379,21 +401,18 @@ export class Runner {
         .run();
         this.taskExecutions.transition(runId, 'failed');
         return true;
-      }, (changed) => changed ? [this.buildEvent(runId, input, 'failed', startedMs)] : []);
-      if (!changed) return;
-    } catch (error) {
-      this.log(`runner: ${runId} terminal state could not be persisted: ${(error as Error).message}`);
-      return;
-    }
-    try {
-      this.bus.publish({
+      }, (changed) => changed ? [this.buildEvent(runId, input, 'failed', startedMs), {
         id: `agent-evt:${runId}:fail:${Date.now()}`,
         type: 'agent.upserted',
         ts: new Date().toISOString(),
         source: { kind: 'runner', ref: runId },
         payload: { agent: { id: runId, name: this.agentName(input), icon: 'code', tone: 'danger', kind: 'runner', status: 'failed', statusLine: 'Failed', pct: null } },
-      });
-    } catch { /* best effort */ }
+      }] : []);
+      if (!changed) return;
+    } catch (error) {
+      this.log(`runner: ${runId} terminal state could not be persisted: ${(error as Error).message}`);
+      return;
+    }
     try { this.opts.onRunDone?.(runId, { repoId: input.repoId, ok: false, resultText: null }); } catch { /* hook must never break the runner */ }
   }
 

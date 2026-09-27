@@ -275,6 +275,27 @@ try {
     await page.getByText('Verification: not independently verified', { exact: true }).waitFor();
     if (!(await page.getByRole('button', { name: 'Run npm verify', exact: true }).isEnabled())) throw new Error('Confirmed stop should release verification control');
   }
+  for (const width of [1536, 390]) {
+    const repositoryWait = 'Waiting for the current or quarantined writer in this repository.';
+    const capacityWait = 'Waiting for an agent execution slot (limit 2).';
+    Object.assign(runFixture, { status: 'queued', executionStatus: 'queued', timelineState: 'live', waitingReason: repositoryWait,
+      verificationAttempts: [], verificationLocked: false, workspacePath: null, headSha: null, diffDigest: null, approvalPolicyVersion: null, verifyVerdict: null, humanAction: null, processTermination: null });
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto(base + '/agents?run=demo-stop'); await pair();
+    await page.getByRole('status').filter({ hasText: repositoryWait }).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Repository waiting reason mobile overflow');
+    await page.screenshot({ path: join(out, `queue-repository-${width}.png`), fullPage: true });
+    await page.locator('#run-demo-stop > button').click();
+    runFixture.waitingReason = capacityWait;
+    await page.getByText(capacityWait, { exact: true }).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Capacity waiting reason mobile overflow');
+    await page.screenshot({ path: join(out, `queue-capacity-${width}.png`), fullPage: true });
+    runFixture.status = 'running'; runFixture.executionStatus = 'running'; runFixture.waitingReason = null;
+    await page.getByText(capacityWait, { exact: true }).waitFor({ state: 'hidden' });
+    await page.locator('#run-demo-stop').getByText('running', { exact: true }).waitFor();
+    runFixture.status = 'done'; runFixture.executionStatus = 'succeeded'; runFixture.timelineState = 'ended';
+    await page.locator('#run-demo-stop').getByText('done', { exact: true }).waitFor();
+  }
   await desktop.addInitScript((accToken) => { window.__ACC_DESKTOP__ = { serverUrl: '', accToken }; }, token);
   await desktop.setViewportSize({ width: 1536, height: 1024 });
   await desktop.goto(base); await desktop.getByRole('heading', { name: 'Welcome back' }).waitFor({ timeout: 10000 });

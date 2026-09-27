@@ -22,6 +22,9 @@ while queued, active or awaiting review. An uncertain failed attempt blocks edit
 while its writer lock remains. A failed lifecycle transaction rolls back the task
 and run together. Failure to store a terminal result retains the active state and
 writer lock; no successful agent event is emitted ahead of the commit.
+The failure path also commits the failed build and agent events in that same
+transaction. Rejecting either outbox event leaves the run, task and replayed
+agent state unchanged until recovery can persist the complete transition.
 
 Before claim, worktree preparation and native process resume, the registered
 checkout is checked against the scanner path, directory identity and Git common
@@ -31,6 +34,16 @@ Registered sibling checkouts serialize against the same repository. Existing
 lock keys are retained across migration; an old unbound lock also blocks siblings.
 If the scope of a legacy lock cannot be established, registered dispatch waits
 conservatively instead of assuming it belongs to another repository.
+Unregistered sibling worktrees are also compared by their actual Git common
+directory identity; separate scanner IDs do not permit concurrent writers.
+
+The default agent scheduler admits two concurrent agent jobs. Queued run API
+responses expose a current `waitingReason`, distinguishing repository ownership
+(including quarantine) from a full agent execution limit. The history list and
+expanded run view refresh those reasons while jobs are pending; reasons clear
+when a run leaves the queue. This is a controller limit, not an OS process quota:
+verification has separate ownership, and an unknown process can outlive its
+controller slot while its repository stays quarantined.
 
 An accepted queued job survives reopening its SQLite profile. It rechecks current
 permissions, project/dependencies and checkout/base before spawn. A possibly
@@ -56,6 +69,12 @@ immutable active tasks, exit zero, retry, unchanged original files and profile
 reopening. It makes no provider/model call. `taskExecution.test.ts` covers sibling
 serialization, queued recovery, outbox rollback, changed base/project/directory,
 unknown process outcome, legacy quarantine and terminal storage failure.
+`queueAcceptance.test.ts` exercises authenticated dispatch into real temporary
+Git worktrees with controlled Node child processes: unregistered sibling
+exclusivity, two default agent slots, both waiting reasons, advancement after
+exit, and restored completed history without rerunning jobs. The provider is
+an offline fixture. `scripts/smoke.mjs` exercises changing queue reasons and
+queued/running/done list polling at 1536/390 pixels with explicit DEMO responses.
 `scripts/smoke-task-execution.mjs` tests review focus, exact submitted bindings,
 keyboard confirmation and awaiting-review rendering at 1536/390 pixels using
 explicit DEMO responses. Browser fixtures are not provider execution evidence.

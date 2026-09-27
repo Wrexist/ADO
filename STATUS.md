@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: köorsaker, syskon-worktrees och atomisk felstatus
+
+Körningen, uppgiftens felstatus och agentens synliga felhändelse sparas nu i samma transaktion. Ett injicerat fel vid lagring av agenthändelsen lämnar samtliga tillstånd oförändrade och behåller skrivlåset; återhämtning kan sedan spara hela övergången. Oregistrerade Git-worktrees jämförs också genom sin verkliga gemensamma Git-katalog, så olika scanner-ID:n inte ger parallella skrivare i samma repo.
+
+Agentkön har två platser som standard. API och körhistorik visar aktuella vänteskäl för repolås respektive full kapacitet. Både listan och detaljvyn uppdateras medan jobb väntar eller körs. Ett nytt API-prov använder riktiga Node-processer och temporära Git-worktrees för exklusivitet, kapacitetsgräns, köframflyttning och återöppnad profil utan omkörning. Se [körkontraktet](docs/controlos/task-execution.md).
+
+`npm run verify` passerade med typkontroll, lint, 342 tester i 66 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Hela `npm run smoke` passerade, inklusive ändrade vänteskäl och queued/running/done utan omladdning vid 1536/390 px. De fyra nya bilderna har granskats; browserprovet använder uttryckliga DEMO-fixtures. Loggar: `controlos-queue-matrix-focused.log`, `controlos-queue-matrix-verify.log` och `controlos-queue-matrix-smoke.log` (ignorerade). Webbens chunkvarning kvarstår, cirka 559 kB före gzip.
+
+T12 hålls öppet: normalfallet är provat, men den globala startgränsen behöver också räkna beständiga karantänlås och verifieringsägarskap. Den nuvarande räknaren gäller agentkontrollerns aktiva jobb; en okänd process kan överleva sin frigjorda kontrollplats. Detta är nästa avgränsade R1-ändring. Fortfarande är 6 av 46 fullständiga acceptansscenarier lokalt godkända, och inga fulla R1–R4-grindar är klara. Ingen riktig modell, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: osäkert adapterfel före returnerat processhandtag
 
 Agentmotorn markerar nu processutfallet som osäkert före anropet till processadaptern. Om adaptern skapar en process och sedan kastar ett fel behålls det beständiga repolåset, även om motorn aldrig fick processhandtaget. Körkapaciteten frigörs för andra repon. Vid omstart får även avbrutna körningar utan sparad processidentitet uttrycklig status `unconfirmed`; avsaknad av metadata räknas inte som stoppbevis.

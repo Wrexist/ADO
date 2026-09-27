@@ -50,6 +50,7 @@ export const AgentRun = z.object({
   exitCode: z.number().int().nullable(),
   /** Honest annotation: 'orphaned on boot', 'opaque stream', 'killed from the dashboard', … */
   note: z.string().nullable(),
+  waitingReason: z.string().nullable().optional(),
   /** Human verdict on the run's work (accepted/corrected/redone) — null until someone judges it. */
   humanAction: RunHumanAction.nullable(),
   workspacePath: z.string().nullable().optional(),
