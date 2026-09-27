@@ -76,6 +76,13 @@ try {
     references: ['identity_matches', 'missing', 'replaced', 'other_host', 'unrecorded', 'unavailable'].map((status, index) => ({ kind: 'run_workspace', id: `DEMO-reference-${index}`, path: `C:/DEMO/restored-workspaces/${status}/a-long-local-project-path-for-responsive-review`, status })),
   } }));
   await page.route('**/api/recovery/runs/*/content', (route) => route.fulfill({ json: { runId: 'DEMO-reference-0', checkedAt: '2026-09-27T12:00:00Z', status: 'matches_recorded', executionEnabled: false } }));
+  let activationBlocked = true;
+  await page.route('**/api/recovery/prepare', (route) => route.fulfill({ json: { blockers: activationBlocked ? ['Retained writer locks require confirmed process termination. Activation cannot release them.'] : [], token: activationBlocked ? null : 'DEMO-idle-review', references: 0, comparedResults: 0 } }));
+  await page.route('**/api/recovery/activate', (route) => {
+    const body = route.request().postDataJSON();
+    if (body.token !== 'DEMO-idle-review' || body.confirmation !== 'ENABLE MANUAL OPERATION') throw new Error('Activation did not bind the explicit review');
+    return route.fulfill({ json: { restartRequired: true, mode: 'manual' } });
+  });
   for (const width of [1536, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(base + '/agents'); await pair();
@@ -89,10 +96,28 @@ try {
     await page.getByText('Matches the saved revision and fingerprint at inspection time. This is not a new verification or approval.', { exact: true }).waitFor();
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Recovery banner overflow');
     await page.screenshot({ path: join(out, `recovery-review-${width}.png`), fullPage: true });
+    activationBlocked = true;
+    await page.getByText('Resume manual operation', { exact: true }).click();
+    await page.getByRole('button', { name: 'Review activation', exact: true }).click();
+    await page.getByText('Retained writer locks require confirmed process termination. Activation cannot release them.', { exact: true }).waitFor();
+    if (await page.getByRole('button', { name: 'Approve manual operation after restart' }).count()) throw new Error('Blocked activation was offered for approval');
+    // Separate idle-profile UI fixture; the real API tests prove unresolved rows cannot be cleared here.
+    activationBlocked = false;
+    await page.reload(); await pair();
+    await page.getByText('Resume manual operation', { exact: true }).click();
+    await page.getByRole('button', { name: 'Review activation', exact: true }).click();
+    const approve = page.getByRole('button', { name: 'Approve manual operation after restart', exact: true });
+    await approve.waitFor(); if (await approve.isEnabled()) throw new Error('Activation did not require typed confirmation');
+    await page.getByLabel('Type ENABLE MANUAL OPERATION').fill('ENABLE MANUAL OPERATION');
+    await approve.click();
+    await page.getByText('Manual operation approved. Close and restart ControlOS with this same profile. This session remains paused until restart.', { exact: true }).waitFor();
+    await page.screenshot({ path: join(out, `recovery-activation-${width}.png`), fullPage: true });
   }
   await page.unroute('**/api/recovery');
   await page.unroute('**/api/recovery/references');
   await page.unroute('**/api/recovery/runs/*/content');
+  await page.unroute('**/api/recovery/prepare');
+  await page.unroute('**/api/recovery/activate');
   // Explicit planning fixture. Persistence and Git preservation have separate real API tests.
   const portfolioProjectId = '11111111-1111-4111-8111-111111111111';
   const portfolioRepositoryId = '22222222-2222-4222-8222-222222222222';

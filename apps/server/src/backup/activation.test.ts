@@ -1,0 +1,68 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, it, vi } from 'vitest';
+import { openDb } from '../db';
+import { runs, executionLocks } from '../db/schema';
+import { backupDatabase, restoreBackup } from './index';
+import { buildServer, type AccServer } from '../app';
+import { readRecoveryState } from './recovery';
+
+it('requires fresh explicit activation, preserves unresolved work and keeps recovered manual boots free of automatic services', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-activation-'));
+  let server: AccServer | undefined;
+  const network = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected network request'));
+  const source = openDb(join(root, 'source.sqlite'));
+  const backup = backupDatabase(source.sqlite, join(root, 'backups'), { dataDir: root }); source.sqlite.close();
+  const profile = join(root, 'profile'); restoreBackup(backup.file, profile);
+  const env = { port: 8787, webOrigin: 'http://localhost:5173', accToken: 'activation-fixture', dbPath: join(profile, 'acc.sqlite'), projectDirs: [root], demo: false };
+  const headers = { host: '127.0.0.1:8787', 'x-acc-token': env.accToken };
+  const post = (url: string, payload = {}) => server!.app.inject({ method: 'POST', url, headers, payload });
+  let starts = 0;
+  const boot = () => buildServer(env, { startSystem: true, startScanner: true, spawner: { spawn() { starts++; throw new Error('Unexpected process'); } } });
+  try {
+    server = await boot();
+    expect((await server.app.inject({ method: 'POST', url: '/api/recovery/prepare', headers: { host: headers.host }, payload: {} })).statusCode).toBe(401);
+    expect((await post('/api/recovery/activate', { token: 'invented', confirmation: 'ENABLE MANUAL OPERATION' })).statusCode).toBe(409);
+    let review = (await post('/api/recovery/prepare')).json(); expect(review.blockers).toEqual([]); expect(review.token).toBeTruthy();
+    writeFileSync(join(profile, 'project-settings.json'), '{}');
+    expect((await post('/api/recovery/activate', { token: review.token, confirmation: 'ENABLE MANUAL OPERATION' })).statusCode).toBe(409);
+    expect(readRecoveryState(profile)?.mode).toBe('review');
+    const injected = openDb(env.dbPath);
+    injected.db.insert(runs).values({ id: 'old', repoId: 'fixture', task: 'Unresolved', model: 'default', status: 'queued', startedTs: new Date().toISOString() }).run();
+    injected.db.insert(executionLocks).values({ resource: 'fixture', runId: 'old', owner: 'original-owner', acquiredTs: new Date().toISOString() }).run();
+    review = (await post('/api/recovery/prepare')).json(); expect(review.token).toBeNull(); expect(review.blockers.length).toBe(2);
+    expect(injected.db.select().from(executionLocks).all()).toHaveLength(1);
+    // Test-only removal models a different, idle fixture. Activation itself cannot resolve or remove these rows.
+    injected.db.delete(executionLocks).run();
+    injected.db.update(runs).set({ status: 'failed', processTermination: 'unconfirmed' }).run();
+    review = (await post('/api/recovery/prepare')).json(); expect(review.token).toBeNull(); expect(review.blockers).toContain('Recorded process termination is uncertain; manual activation cannot clear that uncertainty.');
+    injected.db.delete(runs).run(); injected.sqlite.close();
+    review = (await post('/api/recovery/prepare')).json();
+    expect((await post('/api/recovery/activate', { token: review.token, confirmation: 'yes' })).statusCode).toBe(409);
+    review = (await post('/api/recovery/prepare')).json();
+    expect((await post('/api/recovery/activate', { token: review.token, confirmation: 'ENABLE MANUAL OPERATION' })).json()).toMatchObject({ restartRequired: true, mode: 'manual' });
+    expect(readRecoveryState(profile)?.mode).toBe('manual');
+    expect((await server.app.inject({ url: '/api/recovery', headers })).json().recovery.restartRequired).toBe(true);
+    expect((await post('/api/setup/probe')).statusCode).toBe(423);
+    expect((await post('/api/recovery/prepare')).statusCode).toBe(409);
+    await server.close(); server = await boot();
+    expect(server.scanner).toBeNull(); expect(server.sysmon).toBeNull();
+    expect((await server.app.inject({ url: '/api/recovery', headers })).json().recovery.mode).toBe('manual');
+    expect((await post('/api/portfolio/projects', { name: 'Manual planning', kind: 'app', goal: 'Continue safely', lifecycle: 'active', focus: true, manualPriority: 3 })).statusCode).toBe(200);
+    expect((await post('/api/connections/anthropic', { value: 'synthetic-activation-key' })).statusCode).toBe(200);
+    server.incidents.report({ source: 'server', kind: 'activation-fixture', message: 'Cannot read properties of undefined' });
+    await server.incidents.settled();
+    expect(network).not.toHaveBeenCalled();
+    expect(starts).toBe(0);
+    await server.close(); server = undefined;
+    const later = openDb(env.dbPath);
+    later.db.insert(runs).values({ id: 'new-queued', repoId: 'fixture', task: 'Wait for explicit scan', model: 'default', status: 'queued', engineVersion: 1, startedTs: new Date().toISOString() }).run(); later.sqlite.close();
+    server = await boot();
+    const queued = (await server.app.inject({ url: '/api/runs', headers })).json().runs.find((run: { id: string }) => run.id === 'new-queued');
+    expect(queued.status).toBe('queued'); expect(starts).toBe(0);
+    const marker = JSON.parse(readFileSync(join(profile, 'restore-state.json'), 'utf8')); delete marker.activation;
+    writeFileSync(join(profile, 'restore-state.json'), JSON.stringify(marker));
+    expect(() => readRecoveryState(profile)).toThrow('Incomplete or invalid restoration');
+  } finally { await server?.close(); network.mockRestore(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
+}, 30000);

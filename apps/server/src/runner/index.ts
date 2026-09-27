@@ -52,6 +52,8 @@ interface RunnerOpts {
    * automations, incident/review fixes — honors the switch through this one choke point.
    */
   blockedReason?: (repoId: string) => string | null;
+  /** Defer persisted queue claims until an explicit runtime prerequisite is ready. */
+  queuePaused?: () => string | null;
   /**
    * Called once when a run finishes (success or failure) with the agent's final text (null
    * when the stream carried none). Consumers parse it for verified-outcome markers — e.g.
@@ -270,6 +272,8 @@ export class Runner {
     const run = this.db.select().from(runs).where(eq(runs.id, runId)).get();
     if (!run || run.status !== 'queued') return null;
     if (this.stopped) return 'Agent host is stopping.';
+    const pause = this.opts.queuePaused?.();
+    if (pause) return pause;
     const blocked = this.opts.blockedReason?.(run.repoId);
     if (blocked) return redact(blocked, this.opts.secrets?.());
     const cwd = this.opts.cwdFor(run.repoId);
@@ -282,7 +286,7 @@ export class Runner {
   }
 
   private drainNext(): void {
-    if (this.stopped || this.draining) return;
+    if (this.stopped || this.draining || this.opts.queuePaused?.()) return;
     this.draining = true;
     try { this.drainQueue(); }
     finally { this.draining = false; }

@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R4: uttrycklig övergång till manuell drift
+
+Återställda profiler utan olösta blockerare kan nu granskas för manuell drift. En fem minuter giltig engångsbekräftelse binds till aktuella körningar, verifieringar, lås, referenser, innehållsjämförelser och profilens JSON-filer. Användaren måste skriva `ENABLE MANUAL OPERATION`; servern kontrollerar allt på nytt och vägrar ändrat underlag. Godkännandet sparas med filidentitets-/innehållskontroll, flush och rename. Den gamla sessionen förblir spärrad tills samma profil startas om, även om webbsidan laddas om under tiden.
+
+Köade/körande gamla jobb, pågående verifieringar, kvarhållna lås, registrerat osäkert processavslut och otillräckliga referens-/innehållsbevis stoppar aktivering. Flödet tar inte bort sådana poster eller lås. Efter godkänd omstart kan användaren arbeta med planering och inställningar. Startup-scanning, schemalagd/händelsestyrd automation och automatisk desktop-uppdatering förblir avstängda. Nya köjobb väntar efter senare omstarter på en slutförd uttrycklig projektskanning, utan att markeras misslyckade bara för att scanner ännu saknas.
+
+`npm run verify` passerade: typkontroll, lint, 362 tester i 77 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. De sista förtydligandena av scannergrinden, osäkert processavslut och omstartsbesked passerade därefter full typkontroll, riktad lint och båda återställnings-/aktiveringstesterna. Testet använder isolerade profiler; dess borttagning av syntetiska blockerande rader skapar en separat ledig fixture och är ingen produktfunktion. [Återställningsflöde och begränsningar](docs/controlos/profile-recovery.md).
+
+13 av 46 fullständiga scenarier är fortsatt lokalt godkända. Fulla R1–R4-grindar är öppna. Flöden för att lösa gamla jobb/lås eller återbinda saknade referenser återstår, liksom verklig användarprofil och installer/uppdatering. Paketerad desktop har inte provats på nytt med aktivering. Ingen modell, pilotagent, merge eller publicering kördes. Följande avsnitt är historiska kontrollpunkter.
+
+Hela browser-smoke passerade med blockerad respektive uttryckligt godkänd aktivering vid 1536/390 px; mobilbilden har granskats. En sista regression med konfigurerad syntetisk Anthropic-nyckel bekräftar att incidenter i återställd manuell drift inte gör automatiska modellanrop. Riktade tester, lint och slutbygge passerade efter detta skydd. Loggar: `controlos-recovery-activation-verify.log`, `controlos-recovery-activation-final-checks.log`, `controlos-recovery-activation-smoke.log`, `controlos-recovery-activation-provider-check.log` och `controlos-recovery-activation-final-build.log` (ignorerade).
+
 ## R4: passiv jämförelse av återställt resultatinnehåll
 
 Återställningsrapporten kan nu jämföra en körnings sparade Git-revision och innehållshash med den kvarvarande arbetskopian. Matchning, avvikelse, otillgänglig jämförelse och saknat historiskt underlag visas separat. API:t kräver återställningsläge och autentisering och kör högst en jämförelse åt gången. Inga verifieringsposter, godkännanden, körningsrader eller lås ändras.

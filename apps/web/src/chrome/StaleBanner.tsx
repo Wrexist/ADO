@@ -9,6 +9,38 @@ const referenceLabels: Record<RecoveryReferenceStatus, string> = {
   unrecorded: 'Insufficient recorded identity', unavailable: 'Cannot inspect safely',
 };
 
+function RecoveryActivationPanel() {
+  const [review, setReview] = useState<{ blockers: string[]; token: string | null; references: number; comparedResults: number } | null>(null);
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [restart, setRestart] = useState(false);
+  async function request(action: 'prepare' | 'activate') {
+    setBusy(true); setError(null);
+    try {
+      const response = await fetch(`${SERVER_URL}/api/recovery/${action}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN }, body: JSON.stringify(action === 'activate' ? { token: review?.token, confirmation } : {}) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'Recovery review failed');
+      if (action === 'prepare') { setReview(data); setConfirmation(''); }
+      else setRestart(true);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Recovery review failed'); setReview(null); }
+    finally { setBusy(false); }
+  }
+  return <details className="mt-3"><summary className="cursor-pointer">Resume manual operation</summary>
+    <p className="mt-2">Review local references and saved results again. Unresolved jobs and locks block activation. Startup scanning and scheduled/event automation stay off; credentials and project folders must be configured explicitly.</p>
+    {restart ? <p className="mt-2 font-semibold">Manual operation approved. Close and restart ControlOS with this same profile. This session remains paused until restart.</p> : <>
+      <button type="button" disabled={busy} className="mt-2 rounded border border-current px-3 py-1 disabled:opacity-50" onClick={() => void request('prepare')}>{busy ? 'Checking…' : 'Review activation'}</button>
+      {review && <div className="mt-2"><p>{review.references} local references · {review.comparedResults} saved results compared</p>
+        {review.blockers.length > 0 ? <ul className="list-inside list-disc">{review.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul> : <>
+          <label className="mt-2 block">Type ENABLE MANUAL OPERATION<input className="mt-1 block w-full max-w-md rounded border border-current bg-transparent p-2" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
+          <button type="button" disabled={busy || confirmation !== 'ENABLE MANUAL OPERATION'} className="mt-2 rounded border border-current px-3 py-1 disabled:opacity-50" onClick={() => void request('activate')}>Approve manual operation after restart</button>
+        </>}
+      </div>}
+    </>}
+    {error && <p role="alert" className="mt-2">{error}</p>}
+  </details>;
+}
+
 function RecoveryReferences() {
   const [content, setContent] = useState<Record<string, RecoveryContentReport['status']>>({});
   const [comparing, setComparing] = useState(false);
@@ -60,18 +92,19 @@ function RecoveryReferences() {
 function RecoveryBanner() {
   const connection = useBus((s) => s.connection);
   const [message, setMessage] = useState<string | null>(null);
+  const [review, setReview] = useState(true);
   useEffect(() => {
     if (!ACC_TOKEN) return;
     const controller = new AbortController();
     void fetch(`${SERVER_URL}/api/recovery`, { headers: { 'x-acc-token': ACC_TOKEN }, signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error('Recovery status unavailable');
-        const state = await response.json() as { recovery?: { mode?: string } | null; message?: string };
-        if (!controller.signal.aborted) setMessage(state.recovery?.mode === 'review' ? state.message ?? 'Recovery review mode: jobs and changes are paused.' : null);
+        const state = await response.json() as { recovery?: { mode?: string; restartRequired?: boolean } | null; message?: string };
+        if (!controller.signal.aborted) { setMessage(state.recovery ? state.message ?? 'Recovered profile' : null); setReview(state.recovery?.mode === 'review' && !state.recovery.restartRequired); }
       }).catch(() => { /* Keep an already known recovery warning during disconnection. */ });
     return () => controller.abort();
   }, [connection]);
-  return message ? <div className="bg-warning/15 px-4 py-3 text-sm text-warning"><p role="status">{message}</p><RecoveryReferences /></div> : null;
+  return message ? <div className="bg-warning/15 px-4 py-3 text-sm text-warning"><p role="status">{message}</p>{review && <><RecoveryReferences /><RecoveryActivationPanel /></>}</div> : null;
 }
 
 /**

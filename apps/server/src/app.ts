@@ -20,6 +20,7 @@ import { ConnectionsStore, type SecretCodec } from './connections/store';
 import { readRecoveryState, recoveryMessage } from './backup/recovery';
 import { inspectRecoveryReferences } from './backup/references';
 import { compareRecoveredContent } from './backup/content';
+import { RecoveryActivation } from './backup/activation';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
@@ -153,6 +154,7 @@ function reviewFixTask(review: AutoReview, findingIdx?: number): string {
 
 export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
   const recovery = env.dbPath === ':memory:' ? null : readRecoveryState(dirname(env.dbPath));
+  const recoveryReview = recovery?.mode === 'review';
   if (recovery) { env = { ...env, demo: false, projectDirs: [] }; deps = { ...deps, startSystem: false, startScanner: false }; }
   // Secrets store: stored keys override .env; secrets never leave the server.
   const ENV_FALLBACK: Record<string, string> = {
@@ -216,7 +218,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   registerSecurity(app, env);
   app.addHook('preHandler', async (req, reply) => {
-    if (recovery && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.url.split('?')[0] !== '/api/session') {
+    if (recoveryReview && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !['/api/session', '/api/recovery/prepare', '/api/recovery/activate'].includes(req.url.split('?')[0])) {
       if (req.url.split('?')[0] === '/api/app-open') return reply.send({ recorded: false, recovery: true });
       return reply.code(423).send({ error: recoveryMessage });
     }
@@ -328,7 +330,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // and stream both through the bus. The diagnoser reserves the top model for this debugging
   // task (convention 5) and self-falls-back to a heuristic with no key. Process-level fault
   // hooks (unhandledRejection/uncaughtException) are wired to `incidents` in index.ts.
-  const diagnoser = new IncidentDiagnoser(() => connections.resolve('anthropic'), fetch,
+  const diagnoser = new IncidentDiagnoser(() => recovery ? undefined : connections.resolve('anthropic'), fetch,
     (msg) => app.log.info(redact(msg, [env.accToken, ...connections.statusAll().map((connection) => connections.resolve(connection.id))])));
   const incidents = new IncidentReporter(bus, diagnoser, (msg) => app.log.warn(msg), undefined,
     () => [env.accToken, ...connections.statusAll().map((connection) => connections.resolve(connection.id))]);
@@ -420,7 +422,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const testflight = new TestFlightProfileStore(testflightPath);
 
   let scanner: Scanner | null = null;
+  let restoredScanReady = false;
+  let wakeRestoredQueue = () => {};
   const rebuildScanner = async (): Promise<void> => {
+    restoredScanReady = false;
     const before = scanner?.repoIds() ?? [];
     scanner?.stop();
     scanner = null;
@@ -444,6 +449,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       });
     }
     snapshotStats(); // accurate snapshot once the scan populated/pruned repos
+    restoredScanReady = true;
+    wakeRestoredQueue();
   };
   // Tests skip boot scanning unless explicitly opting into an isolated profile scan.
   if (deps.startScanner ?? (deps.startSystem !== false)) await rebuildScanner();
@@ -492,15 +499,17 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       secrets: () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))],
       workspaceRoot: deps.workspaceRoot ?? (!deps.spawner && !env.demo ? join(dirname(env.dbPath), 'workspaces') : undefined),
       receiptRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'process-receipts') : undefined,
-      blockedReason: (repoId) => recovery ? recoveryMessage :
+      blockedReason: (repoId) => recoveryReview ? recoveryMessage :
         projectSettings.isEnabled(repoId, 'agents')
           ? null
           : `agent dispatch is turned off for '${repoId}' — enable it in the project's Settings`,
+      queuePaused: () => recovery?.mode === 'manual' && !restoredScanReady ? 'Recovered manual profile: scan project folders explicitly before queued jobs can resume.' : null,
       onRunDone: onTestflightRunDone,
     },
     (msg) => app.log.info(msg),
   );
-  const orphans = recovery ? 0 : runner.reconcileOrphans();
+  wakeRestoredQueue = () => runner.wake();
+  const orphans = recoveryReview ? 0 : runner.reconcileOrphans();
   if (orphans > 0) app.log.warn(`runner: reconciled ${orphans} orphaned run(s) on boot`);
 
   // Deep review: opt-in `claude ultrareview` (cloud multi-agent) per project, streamed.
@@ -818,7 +827,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     resourceFor: (repoId, cwd) => runner.resourceKey(repoId, cwd),
     cwdFor: (repoId) => bus.snapshot().state.repos[repoId]?.localPath,
   });
-  if (!recovery) verifier.reconcile();
+  if (!recoveryReview) verifier.reconcile();
   app.post('/api/planning/tasks/:id/approval', async (req, reply) => {
     try { return { approval: await verifier.prepareTaskAcceptance((req.params as { id: string }).id, req.body) }; }
     catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
@@ -1035,7 +1044,20 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   app.get('/api/recovery', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
-    return { recovery, message: recovery ? recoveryMessage : null };
+    const restartRequired = recoveryActivation?.restartRequired ?? false;
+    return { recovery: recovery ? { ...recovery, restartRequired } : null, message: restartRequired ? 'Manual operation approved. Close and restart ControlOS with this same profile. This session remains paused until restart.' : recoveryReview ? recoveryMessage : recovery ? 'Recovered profile: manual operation is enabled. Startup scanning and scheduled/event automation remain off. Reconfigure credentials and project folders explicitly.' : null };
+  });
+  const recoveryActivation = recoveryReview ? new RecoveryActivation(db, dirname(env.dbPath), registry.hostId) : null;
+  let activationBusy = false;
+  for (const action of ['prepare', 'activate'] as const) app.post(`/api/recovery/${action}`, async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!recoveryActivation || activationBusy || recoveryContentBusy) return reply.code(409).send({ error: 'Recovery review unavailable or already in progress' });
+    activationBusy = true;
+    try {
+      const body = (req.body ?? {}) as { token?: unknown; confirmation?: unknown };
+      return action === 'prepare' ? await recoveryActivation.prepare() : await recoveryActivation.activate(body.token, body.confirmation);
+    } catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
+    finally { activationBusy = false; }
   });
   app.get('/api/recovery/references', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
@@ -1046,7 +1068,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.get('/api/recovery/runs/:id/content', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     if (!recovery) return reply.code(409).send({ error: 'Content review requires a restored profile' });
-    if (recoveryContentBusy) return reply.code(409).send({ error: 'Another content comparison is in progress' });
+    if (recoveryContentBusy || activationBusy) return reply.code(409).send({ error: 'Another recovery review is in progress' });
     const run = db.select().from(runs).where(eq(runs.id, (req.params as { id: string }).id)).get();
     if (!run) return reply.code(404).send({ error: 'Run not found' });
     recoveryContentBusy = true;
