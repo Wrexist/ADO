@@ -24,6 +24,7 @@ import { prepareWorkspace, workspaceEvidence } from './workspace';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
 import { verificationBlocks } from './verificationOwnership';
 import { ProcessNotStartedError } from '../lib/processLaunch';
+import { executionCapacityAvailable, executionCapacityReason } from './executionCapacity';
 
 export interface DispatchInput {
   repoId: string;
@@ -275,6 +276,7 @@ export class Runner {
     if (!cwd) return 'Repository checkout is unavailable.';
     const resource = this.resourceKey(run.repoId, cwd);
     if (this.busyDirectories.has(resource) || this.db.select().from(executionLocks).where(eq(executionLocks.resource, resource)).get() || this.repositoryBusy(run.repoId, cwd)) return 'Waiting for the current or quarantined writer in this repository.';
+    if (!executionCapacityAvailable(this.db)) return executionCapacityReason;
     if (this.active >= this.opts.maxConcurrent) return `Waiting for an agent execution slot (limit ${this.opts.maxConcurrent}).`;
     return 'Waiting for the queued job to be claimed.';
   }
@@ -288,7 +290,7 @@ export class Runner {
 
   private drainQueue(): void {
     if (this.stopped) return;
-    while (this.active < this.opts.maxConcurrent && !this.stopped) {
+    while (this.active < this.opts.maxConcurrent && !this.stopped && executionCapacityAvailable(this.db)) {
       // Skip a busy checkout so unrelated projects can proceed, while writers to the
       // same checkout remain serialized even when they have different logical IDs.
       const index = this.queue.findIndex((q) => {
@@ -314,6 +316,7 @@ export class Runner {
       let claimed: boolean;
       try {
         claimed = this.bus.commit((tx) => {
+        if (!executionCapacityAvailable(this.db)) return false;
         if (tx.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(next.input.repoId, cwd))).get()) return false;
         if (this.repositoryBusy(next.input.repoId, cwd)) return false;
         const updated = tx.update(runs).set({ status: 'running' }).where(and(eq(runs.id, next.id), eq(runs.status, 'queued'))).run();

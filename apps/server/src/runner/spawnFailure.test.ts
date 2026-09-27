@@ -59,3 +59,38 @@ it('keeps a live writer quarantined when its adapter throws before returning a h
     rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 }, 60000);
+
+it('counts two real lost processes against global admission even after profile reopening', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-capacity-lost-'));
+  for (const id of ['a', 'b', 'c']) mkdirSync(join(root, id));
+  const path = join(root, 'profile.sqlite'), first = openDb(path);
+  const children: ChildProcessWithoutNullStreams[] = [], closed: Promise<void>[] = [];
+  let ready = 0, reopened: ReturnType<typeof openDb> | undefined, recovered: Runner | undefined;
+  const spawner: Spawner = { spawn(opts) {
+    const child = spawn(process.execPath, ['-e', "console.log('ready');setInterval(()=>{},1000);setTimeout(()=>process.exit(),30000)"], { cwd: opts.cwd, windowsHide: true });
+    children.push(child); closed.push(new Promise((resolve) => child.once('close', () => resolve())));
+    child.on('error', () => {}); child.stdin.end(); child.stderr.resume(); child.stdout.once('data', () => { ready++; });
+    throw new Error('Process exists; handle delivery failed');
+  } };
+  const opts = { cwdFor: (id: string) => join(root, id), maxConcurrent: 99 };
+  const runner = new Runner(new Bus(first.db), first.db, spawner, opts);
+  try {
+    runner.dispatch({ repoId: 'a', task: 'lost a' }); runner.dispatch({ repoId: 'b', task: 'lost b' });
+    await expect.poll(() => ready, { timeout: 15000 }).toBe(2);
+    const waiting = runner.dispatch({ repoId: 'c', task: 'must wait globally' });
+    expect(children).toHaveLength(2);
+    expect(runner.waitingReason(waiting.runId)).toContain('profile limit (2)');
+    for (const child of children) expect(() => process.kill(child.pid!, 0)).not.toThrow();
+    reopened = openDb(path); recovered = new Runner(new Bus(reopened.db), reopened.db, spawner, opts);
+    recovered.reconcileOrphans(); expect(children).toHaveLength(2);
+    expect(reopened.db.select().from(runs).where(eq(runs.id, waiting.runId)).get()?.status).toBe('queued');
+    for (const child of children) child.kill(); await Promise.all(closed);
+    // Disappearance observed by this test is not authenticated recovery evidence.
+    recovered.wake(); expect(children).toHaveLength(2);
+    expect(reopened.db.select().from(executionLocks).all()).toHaveLength(2);
+  } finally {
+    for (const child of children) child.kill(); await Promise.all(closed);
+    await recovered?.stop(); await runner.stop(); reopened?.sqlite.close(); first.sqlite.close();
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  }
+}, 60000);

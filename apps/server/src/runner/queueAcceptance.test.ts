@@ -55,7 +55,7 @@ it('T12: serializes unregistered sibling writers, enforces two agent slots and e
     expect(await detail(second)).toMatchObject({ status: 'queued', waitingReason: 'Waiting for the current or quarantined writer in this repository.' });
     expect((await server.app.inject({ url: `/api/runs/${second}`, headers: { host: auth.host } })).statusCode).toBe(401);
     const extra = await dispatch(repos[2], 'C');
-    expect(await detail(extra)).toMatchObject({ status: 'queued', waitingReason: 'Waiting for an agent execution slot (limit 2).' });
+    expect(await detail(extra)).toMatchObject({ status: 'queued', waitingReason: 'Waiting for execution capacity: active or quarantined writers occupy the profile limit (2).' });
     finish('A first'); await started('A second');
     expect(await detail(second)).toMatchObject({ status: 'running', waitingReason: null });
     expect((await detail(extra)).status).toBe('queued');

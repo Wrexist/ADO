@@ -45,7 +45,7 @@ try {
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     if (message.text().includes('409') && /\/api\/runs\/demo-stop\/(outcome|verify)$/.test(message.location().url)) return; // explicit stale-review fixtures below
-    errors.push(message.text());
+    errors.push(`${message.text()} (${message.location().url.split(/[?#]/)[0] || 'inline'})`);
   });
   async function pair() {
     await page.getByLabel('Access key').fill(token); await page.getByRole('button', { name: 'Connect', exact: true }).click();
@@ -277,7 +277,7 @@ try {
   }
   for (const width of [1536, 390]) {
     const repositoryWait = 'Waiting for the current or quarantined writer in this repository.';
-    const capacityWait = 'Waiting for an agent execution slot (limit 2).';
+    const capacityWait = 'Waiting for execution capacity: active or quarantined writers occupy the profile limit (2).';
     Object.assign(runFixture, { status: 'queued', executionStatus: 'queued', timelineState: 'live', waitingReason: repositoryWait,
       verificationAttempts: [], verificationLocked: false, workspacePath: null, headSha: null, diffDigest: null, approvalPolicyVersion: null, verifyVerdict: null, humanAction: null, processTermination: null });
     await page.setViewportSize({ width, height: 1024 });

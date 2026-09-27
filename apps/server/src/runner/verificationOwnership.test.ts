@@ -112,6 +112,33 @@ it('serializes separate clones sharing the agent resource key while allowing pro
   } finally { h.close(); }
 });
 
+it('shares profile capacity with agent quarantine and rejects verification before invalidating prior results', async () => {
+  const h = await fixture();
+  let runner: Runner | undefined;
+  try {
+    const b = join(h.root, 'b'), c = join(h.root, 'c');
+    h.git(['clone', '--quiet', h.repo, b]); h.git(['clone', '--quiet', h.repo, c]);
+    h.db.insert(runs).values({ ...h.run, id: 'b', repoId: 'b', workspacePath: b }).run();
+    h.db.insert(runs).values({ ...h.run, id: 'c', repoId: 'c', workspacePath: c, verifyVerdict: 'pass', humanAction: 'accepted' }).run();
+    const a = h.claim();
+    h.db.insert(executionLocks).values({ resource: b, runId: 'b', owner: 'lost-agent', acquiredTs: new Date().toISOString() }).run();
+    let starts = 0;
+    const verifier = new Verifier(h.db, () => [], undefined, { spawn() { starts++; throw new ProcessNotStartedError('fixture preflight'); } });
+    await expect(verifier.verify('c')).rejects.toThrow('profile limit (2)');
+    expect(starts).toBe(0);
+    expect(h.db.select().from(runs).where(eq(runs.id, 'c')).get()).toMatchObject({ verifyVerdict: 'pass', humanAction: 'accepted' });
+    expect(h.db.select().from(verificationAttempts).all()).toHaveLength(1);
+    runner = new Runner(new Bus(h.db), h.db, { spawn() { starts++; return { lines: (async function* () {})(), done: Promise.resolve(0), kill() {} }; } }, { cwdFor: () => c });
+    const queued = runner.dispatch({ repoId: 'c', task: 'waiting behind verifier and quarantine' });
+    expect(runner.waitingReason(queued.runId)).toContain('profile limit (2)');
+    // This fixture claim never spawned. Releasing it leaves the lost agent counted.
+    h.db.transaction(() => h.ownership.finish(a, 'failed', 'not_started', true));
+    runner.wake(); await expect.poll(() => runner!.isLive(queued.runId)).toBe(false);
+    expect(starts).toBe(1);
+    expect(h.db.select().from(executionLocks).all().map((lock) => lock.owner)).toEqual(['lost-agent']);
+  } finally { await runner?.stop(); h.close(); }
+});
+
 it('requires the verification identity receipt and never substitutes the parent agent receipt', async () => {
   const h = await fixture();
   try {

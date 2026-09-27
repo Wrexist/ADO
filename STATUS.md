@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: beständig gemensam kapacitet för skrivarjobb
+
+Agentjobb, verifieringar och kvarhållna karantänlås räknas nu mot samma gräns om två skrivarägarskap per profil. Migration 0016 nekar ett tredje lås i SQLite även vid konkurrerande anslutningar. Köval och claim kontrollerar också gränsen. Ett tappat processhandtag eller en omstart frigör därmed ingen kapacitet utan att det befintliga ägarskapet kan hävas. En äldre profil med fler lås bevaras och nekar nya skrivare tills färre än två återstår. Gränsen avser jobb i denna profil, inte antalet underprocesser eller externa program.
+
+Verifiering utan kapacitet nekas innan ett försök skapas eller tidigare verifiering/acceptans återkallas. Bekräftad frigöring väcker agentkön. Körhistoriken visar att aktiva eller karantänlagda skrivare upptar profilens kapacitet. Se [körkontraktet](docs/controlos/task-execution.md) och [verifieringsägarskapet](docs/controlos/verification-processes.md).
+
+`npm run verify` passerade: typkontroll, lint, 346 tester i 67 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Nya prov omfattar två verkliga processer med borttappade handtag, fortsatt spärr efter återöppning, blandat verifierings-/agentägarskap, bevarade tidigare resultat vid kapacitetsavslag, migrering av tre gamla karantänlås och två separata processer som tävlar om sista platsen med rollback för förloraren. Loggar: `controlos-capacity-focused.log`, `controlos-capacity-race.log` och `controlos-capacity-verify.log` (ignorerade).
+
+Det första browserprovet underkändes av Chromium `ERR_NO_BUFFER_SPACE` efter genomförda flöden. Felrapporteringen har kompletterats med resursadress utan query. Därefter passerade riktad lint och hela browserprovet i `controlos-capacity-final-smoke.log`; inga produktundantag infördes. De nya 1536/390-bilderna har granskats. Browserkörningarna är uttryckliga DEMO-fixtures. Webbens chunkvarning kvarstår, cirka 559 kB före gzip.
+
+T12 är lokalt godkänt för den dokumenterade Windows-profilen. Totalt är 7 av 46 fullständiga acceptansscenarier lokalt godkända och 39 fortfarande inte fullständigt provade. Fulla R1–R4-grindar är öppna. Nästa del gäller kvitterad köpost vid faktisk serverkrasch, dubbla API-anrop och omprövad policy före start. Native-fönstret före sparad processidentitet, sandbox, andra hjälpprocesser och verklig pilot återstår. Ingen riktig modell, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: köorsaker, syskon-worktrees och atomisk felstatus
 
 Körningen, uppgiftens felstatus och agentens synliga felhändelse sparas nu i samma transaktion. Ett injicerat fel vid lagring av agenthändelsen lämnar samtliga tillstånd oförändrade och behåller skrivlåset; återhämtning kan sedan spara hela övergången. Oregistrerade Git-worktrees jämförs också genom sin verkliga gemensamma Git-katalog, så olika scanner-ID:n inte ger parallella skrivare i samma repo.

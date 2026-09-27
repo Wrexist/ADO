@@ -4,6 +4,8 @@
 
 Försök och lås skapas i samma transaktion som återkallar tidigare verifiering och acceptans. Agentjobb kontrollerar verifieringslås vid köval och claim. Kontrollen omfattar scanner-ID, registrerad repoidentitet och fysisk gemensam Git-katalog, även för oregistrerade syskon-worktrees. Okänd identitet är inte tillstånd att börja skriva. Befintliga agentlås behåller sina nycklar och sin karantän.
 
+Migration 0016 begränsar profilen till två samtidiga skrivarägarskap totalt. Verifieringar, agenter och kvarhållna karantänlås räknas tillsammans. SQLite nekar ett tredje lås även vid konkurrerande anslutningar. Ett verifieringsanrop utan kapacitet nekas innan något nytt försök skapas eller tidigare bevis/acceptans återkallas; anropet köas inte automatiskt. Bekräftad frigöring väcker agentkön. Gamla profiler med fler lås behåller dem och väntar på verifierad återhämtning. Gränsen avser jobb i denna profil, inte antalet underprocesser eller andra profiler.
+
 På Windows används samma native Job Object-värd som för agentkörningarna. Processidentiteten sparas innan den suspenderade processen får fortsätta. Godkänt slut kräver att native-värden har observerat noll processer i jobbet. Båda utdataströmmarna dräneras med begränsade buffertar och redigering av hemligheter. Resultatets innehåll kontrolleras efter avslutat processträd. Bevis, slutstatus och upplåsning sparas atomiskt.
 
 Avbrott och återhämtning:

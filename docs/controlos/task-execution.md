@@ -37,13 +37,20 @@ conservatively instead of assuming it belongs to another repository.
 Unregistered sibling worktrees are also compared by their actual Git common
 directory identity; separate scanner IDs do not permit concurrent writers.
 
-The default agent scheduler admits two concurrent agent jobs. Queued run API
-responses expose a current `waitingReason`, distinguishing repository ownership
-(including quarantine) from a full agent execution limit. The history list and
-expanded run view refresh those reasons while jobs are pending; reasons clear
-when a run leaves the queue. This is a controller limit, not an OS process quota:
-verification has separate ownership, and an unknown process can outlive its
-controller slot while its repository stays quarantined.
+The profile admits at most two owned writer jobs across agents and verification.
+Every retained execution lock counts, including unknown outcomes, interrupted
+owners and ownership from another server connection. Migration 0016 enforces
+admission in SQLite as well as before scheduler claim. Old profiles with more
+than two locks keep them all and admit no new writer until fewer than two remain.
+An agent controller can additionally impose a lower local concurrency limit.
+
+Queued run API responses expose a current `waitingReason`, distinguishing
+repository ownership, occupied profile capacity and a lower local controller
+limit. The history list and expanded run view refresh reasons while jobs are
+pending; reasons clear when a run leaves the queue. This bounds admitted writer
+jobs in one profile, not individual descendant processes, other profiles or
+unmanaged external programs. Uncertain outcomes retain their place until the
+existing recovery path confirms stop. Capacity exhaustion never unlocks a repo.
 
 An accepted queued job survives reopening its SQLite profile. It rechecks current
 permissions, project/dependencies and checkout/base before spawn. A possibly
@@ -78,6 +85,12 @@ queued/running/done list polling at 1536/390 pixels with explicit DEMO responses
 `scripts/smoke-task-execution.mjs` tests review focus, exact submitted bindings,
 keyboard confirmation and awaiting-review rendering at 1536/390 pixels using
 explicit DEMO responses. Browser fixtures are not provider execution evidence.
+`executionCapacity.test.ts` checks an over-capacity profile migration and two
+independent OS processes racing for the last slot, including transaction rollback.
+`spawnFailure.test.ts` keeps two actual lost child processes alive while proving
+that a third writer waits through reopening. `verificationOwnership.test.ts`
+checks mixed verifier/agent ownership and that capacity refusal preserves prior
+result decisions without creating a verification attempt.
 
 This is trusted local execution, not an OS sandbox. Same-user filesystem races,
 shared Git metadata, scanner-ID-based permission migration, default-branch/fetch
