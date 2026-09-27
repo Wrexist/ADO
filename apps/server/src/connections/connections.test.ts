@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -70,4 +70,16 @@ it('preserves the original store if encryption verification fails', () => {
   const path = newPath(); new ConnectionsStore(path).set('github', 'keep-me'); const original = readFileSync(path, 'utf8');
   expect(() => new ConnectionsStore(path, undefined, { id: 'broken', encrypt: () => 'cipher', decrypt: () => 'wrong' })).toThrow(/round-trip/);
   expect(readFileSync(path, 'utf8')).toBe(original);
+});
+it('migrates an explicitly supported legacy encoding and rejects inherited decoder names', () => {
+  const path = newPath();
+  const old = { id: 'old', encrypt: (value: string) => Buffer.from(value).toString('base64'), decrypt: (value: string) => Buffer.from(value, 'base64').toString() };
+  new ConnectionsStore(path, undefined, old).set('github', 'legacy-secret');
+  const next = { ...old, id: 'new', legacyDecoders: { old: old.decrypt } };
+  expect(new ConnectionsStore(path, undefined, next).resolve('github')).toBe('legacy-secret');
+  expect(readFileSync(path, 'utf8')).toContain('"encoding": "new"');
+  const invalid = JSON.stringify({ github: { value: 'cipher', encoding: 'toString', updatedTs: 'now' } });
+  writeFileSync(path, invalid);
+  expect(() => new ConnectionsStore(path, undefined, next)).toThrow('original OS key provider');
+  expect(readFileSync(path, 'utf8')).toBe(invalid);
 });

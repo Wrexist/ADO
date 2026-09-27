@@ -15,14 +15,15 @@
  * 5. auto-update    — packaged builds check GitHub Releases; failures only log (offline
  *                     is normal, and unsigned macOS builds can't auto-update — DESKTOP.md).
  */
-import { randomBytes } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, shell, safeStorage } from 'electron';
 import fixPath from 'fix-path';
 import { buildServer, type AccServer } from '../../server/src/app';
 import { loadEnv } from '../../server/src/env';
+import { loadOrCreateToken } from './tokenStore';
+import { windowsCredentials } from './windowsCredentials';
 
 /** Ask the OS for a free localhost port (close it immediately; the server rebinds it). */
 function freePort(): Promise<number> {
@@ -37,21 +38,6 @@ function freePort(): Promise<number> {
   });
 }
 
-/** The shared secret lives in userData (0600) — created once, reused across launches. */
-function loadOrCreateToken(dir: string): string {
-  const file = join(dir, 'acc-token');
-  const existing = existsSync(file) ? readFileSync(file, 'utf8').trim() : '';
-  const prefix = 'os:v1:';
-  if (existing.startsWith(prefix)) return safeStorage.decryptString(Buffer.from(existing.slice(prefix.length), 'base64'));
-  const token = existing || randomBytes(24).toString('hex');
-  const encrypted = safeStorage.encryptString(token);
-  if (safeStorage.decryptString(encrypted) !== token) throw new Error('Access key encryption failed');
-  const temp = `${file}.${randomBytes(12).toString('hex')}.tmp`;
-  writeFileSync(temp, `${prefix}${encrypted.toString('base64')}\n`, { mode: 0o600, flag: 'wx' });
-  renameSync(temp, file); chmodSync(file, 0o600);
-  return token;
-}
-
 let server: AccServer | null = null;
 
 async function start(): Promise<void> {
@@ -61,7 +47,12 @@ async function start(): Promise<void> {
   if (!safeStorage.isEncryptionAvailable() || (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')) throw new Error('Unlock the OS credential store and restart ControlOS.');
   const userData = app.getPath('userData');
   mkdirSync(userData, { recursive: true });
-  const accToken = loadOrCreateToken(userData);
+  const nativeCodec = process.platform === 'win32' ? windowsCredentials(app.isPackaged
+    ? join(process.resourcesPath, 'process-host', 'ControlOS.CredentialHost.exe')
+    : join(__dirname, '../../server/native/dist/ControlOS.CredentialHost.exe')) : undefined;
+  const tokenCodec = nativeCodec ? { ...nativeCodec, prefix: 'os:dpapi:v1:', legacyDecrypt: (value: Buffer) => safeStorage.decryptString(value) }
+    : { encrypt: (value: string) => safeStorage.encryptString(value), decrypt: (value: Buffer) => safeStorage.decryptString(value) };
+  const accToken = loadOrCreateToken(userData, tokenCodec);
   const port = await freePort();
 
   // Packaged: web bundle + drizzle migrations ride in resources/ (electron-builder
@@ -86,7 +77,11 @@ async function start(): Promise<void> {
   if (!safeStorage.isEncryptionAvailable() || (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')) {
     throw new Error('The OS credential store is unavailable. Unlock it and restart ControlOS.');
   }
-  server = await buildServer(env, { secretCodec: {
+  server = await buildServer(env, { secretCodec: nativeCodec ? {
+    id: 'windows-dpapi-v1', encrypt: (value) => nativeCodec.encrypt(value).toString('base64'),
+    decrypt: (value) => nativeCodec.decrypt(Buffer.from(value, 'base64')),
+    legacyDecoders: { 'electron-safe-storage-v1': (value) => safeStorage.decryptString(Buffer.from(value, 'base64')) },
+  } : {
     id: 'electron-safe-storage-v1',
     encrypt: (value) => safeStorage.encryptString(value).toString('base64'),
     decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),

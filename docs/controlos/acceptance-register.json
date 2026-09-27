@@ -494,7 +494,9 @@
       "specification": "**Grind:** R1. **Krav:** REQ15, REQ21. **Status:** not_run.\n\n**Givet:** Anslutningsfilen innehåller trasig JSON eller läsning nekas.\n\n**När:** Appen öppnas och en inställning försöker sparas.\n\n**Godkänt endast om:** Ingen tom store skrivs över originalet. Fel skiljs från ENOENT och återställningsväg visas.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/connections/connections.test.ts",
-        "apps/server/src/lib/persistence.test.ts"
+        "apps/server/src/lib/persistence.test.ts",
+        "docs/controlos/native-credentials.md",
+        "docs/controlos/native-credential-evidence.json"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },
@@ -589,7 +591,9 @@
       "specification": "**Grind:** R1. **Krav:** REQ21. **Status:** not_run.\n\n**Givet:** Inställningslagring avbryts eller disk blir full.\n\n**När:** Nästa start läser lagringen.\n\n**Godkänt endast om:** Senast konsistent tillstånd återfås. Databasmigration/JSON-ersättning får inte ge ett tyst tomt projekt.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/lib/persistence.test.ts",
-        "apps/server/src/connections/connections.test.ts"
+        "apps/server/src/connections/connections.test.ts",
+        "docs/controlos/native-credentials.md",
+        "docs/controlos/native-credential-evidence.json"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },

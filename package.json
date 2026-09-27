@@ -24,6 +24,7 @@
     "build": "npm run build --workspaces --if-present",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:native-profile": "node scripts/probe-native-profile.mjs",
     "autostart": "bash scripts/install-autostart.sh",
     "restore": "node --import tsx scripts/restore.mts"
   },

@@ -13,6 +13,7 @@ export interface SecretCodec {
   id: string;
   encrypt(value: string): string;
   decrypt(value: string): string;
+  legacyDecoders?: Record<string, (value: string) => string>;
 }
 
 interface StoredConn {
@@ -41,9 +42,12 @@ export class ConnectionsStore {
       if (!value || typeof value.value !== 'string' || typeof value.updatedTs !== 'string') {
         throw new Error(`Invalid connection '${id}'; refusing to overwrite the store`);
       }
-      if (value.encoding && value.encoding !== this.codec?.id) throw new Error('This credential store requires its original OS key provider');
-      decoded[id] = { value: value.encoding ? this.codec!.decrypt(value.value) : value.value, updatedTs: value.updatedTs };
-      needsMigration ||= !value.encoding;
+      const legacy = this.codec?.legacyDecoders;
+      const decoder = value.encoding === this.codec?.id ? this.codec?.decrypt
+        : value.encoding && legacy && Object.hasOwn(legacy, value.encoding) ? legacy[value.encoding] : undefined;
+      if (value.encoding && !decoder) throw new Error('This credential store requires its original OS key provider');
+      decoded[id] = { value: value.encoding ? decoder!(value.value) : value.value, updatedTs: value.updatedTs };
+      needsMigration ||= value.encoding !== this.codec?.id;
     }
     if (this.codec && needsMigration) this.persist(decoded);
     this.data = decoded;

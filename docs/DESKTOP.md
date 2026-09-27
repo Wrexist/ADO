@@ -1,7 +1,7 @@
 # DESKTOP.md — distributable desktop app (decision record + operations)
 
-Date: 2026-07-17 · Status: **shipped v1** (wrapper + release pipeline; first installer lands
-when the first `v*` tag is pushed)
+Original decision: 2026-07-17. Current status: wrapper and release definition exist;
+installer release, update and complete profile migration are not accepted by local tests.
 
 ## What Isac asked for
 
@@ -127,3 +127,11 @@ npm run build -w @ado/web && npm run dist -w @ado/desktop   # current OS install
   2026 CA-rotation regression https://learn.microsoft.com/en-us/answers/questions/5855708/trusted-signing-regression-in-smartscreen-reputati
 - Electron vs Tauri for a Node backend: https://www.dolthub.com/blog/2025-11-13-electron-vs-tauri/ ·
   https://www.gethopp.app/blog/tauri-vs-electron · sidecar approach https://dev.to/marcin_codes/tauri-nodejs-alternative-to-electron-2l9l
+## Windows credential migration evidence
+
+Windows desktop now stores new credentials as per-user DPAPI blobs through the
+packaged native credential host. Readable older Electron credentials migrate
+without changing their values. Run `npm run smoke:native-profile` for the
+disposable interruption/reopen fixture. See
+[native credential evidence and recovery limits](controlos/native-credentials.md).
+This does not establish installer-update or full-profile restore acceptance.

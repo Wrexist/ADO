@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: avbrottstålig Windows-kryptering av nyckelfiler
+
+Ett nytt native-test visade att den tidigare Electron-krypteringen kunde klara round-trip i samma process men misslyckas efter ett omedelbart processavslut i en ny profil. Windows desktop använder därför nu en separat DPAPI-hjälpprocess för varje credential. Värden går via privata pipes, inte argument. Läsbara äldre Electron-nycklar migreras; tomma, trasiga eller oläsbara tokenfiler ersätts inte längre med en ny nyckel.
+
+`npm run verify` passerade på Windows x64, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 293 tester i 50 filer och byggning. Native-provet med Electron 44.4.5 passerade avbrott mellan migreringsstegen, återöppning och migration från äldre kryptering. Endast syntetiska nycklar användes. Loggar: `controlos-profile-final-verify.log` och `controlos-native-profile-final.log` (ignorerade).
+
+Se [protokoll, återställningsgränser och reproduktion](docs/controlos/native-credentials.md) samt [versionsbunden evidens](docs/controlos/native-credential-evidence.json). Detta gäller credentialfiler i en engångsprofil. Full profilmigrering, riktig återställning, annat OS-konto och installeruppdatering återstår. R1–R4 förblir öppna; inga fullständiga scenarier har godkänts i denna etapp. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: maskering före förkortning och i felrapporter
 
 Agenternas progress/resultat maskeras nu före förkortning; verktygsnamn och körmotorns loggar skyddas också. Kända hemligheter maskeras även i standardkodade URL-/JSON-former. Incidenter maskeras före diagnos och lagring, diagnossvar före publicering och oväntade HTTP-fel före svar/loggning.
