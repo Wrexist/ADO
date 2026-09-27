@@ -55,6 +55,10 @@ export function TodayPage() {
   const projectName = (id: string) => `${data?.portfolio.projects.find((p) => p.id === id)?.name ?? 'Project'} · ${id.slice(0, 8)}`;
   const visible = tasks.filter((t) => (!projectId || t.projectId === projectId) && (!lockedTaskId || t.id === lockedTaskId));
   const estimateTasks = visible.filter((t) => t.status === 'ready' || t.id === lockedTaskId);
+  const hiddenEstimates = Object.entries(estimates).filter(([id, draft]) => (draft.min || draft.max) && !estimateTasks.some((task) => task.id === id));
+  const removeEstimate = (id: string) => {
+    changed(); setEstimates((previous) => { const next = { ...previous }; delete next[id]; return next; });
+  };
   const changeEstimate = (id: string, version: number, key: 'min' | 'max', value: string) => {
     changed(); setEstimates((previous) => ({ ...previous, [id]: { ...(previous[id] ?? { min: '', max: '' }), taskVersion: version, [key]: value } }));
   };
@@ -84,6 +88,19 @@ export function TodayPage() {
                 <label className="min-w-0 text-body">Locked task<select aria-label="Locked task" className={field} value={lockedTaskId} onChange={(e) => { setLockedTaskId(e.target.value); changed(); }}><option value="">No task locked</option>{tasks.filter((t) => !projectId || t.projectId === projectId).map((t) => <option key={t.id} value={t.id}>{t.title} · {projectName(t.projectId)} · {t.status}</option>)}</select></label>
               </div>
               {lockedTaskId && <p className="text-body text-text2">This task stays your focus even if it does not fit. No other task will replace it.</p>}
+              {hiddenEstimates.length > 0 && <div role="region" aria-label="Other retained estimates" className="min-w-0 rounded-tile border p-3">
+                <h3 className="text-body font-semibold">Other retained estimates</h3>
+                <p className="mt-2 text-body text-text2">These estimates are outside this view but are included when you save. Remove obsolete estimates here, or change focus to review their tasks. Removal changes your draft until you save.</p>
+                {hiddenEstimates.map(([id, draft]) => {
+                  const task = tasks.find((t) => t.id === id);
+                  return <div key={id} className="mt-3 min-w-0 break-words border-t pt-3">
+                    <p className="text-body font-semibold">{task?.title ?? 'Task no longer available'}</p>
+                    <p className="text-label text-text3">{task ? projectName(task.projectId) : id} · Estimate version {draft.taskVersion} · {draft.min || '?'}–{draft.max || '?'} minutes</p>
+                    {(!task || task.version !== draft.taskVersion) && <p className="text-body text-warning">This estimate is stale and prevents saving.</p>}
+                    <Button className="mt-2" variant="outline" size="sm" aria-label={`Remove retained estimate: ${task?.title ?? id}`} onClick={() => removeEstimate(id)}>Remove estimate</Button>
+                  </div>;
+                })}
+              </div>}
               <details className="min-w-0 rounded-tile border p-3" open>
                 <summary className="cursor-pointer text-body font-semibold">Time estimates ({estimateTasks.length})</summary>
                 <p className="mt-2 text-body text-text2">Give a rough range in minutes. The upper end must fit your window. Leave both fields empty when duration is unknown.</p>

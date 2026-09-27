@@ -62,7 +62,7 @@ try {
     await result.getByRole('heading', { name: 'DEMO locked focus', exact: true }).waitFor();
     assert.equal(await result.locator('article').count(), 1);
     assert.ok((await result.innerText()).includes('User estimate; actual duration is unknown'));
-    await result.getByText('Why other tasks were excluded (2)', { exact: true }).click();
+    await result.locator('summary').click();
     assert.ok((await result.innerText()).includes('Outside your locked task or project focus'));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -88,6 +88,31 @@ try {
     await page.route('**/api/planning/today', route => route.abort());
     await suggest.click(); await page.getByRole('alert').waitFor(); assert.equal(await result.count(), 0);
     await page.unroute('**/api/planning/today');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    const oldInput = { ...input, title: `DEMO old estimate ${width}` };
+    const retainedTask = (await call('/api/planning/tasks', oldInput)).task;
+    const savedBefore = (await server.app.inject({ url: '/api/planning/today/preferences', headers })).json();
+    const retainedChoices = await call('/api/planning/today/preferences', { version: savedBefore.version, availableMinutes: 30, projectId: project.id, lockedTaskId: focus.id, estimates: [
+      { taskId: focus.id, taskVersion: focus.version, minMinutes: 10, maxMinutes: 26 },
+      { taskId: retainedTask.id, taskVersion: retainedTask.version, minMinutes: 5, maxMinutes: 10 },
+    ] }, 'PUT');
+    await call(`/api/planning/tasks/${retainedTask.id}`, { ...oldInput, version: retainedTask.version, status: 'archived' }, 'PUT');
+    await page.getByRole('button', { name: 'Load saved choices', exact: true }).click();
+    const retained = page.getByRole('region', { name: 'Other retained estimates', exact: true });
+    await retained.getByText('This estimate is stale and prevents saving.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Save choices', exact: true }).click();
+    await page.getByRole('alert').filter({ hasText: 'Task estimate is stale' }).waitFor();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const retainedShot = `smoke-shots/today-retained-${width}.png`; await page.screenshot({ path: resolve(retainedShot), fullPage: true }); shots.push(retainedShot);
+    await retained.getByRole('button', { name: `Remove retained estimate: ${retainedTask.title}`, exact: true }).click();
+    assert.equal(await retained.count(), 0);
+    assert.deepEqual((await server.app.inject({ url: '/api/planning/today/preferences', headers })).json(), retainedChoices);
+    assert.equal(await page.getByLabel('Locked task', { exact: true }).inputValue(), focus.id);
+    await page.getByRole('button', { name: 'Save choices', exact: true }).click();
+    await page.getByText('Choices saved in this profile.', { exact: true }).waitFor();
+    const cleaned = (await server.app.inject({ url: '/api/planning/today/preferences', headers })).json();
+    assert.deepEqual(cleaned.estimates, retainedChoices.estimates.filter((e: { taskId: string }) => e.taskId === focus.id));
+    assert.equal(cleaned.lockedTaskId, focus.id);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   }
   assert.deepEqual((await server.app.inject({ url: '/api/runs', headers })).json().runs, []);

@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Today: gamla uppskattningar utanför fokus går att rätta
+
+`npm run verify` passerade med typkontroll, lint, 413 tester i 88 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Slutligt riktat browserprov och separat lint passerade; käll-, bygg- och bildhasharna stämmer. Loggar: `controlos-today-retained-verify.log`, `controlos-today-retained-probe-final.log` och `controlos-today-retained-lint.log`.
+
+Uppskattningar som inte visas i det valda fokuset redovisas nu separat, inklusive arkiverade eller saknade uppgifter. Detta löser ett sparglapp: en gammal uppskattning kunde blockera sparandet utan att användaren såg något fält att ändra. Borttagning är uttrycklig och ändrar bara utkastet fram till Save choices; fokus och övriga uppskattningar behålls.
+
+Det byggda browserprovet passerade vid 1536/390 px genom riktigt API och separat syntetisk profil. En uppgift arkiverades efter att uppskattningen sparats; sparandet avvisades, endast den gamla uppskattningen togs bort och den exakta kvarvarande uppsättningen sparades utan att fokus ändrades. Databasen var oförändrad mellan borttagning i utkastet och uttrycklig sparning. Bilderna är granskade och använder DEMO-data. Logg: `controlos-today-retained-probe.log`; bilder: `smoke-shots/today-retained-1536.png` och `smoke-shots/today-retained-390.png`.
+
+16/46 scenarier är fortsatt lokalt godkända. T08-underlaget är uppdaterat; REQ06, native migration/restore och fulla R1–R4-grindar är fortsatt öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## Sparade Today-val med versionskontroll
 
 Hela `npm run smoke`, slutlig separat typkontroll och lint passerade också. Käll-, bygg- och bildhasharna stämmer efter slutprovet och smoke-byggningen. Loggar: `controlos-today-preferences-smoke.log`, `controlos-today-preferences-final-typecheck.log` och `controlos-today-preferences-final-lint.log`.
