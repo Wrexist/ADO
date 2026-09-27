@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: beständigt ägarskap för verifieringsprocesser
+
+Verifieringskommandon tar nu beständiga repolås före förkontroll och spawn. Varje försök sparar oföränderligt mål, kommando och processidentitet. Agentkö och verifierare delar spärren för registrerade repon, fysiska Git-kataloger, syskon-worktrees och befintliga GitHub-resursnycklar. Nya verifieringsbevis binds till försökets ID. Tidigare bevis, uppgiftsbeslut och agentstatus hålls åtskilda. Se [kontrakt och gränser](docs/controlos/verification-processes.md).
+
+På Windows startas verifieraren genom den suspenderade native Job Object-värden. Identiteten sparas före resume och normalt avslut kräver ett tomt processträd. Osäkert spawn/stopp behåller karantänlåset. Omstart använder endast verifieringsförsökets eget autentiserade stoppkvitto; agentens kvitto kan inte låsa upp verifieraren. Återhämtning skapar varken nytt jobb eller godkänt bevis. Serveravslut väntar på verifieringsjobben. Körningsvyn visar separat status, stoppbegäran och kvittokontroll utan att exponera privata processidentiteter eller kvittonycklar.
+
+`npm run verify` passerade med typkontroll, lint, 335 tester i 63 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Ett separat omprov av de sju ägarskapstesten passerade efter justerad städning av krasch-fixturen. Proven omfattar verkligt npm-kommando med underprocess, avslut av servern, separat kraschad verifierarprocess, återöppnad databas, atomisk claim, osäker spawn, fel kvitto, syskon-worktree, separata kloner och autentiserade stoppkontroller. En tidigare bred körning fick ett Git-fel vid upprepad repoimport; både separat omprov och den slutliga breda körningen passerade utan ändring av importkoden. Loggarna är ignorerade `controlos-verification-ownership-*.log`.
+
+Fullt browserprov med uttryckliga DEMO-fixtures täcker verifieringsstopp, kvarhållet lås och bekräftat stopp utan falskt godkännande vid 1536/390 px. Agentkorten anpassas nu till en kolumn på mobilen så att namnen går att läsa. Webbens chunkvarning kvarstår, cirka 558 kB före gzip. Detta är lokala kontrollresultat, inte bevis på publicering, verklig modellkörning eller pilotnytta.
+
+POSIX-adaptern redovisar fortfarande endast rotprocessens avslut. Andra hjälpprocesser, kraschen före sparad processidentitet, verifierad OS-sandbox och full native-profilmigrering återstår. Inget ytterligare fullständigt acceptansscenario markeras godkänt: 6 av 46 är lokalt godkända och R1–R4 är öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: uttrycklig revidering och separat nytt försök
 
 Avslutade uppgifter kan nu återöppnas med exakt uppgiftsversion, aktuellt försök, skäl och innehållsbunden återförsöksnyckel. Återöppning återkallar uppgiftsacceptans och väntande granskningar, sparar oföränderlig historik och återför uppgiften till utkast i samma transaktion. Lagringsfel lämnar inte en halv återöppning. Samma begäran ger samma åtgärds-ID även efter omstart eller senare redigering. Inget jobb startas av återöppningen. Se [kontrakt och gränser](docs/controlos/task-revisions.md).

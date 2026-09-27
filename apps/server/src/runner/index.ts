@@ -22,6 +22,7 @@ import { resolve } from 'node:path';
 import { redact } from '../lib/redact';
 import { prepareWorkspace, workspaceEvidence } from './workspace';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
+import { verificationBlocks } from './verificationOwnership';
 
 export interface DispatchInput {
   repoId: string;
@@ -135,7 +136,7 @@ export class Runner {
     if (!this.opts.receiptRoot || this.isLive(runId)) return false;
     const run = this.db.select().from(runs).where(eq(runs.id, runId)).get();
     const lock = this.db.select().from(executionLocks).where(eq(executionLocks.runId, runId)).get();
-    if (!run || !lock || run.status !== 'failed') return false;
+    if (!run || !lock || lock.owner.startsWith('verify:') || run.status !== 'failed') return false;
     const receipt = readTerminationReceipt(this.opts.receiptRoot, run.processIdentity);
     if (!receipt) return false;
     const ts = new Date().toISOString();
@@ -257,6 +258,8 @@ export class Runner {
   }
 
   /** Start queued runs up to the concurrency limit; fail any whose cwd is no longer allowed. */
+  wake(): void { this.drainNext(); }
+
   private drainNext(): void {
     if (this.stopped || this.draining) return;
     this.draining = true;
@@ -316,7 +319,7 @@ export class Runner {
     }
   }
 
-  private resourceKey(repoId: string, cwd: string): string {
+  resourceKey(repoId: string, cwd: string): string {
     const remote = this.bus.snapshot().state.repos[repoId]?.githubFullName;
     if (remote) return `github:${remote.toLowerCase()}`;
     const path = resolve(cwd);
@@ -325,6 +328,7 @@ export class Runner {
 
   /** Preserve legacy lock keys, and additionally serialize registered sibling checkouts. */
   private repositoryBusy(repoId: string, cwd: string) {
+    if (verificationBlocks(this.db, repoId, cwd, this.resourceKey(repoId, cwd))) return true;
     const path = process.platform === 'win32' ? resolve(cwd).toLowerCase() : resolve(cwd);
     const all = this.db.select().from(portfolioCheckouts).all();
     const checkout = all.find((c) => c.sourceId === repoId || c.canonicalPath === path);

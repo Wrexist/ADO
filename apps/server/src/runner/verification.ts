@@ -5,8 +5,9 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db';
 import { runs, verificationEvidence, taskExecutions, planningTasks } from '../db/schema';
 import { workspaceEvidence } from './workspace';
-import { spawnMerged } from '../lib/spawnMerged';
-import { redact } from '../lib/redact';
+import { spawnOwned, type OwnedProcess } from '../lib/ownedProcess';
+import { boundedDiagnostics } from '../lib/processOutput';
+import { VerificationOwnership } from './verificationOwnership';
 import { ApprovalStore, type AcceptanceBinding } from './approvals';
 import { TaskAcceptanceRequest, TaskReviewRequest } from '@ado/shared';
 import { TaskReviewStore, type TaskCriterionBinding } from './taskReview';
@@ -16,8 +17,32 @@ export interface AcceptanceTarget { headSha?: string; diffDigest?: string; polic
 /** Verification is explicit: executes the repository's own npm verify script in trusted-local mode. */
 export class Verifier {
   private active = new Set<string>();
-  constructor(private db: Db, private secrets: () => Array<string | undefined>, private approvals = new ApprovalStore(db)) {}
-  isActive(id: string) { return this.active.has(id); }
+  private processes = new Map<string, OwnedProcess>();
+  private jobs = new Set<Promise<unknown>>();
+  private verifying = new Set<string>();
+  private stopped = false;
+  private cancelled = new Set<string>();
+  private ownership: VerificationOwnership;
+  constructor(private db: Db, private secrets: () => Array<string | undefined>, private approvals = new ApprovalStore(db), private options: { receiptRoot?: string; cwdFor?: (repoId: string) => string | undefined; resourceFor?: (repoId: string, cwd: string) => string; released?: () => void; spawn?: typeof spawnOwned } = {}) {
+    this.ownership = new VerificationOwnership(db, options.receiptRoot, options.cwdFor, options.resourceFor);
+  }
+  isActive(id: string) { return this.active.has(id) || this.ownership.busy(id); }
+  reconcile(runId?: string) {
+    if (runId ? this.active.has(runId) : this.active.size) throw new Error('Cannot reconcile while this verifier is active');
+    const recovered = this.ownership.reconcile(runId);
+    if (recovered) this.options.released?.();
+    return recovered;
+  }
+  cancel(id: string) {
+    if (!this.verifying.has(id)) throw new Error('No live verification owned by this server; recheck its stop receipt');
+    this.cancelled.add(id);
+    this.processes.get(id)?.kill();
+  }
+  async stop() {
+    this.stopped = true;
+    for (const proc of this.processes.values()) proc.kill();
+    await Promise.allSettled([...this.jobs]);
+  }
 
   private invalidateResult(run: typeof runs.$inferSelect) {
     this.db.transaction(() => {
@@ -56,7 +81,7 @@ export class Verifier {
   }
 
   async prepareAcceptance(id: string, target: AcceptanceTarget, taskReview?: TaskCriterionBinding) {
-    if (this.active.has(id)) throw new Error('Verification or acceptance already running');
+    if (this.isActive(id)) throw new Error('Verification or acceptance already running, or writer quarantined');
     this.active.add(id);
     try {
       const run = this.db.select().from(runs).where(eq(runs.id, id)).get();
@@ -72,7 +97,7 @@ export class Verifier {
   }
 
   async accept(id: string, target: AcceptanceTarget, taskReview?: TaskCriterionBinding) {
-    if (this.active.has(id)) throw new Error('Verification or acceptance already running');
+    if (this.isActive(id)) throw new Error('Verification or acceptance already running, or writer quarantined');
     this.active.add(id);
     try {
       const run = this.db.select().from(runs).where(eq(runs.id, id)).get();
@@ -99,9 +124,22 @@ export class Verifier {
       });
     } finally { this.active.delete(id); }
   }
-  async verify(id: string) {
-    if (this.active.has(id)) throw new Error('Verification already running');
+  verify(id: string) {
+    const job = this.verifyOwned(id);
+    this.jobs.add(job);
+    void job.finally(() => this.jobs.delete(job)).catch(() => {});
+    return job;
+  }
+  private async verifyOwned(id: string) {
+    if (this.stopped) throw new Error('Verifier is stopping');
+    if (this.isActive(id)) throw new Error('Verification already running, or writer quarantined');
     this.active.add(id);
+    let attemptId: string | undefined;
+    this.verifying.add(id);
+    let proc: OwnedProcess | undefined;
+    let spawned = false;
+    let settled = false;
+    let finished = false;
     try {
       const run = this.db.select().from(runs).where(eq(runs.id, id)).get();
       if (!run || run.status !== 'done' || !run.workspacePath || !run.baseSha || !run.headSha || !run.diffDigest) throw new Error('A completed isolated run with captured evidence is required');
@@ -112,6 +150,7 @@ export class Verifier {
       }
       // A new verification attempt invalidates old approval even if preflight fails.
       this.db.transaction(() => {
+        attemptId = this.ownership.claim(run);
         this.approvals.invalidateRun(id, 'New verification requested');
         new TaskReviewStore(this.db).invalidateRun(id, 'New verification requested');
         this.db.update(runs).set({ verifyVerdict: null, humanAction: null }).where(eq(runs.id, id)).run();
@@ -123,21 +162,50 @@ export class Verifier {
       const candidates = [process.env.npm_execpath, join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'), join(dirname(process.execPath), '../lib/node_modules/npm/bin/npm-cli.js')];
       const npm = candidates.find((p): p is string => Boolean(p && p.endsWith('npm-cli.js') && existsSync(p)));
       if (!npm) throw new Error('npm CLI unavailable on this host');
-      const proc = spawnMerged(process.execPath, [npm, 'run', 'verify'], run.workspacePath);
-      let output = '';
-      const collect = async () => { for await (const line of proc.lines) output = (output + redact(line, this.secrets()) + '\n').slice(-16000); };
-      let exitCode: number;
-      try { [exitCode] = await Promise.all([proc.done, collect()]); }
-      catch (error) { proc.kill(); await proc.done; throw error; }
+      if (this.stopped || this.cancelled.has(id)) throw new Error('Verification was stopped');
+      this.ownership.assertRunning(attemptId!);
+      // Mark spawning before calling the adapter: a thrown adapter error cannot
+      // establish that it created no process. Keep that uncertainty quarantined.
+      spawned = true;
+      proc = (this.options.spawn ?? spawnOwned)(process.execPath, [npm, 'run', 'verify'], run.workspacePath, (identity) => this.ownership.identify(attemptId!, identity), this.options.receiptRoot);
+      this.processes.set(id, proc);
+      const stdout = boundedDiagnostics(proc.child.stdout, this.secrets());
+      const stderr = boundedDiagnostics(proc.child.stderr, this.secrets());
+      proc.child.stdin.end();
+      const exitCode = await proc.done;
+      settled = true;
+      if (process.platform === 'win32' && !proc.terminationConfirmed()) throw new Error('Verification process termination is unconfirmed');
+      if (this.stopped) throw new Error('Verification stopped during shutdown');
+      if (this.cancelled.has(id)) throw new Error('Verification was stopped');
+      const output = [stdout(), stderr()].filter(Boolean).join('\n');
       const after = await workspaceEvidence(run.workspacePath, run.baseSha);
+      if (this.stopped || this.cancelled.has(id)) throw new Error('Verification was stopped');
       const unchanged = after.headSha === before.headSha && after.diffDigest === before.diffDigest;
       const verdict = exitCode === 0 && unchanged ? 'pass' : 'fail';
-      const evidence = { id: randomUUID(), runId: id, ...before, command: 'npm run verify', exitCode, verdict, output: output + (unchanged ? '' : '\nResult changed during verification; evidence invalid.'), recordedTs: new Date().toISOString() };
+      const evidence = { id: randomUUID(), attemptId: attemptId!, runId: id, ...before, command: 'npm run verify', exitCode, verdict, output: output + (unchanged ? '' : '\nResult changed during verification; evidence invalid.'), recordedTs: new Date().toISOString() };
       this.db.transaction((tx) => {
+        this.ownership.assertRunning(attemptId!);
         tx.insert(verificationEvidence).values(evidence).run();
         tx.update(runs).set({ verifyVerdict: verdict }).where(eq(runs.id, id)).run();
+        this.ownership.finish(attemptId!, verdict === 'pass' ? 'succeeded' : 'failed', proc!.terminationConfirmed() ? 'confirmed' : 'root_exited', true);
       });
+      finished = true;
       return evidence;
-    } finally { this.active.delete(id); }
+    } catch (error) {
+      if (proc && !settled) { proc.kill(); await proc.done.catch(() => {}); }
+      if (attemptId) {
+        const confirmed = Boolean(proc?.terminationConfirmed());
+        const release = !spawned || confirmed || (process.platform !== 'win32' && settled);
+        this.db.transaction(() => this.ownership.finish(attemptId!, release ? 'failed' : 'termination_unconfirmed', !spawned ? 'not_started' : confirmed ? 'confirmed' : settled && process.platform !== 'win32' ? 'root_exited' : 'unconfirmed', release, 'Verification did not produce accepted evidence'));
+        finished = release;
+      }
+      throw error;
+    } finally {
+      this.active.delete(id);
+      this.verifying.delete(id);
+      this.processes.delete(id);
+      this.cancelled.delete(id);
+      if (finished) this.options.released?.();
+    }
   }
 }

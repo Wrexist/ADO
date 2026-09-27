@@ -70,9 +70,11 @@ export const RunTimelineEntry = z.object({
 });
 export type RunTimelineEntry = z.infer<typeof RunTimelineEntry>;
 
-export const VerificationEvidence = z.object({ id: z.string().uuid(), runId: z.string(), headSha: z.string(), diffDigest: z.string(), command: z.string(), exitCode: z.number().int(), verdict: z.enum(['pass', 'fail']), output: z.string(), recordedTs: z.string() });
+export const VerificationEvidence = z.object({ id: z.string().uuid(), attemptId: z.string().uuid().nullable().optional(), runId: z.string(), headSha: z.string(), diffDigest: z.string(), command: z.string(), exitCode: z.number().int(), verdict: z.enum(['pass', 'fail']), output: z.string(), recordedTs: z.string() });
 
 export const RunDetail = AgentRun.extend({
+  verificationAttempts: z.array(z.object({ id: z.string().uuid(), status: z.enum(['running', 'succeeded', 'failed', 'interrupted', 'termination_unconfirmed']), processTermination: z.enum(['confirmed', 'unconfirmed', 'not_started', 'root_exited']).nullable(), startedTs: z.string(), endedTs: z.string().nullable(), note: z.string().nullable() })).optional(),
+  verificationLocked: z.boolean().optional(),
   verificationEvidence: z.array(VerificationEvidence).optional(),
   approvalPolicyVersion: z.string().uuid().nullable().optional(),
   approvalHistory: z.array(OperationApproval).optional(),

@@ -188,6 +188,19 @@ try {
       runFixture.verifyVerdict = null; runFixture.humanAction = null;
       await route.fulfill({ status: 409, json: { error: 'DEMO: result changed; previous verification and acceptance cleared.' } });
     }
+    else if (path === '/api/runs/demo-stop/verify/stop') {
+      if (route.request().method() !== 'POST') throw new Error('Verification stop must use POST');
+      runFixture.verificationAttempts[0].status = 'termination_unconfirmed';
+      runFixture.verificationAttempts[0].processTermination = 'unconfirmed';
+      await route.fulfill({ json: { requested: true } });
+    }
+    else if (path === '/api/runs/demo-stop/verify/reconcile') {
+      if (route.request().method() !== 'POST') throw new Error('Verification recovery must use POST');
+      runFixture.verificationAttempts[0].status = 'interrupted';
+      runFixture.verificationAttempts[0].processTermination = 'confirmed';
+      runFixture.verificationLocked = false;
+      await route.fulfill({ json: { recovered: 1 } });
+    }
     else if (path === '/api/runs/demo-stop/reconcile') {
       if (route.request().method() !== 'POST') throw new Error('Recovery must use POST');
       runFixture.processTermination = 'confirmed';
@@ -244,6 +257,23 @@ try {
     await page.getByText('Recent result reviews', { exact: true }).click();
     await page.getByText(/Acceptance recorded · result.accept/).waitFor();
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Review history mobile overflow');
+  }
+  for (const width of [1536, 390]) {
+    Object.assign(runFixture, { verifyVerdict: null, humanAction: null, verificationLocked: true,
+      verificationAttempts: [{ id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', status: 'running', processTermination: 'unconfirmed', startedTs: new Date().toISOString(), endedTs: null, note: 'DEMO verification lifecycle; no actual command started.' }] });
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto(base + '/agents?run=demo-stop'); await pair();
+    await page.getByRole('button', { name: 'Stop verification', exact: true }).waitFor();
+    if (await page.getByRole('button', { name: 'Run npm verify', exact: true }).isEnabled()) throw new Error('Locked verifier cannot start another verification');
+    await page.getByRole('button', { name: 'Stop verification', exact: true }).click();
+    await page.getByRole('button', { name: 'Recheck verification stop', exact: true }).waitFor();
+    await page.getByText("Verification is holding this repository's writer lock.", { exact: true }).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Verification lifecycle mobile overflow');
+    await page.screenshot({ path: join(out, `verification-quarantine-${width}.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Recheck verification stop', exact: true }).click();
+    await page.getByText('Verification processes: stopped.', { exact: true }).waitFor();
+    await page.getByText('Verification: not independently verified', { exact: true }).waitFor();
+    if (!(await page.getByRole('button', { name: 'Run npm verify', exact: true }).isEnabled())) throw new Error('Confirmed stop should release verification control');
   }
   await desktop.addInitScript((accToken) => { window.__ACC_DESKTOP__ = { serverUrl: '', accToken }; }, token);
   await desktop.setViewportSize({ width: 1536, height: 1024 });

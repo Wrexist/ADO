@@ -171,13 +171,36 @@ it('refuses reopening while an independent verification command is still running
     const started = join(run.workspacePath!, 'verification-started.signal'), deadline = Date.now() + 30000;
     while (!existsSync(started) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
     expect(existsSync(started)).toBe(true);
+    const live = await h.detail();
+    expect(live.verificationLocked).toBe(true);
+    expect(live.verificationAttempts?.[0]).toMatchObject({ status: 'running' });
+    expect(JSON.stringify(live)).not.toContain('receiptKey');
     const current = (await h.plan()).tasks[0];
     const request = { runId: h.runId, version: current.version, reason: 'Revision must wait for verification', idempotencyKey: randomUUID() };
     const response = await h.post(`/api/planning/tasks/${h.task.id}/reopen`, request);
-    expect(response.statusCode).toBe(409); expect(response.json().error).toContain('still active');
+    expect(response.statusCode).toBe(409); expect(response.json().error).toContain('reopening remains blocked');
     expect((await h.plan()).reopenings).toEqual([]);
     release();
     expect((await verification).statusCode).toBe(200);
     expect((await h.post(`/api/planning/tasks/${h.task.id}/reopen`, request)).statusCode).toBe(200);
   } finally { release(); await verification; await h.close(); }
+}, 120000);
+
+it('authenticates verification controls and records an explicit stop without passing evidence', async () => {
+  const h = await fixture(true), run = await h.detail();
+  const verification = h.post(`/api/runs/${h.runId}/verify`);
+  try {
+    await expect.poll(() => existsSync(join(run.workspacePath!, 'verification-started.signal')), { timeout: 30000 }).toBe(true);
+    for (const action of ['stop', 'reconcile']) {
+      const response = await h.server.app.inject({ method: 'POST', url: `/api/runs/${h.runId}/verify/${action}`, headers: { host: h.auth.host }, payload: {} });
+      expect(response.statusCode).toBe(401);
+    }
+    expect((await h.post(`/api/runs/${h.runId}/verify/reconcile`)).statusCode).toBe(409);
+    expect((await h.post(`/api/runs/${h.runId}/verify/stop`)).statusCode).toBe(200);
+    expect((await verification).statusCode).toBe(409);
+    const stopped = await h.detail();
+    expect(stopped.verificationLocked).toBe(false); expect(stopped.verifyVerdict).toBeNull(); expect(stopped.verificationEvidence).toEqual([]);
+    expect(stopped.verificationAttempts?.[0]).toMatchObject({ status: 'failed', processTermination: process.platform === 'win32' ? 'confirmed' : 'root_exited' });
+    expect((await h.plan()).tasks[0].status).toBe('awaiting_review');
+  } finally { await h.post(`/api/runs/${h.runId}/verify/stop`); await verification; await h.close(); }
 }, 120000);

@@ -91,7 +91,14 @@ export const executionLocks = sqliteTable('execution_locks', {
   acquiredTs: text('acquired_ts').notNull(),
 });
 
+export const verificationAttempts = sqliteTable('verification_attempts', {
+  id: text('id').primaryKey(), runId: text('run_id').notNull().references(() => runs.id), repoId: text('repo_id').notNull(), repositoryId: text('repository_id'),
+  gitIdentity: text('git_identity').notNull(), workspacePath: text('workspace_path').notNull(), baseSha: text('base_sha').notNull(), headSha: text('head_sha').notNull(), diffDigest: text('diff_digest').notNull(), command: text('command').notNull(),
+  status: text('status').notNull(), processIdentity: text('process_identity'), processTermination: text('process_termination'), startedTs: text('started_ts').notNull(), endedTs: text('ended_ts'), note: text('note'),
+});
+
 export const verificationEvidence = sqliteTable('verification_evidence', {
+  attemptId: text('attempt_id').references(() => verificationAttempts.id),
   id: text('id').primaryKey(), runId: text('run_id').notNull(), headSha: text('head_sha').notNull(),
   diffDigest: text('diff_digest').notNull(), command: text('command').notNull(),
   exitCode: integer('exit_code').notNull(), verdict: text('verdict').notNull(),

@@ -58,6 +58,11 @@ export async function verifyRun(id: string): Promise<void> {
   if (!res.ok) throw new Error(await bodyError(res, 'Verification failed'));
 }
 
+export async function controlVerification(id: string, action: 'stop' | 'reconcile'): Promise<void> {
+  const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/verify/${action}`, { method: 'POST', headers: headers(), body: '{}' });
+  if (!res.ok) throw new Error(await bodyError(res, 'Verification control failed'));
+}
+
 export async function prepareRunAcceptance(id: string, target: { headSha?: string | null; diffDigest?: string | null; policyVersion: string }): Promise<OperationApproval> {
   const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/approval`, {
     method: 'POST', headers: headers(), body: JSON.stringify({ operation: 'result.accept', ...target }),

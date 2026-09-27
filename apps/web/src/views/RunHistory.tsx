@@ -4,7 +4,7 @@ import type { AgentRun, RunDetail, RunHumanAction, OperationApproval } from '@ad
 import { Button, Card, Chip, Icon, cx, type Tone } from '../kit';
 import { useBus } from '../store/bus';
 import { durationLabel, timeAgo } from '../lib/time';
-import { fetchRunDetail, fetchRuns, killRun, setRunOutcome, verifyRun, reconcileRun, prepareRunAcceptance } from '../lib/runs';
+import { fetchRunDetail, fetchRuns, killRun, setRunOutcome, verifyRun, reconcileRun, prepareRunAcceptance, controlVerification } from '../lib/runs';
 import { dispatchPrompt } from '../lib/prompts';
 
 const STATUS_TONE: Record<AgentRun['status'], Tone> = {
@@ -29,6 +29,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   const [err, setErr] = useState('');
   const [confirmKill, setConfirmKill] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [controlBusy, setControlBusy] = useState(false);
   const [note, setNoteValue] = useState('');
   const [noteIsError, setNoteIsError] = useState(false);
   const setNote = (value: string) => { setNoteValue(value); setNoteIsError(false); };
@@ -50,7 +51,9 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         // Terminal transition: the parent row still says running/queued — refresh it too.
         if (wasLive.current && d.timelineState !== 'live') onChanged();
         wasLive.current = d.timelineState === 'live';
-        if (d.timelineState === 'live') timer = setTimeout(load, 2000);
+        // Verification has a separate lifecycle after the agent has exited.
+        // Poll while expanded so another client can also stop/recheck it.
+        timer = setTimeout(load, 2000);
       } catch (e) {
         if (alive) setErr((e as Error).message);
       }
@@ -66,6 +69,17 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   if (!detail) return <p className="mt-2 text-label text-text3">Loading…</p>;
 
   const inFlight = detail.status === 'running' || detail.status === 'queued';
+  const verification = detail.verificationAttempts?.[0];
+  const verificationControl = async (action: 'stop' | 'reconcile') => {
+    setControlBusy(true);
+    try {
+      await controlVerification(detail.id, action);
+      setDetail(await fetchRunDetail(detail.id));
+      setNote(action === 'stop' ? 'Verification stop requested. Waiting for process confirmation.' : 'Verification processes stopped. The interrupted attempt was not retried.');
+      onChanged();
+    } catch (error) { setErrorNote((error as Error).message); }
+    finally { setControlBusy(false); }
+  };
   const refreshFailedReview = async (error: Error) => {
     setReview(null);
     setErrorNote(error.message);
@@ -139,12 +153,21 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
 
       {/* timeline — live (growing), ended (complete for this boot), or honestly unavailable */}
       <div className="mt-3 break-words rounded-tile border p-3 text-label text-text2">
-        {detail.status === 'done' && detail.workspacePath && <Button size="sm" disabled={busy} onClick={() => {
+        {detail.status === 'done' && detail.workspacePath && <Button size="sm" disabled={busy || detail.verificationLocked} onClick={() => {
           setBusy(true); setReview(null); setNote('Running repository verification...');
           void verifyRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Verification recorded. Review the result before accepting.'); })
             .catch(refreshFailedReview).finally(() => setBusy(false));
         }}>Run npm verify</Button>}
         <p>Verification: {detail.verifyVerdict ?? 'not independently verified'}</p>
+        {verification && <div className="mt-2 space-y-1">
+          <p>Latest verification attempt: {verification.status.replaceAll('_', ' ')}.</p>
+          <p>{verification.processTermination === 'confirmed' ? 'Verification processes: stopped.' : verification.processTermination === 'root_exited' ? 'Verification root process exited; whole process tree confirmation is unavailable on this host.' : verification.processTermination === 'not_started' ? 'Verification command did not start.' : 'Verification process stop is not yet confirmed.'}</p>
+          {detail.verificationLocked && <p className="text-warning">Verification is holding this repository's writer lock.</p>}
+          {detail.verificationLocked && <Button size="sm" variant="outline" disabled={controlBusy} onClick={() => void verificationControl(verification.status === 'running' ? 'stop' : 'reconcile')}>
+            {verification.status === 'running' ? 'Stop verification' : 'Recheck verification stop'}
+          </Button>}
+          {verification.note && <p>{verification.note}</p>}
+        </div>}
         {detail.status === 'failed' && detail.processTermination === 'unconfirmed' && <Button size="sm" disabled={busy} onClick={() => {
           setBusy(true);
           void reconcileRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Process stop confirmed. The previous attempt remains failed.'); onChanged(); })

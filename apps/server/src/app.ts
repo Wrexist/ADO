@@ -12,7 +12,7 @@ import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, RunHumanAction, type ProbeResult, type AutomationTrigger, type IncidentRecord } from '@ado/shared';
 import { openDb } from './db';
-import { runs, verificationEvidence } from './db/schema';
+import { runs, verificationEvidence, verificationAttempts, executionLocks } from './db/schema';
 import { expandHome, type Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
@@ -767,6 +767,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         approvalPolicyVersion: row.engineVersion === 1 ? approvals.policyVersion(row.repoId) : null,
         approvalHistory: approvals.history(id),
         verificationEvidence: db.select().from(verificationEvidence).where(eq(verificationEvidence.runId, id)).orderBy(desc(verificationEvidence.recordedTs), desc(verificationEvidence.id)).limit(20).all(),
+        verificationAttempts: db.select({ id: verificationAttempts.id, status: verificationAttempts.status, processTermination: verificationAttempts.processTermination, startedTs: verificationAttempts.startedTs, endedTs: verificationAttempts.endedTs, note: verificationAttempts.note }).from(verificationAttempts).where(eq(verificationAttempts.runId, id)).orderBy(desc(verificationAttempts.startedTs), desc(verificationAttempts.id)).limit(20).all(),
+        verificationLocked: db.select().from(executionLocks).where(eq(executionLocks.runId, id)).all().some((lock) => lock.owner.startsWith('verify:')),
         timelineState: runner.isLive(id) ? 'live' : timeline ? 'ended' : 'unavailable',
         timeline: timeline ?? [],
         resultText: row.resultText,
@@ -789,7 +791,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   // Human verdict on a finished run's work — the seed data the (parked) self-learning
   // analyzer will consume at ≥100 runs. Only a human sets this, only on finished runs.
-  const verifier = new Verifier(db, () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))], approvals);
+  const verifier = new Verifier(db, () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))], approvals, {
+    receiptRoot: join(dirname(env.dbPath), 'process-receipts'), released: () => runner.wake(),
+    resourceFor: (repoId, cwd) => runner.resourceKey(repoId, cwd),
+    cwdFor: (repoId) => bus.snapshot().state.repos[repoId]?.localPath,
+  });
+  verifier.reconcile();
   app.post('/api/planning/tasks/:id/approval', async (req, reply) => {
     try { return { approval: await verifier.prepareTaskAcceptance((req.params as { id: string }).id, req.body) }; }
     catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
@@ -1003,6 +1010,17 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.get('/api/connections', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return { connections: connections.statusAll() };
+  });
+  app.post('/api/runs/:id/verify/stop', async (req, reply) => {
+    try { verifier.cancel((req.params as { id: string }).id); return { requested: true }; }
+    catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
+  });
+  app.post('/api/runs/:id/verify/reconcile', async (req, reply) => {
+    try {
+      const recovered = verifier.reconcile((req.params as { id: string }).id);
+      if (!recovered) return reply.code(409).send({ error: 'No authenticated verification stop receipt is available; writer quarantine remains' });
+      return { recovered };
+    } catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
   });
   app.post('/api/connections/:id/verify', async (req, reply) => {
     const id = (req.params as { id: string }).id;
@@ -1351,6 +1369,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       tokens.stop();
       await scheduler?.stop();
       await runner.stop();
+      await verifier.stop();
       await stopProcesses();
       await app.close();
       sqlite.close();

@@ -48,8 +48,10 @@ writer lock. The criterion browser smoke uses explicit DEMO responses to simulat
 a saved reopening with a lost response, identical retry, editing and no automatic
 dispatch at desktop/mobile sizes.
 
-The verifier busy guard is host-process state, not durable recovery for auxiliary
-commands after a host crash. Full auxiliary-process containment/recovery, sandbox
-isolation, carrying reviewed artifacts into a new base, project-specific commands
-and all R1–R4 gates remain separate unfinished work. The agent quarantine rules
-continue to apply and are not bypassed by reopening.
+Verification now holds a durable writer lock and its own persisted process
+identity; reopening remains blocked after a crash until that verification's stop
+can be authenticated. See [verification processes](verification-processes.md).
+Full containment/recovery for other auxiliary commands, POSIX tree confirmation,
+sandbox isolation, carrying reviewed artifacts into a new base, project-specific
+commands and all R1–R4 gates remain separate unfinished work. Reopening does not
+bypass agent or verification quarantine.

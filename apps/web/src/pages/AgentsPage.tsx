@@ -28,7 +28,7 @@ export function AgentsPage() {
     <PageShell title="Agents" subtitle="Running agents, your configured roster, and the build queue — all from the run log.">
       <SectionHeader title={`Running (${running.length})`} className="mt-6" />
       {running.length > 0 ? (
-        <div className="mt-3 grid grid-cols-4 gap-4">
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {running.map((a) => (
             <AgentTile key={a.id} icon={a.icon as never} name={a.name} statusLine={a.statusLine} pct={a.pct} tone={a.tone as Tone} />
           ))}
@@ -39,7 +39,7 @@ export function AgentsPage() {
 
       <SectionHeader title={`Configured (${roster.length})`} className="mt-8" />
       {roster.length > 0 ? (
-        <div className="mt-3 grid grid-cols-4 gap-4">
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {roster.map((a) => (
             <AgentTile key={a.id} icon={a.icon as never} name={a.name} statusLine={a.statusLine} pct={a.pct} tone={a.tone as Tone} />
           ))}

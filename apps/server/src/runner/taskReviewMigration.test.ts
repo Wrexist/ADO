@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { expect, it } from 'vitest';
 import { openDb } from '../db';
-import { portfolioProjects, portfolioRepositories, portfolioCheckouts, planningTasks, runs, taskExecutions, verificationEvidence } from '../db/schema';
+import { portfolioProjects, portfolioRepositories, portfolioCheckouts, planningTasks, runs, taskExecutions } from '../db/schema';
 import { PlanningStore } from '../projects/planning';
 
 it('preserves prior task bindings and verification without inventing criterion acceptance during migration', () => {
@@ -27,12 +27,12 @@ it('preserves prior task bindings and verification without inventing criterion a
     opened.db.insert(planningTasks).values({ id: taskId, projectId, repositoryId, title: 'Old task', outcome: 'Outcome', scope: 'Fixture', outOfScope: '', acceptanceJson: JSON.stringify([{ id: randomUUID(), text: 'Criterion', required: true }]), sourceRefsJson: '[]', priority: 0, status: 'awaiting_review', version: 4, createdTs: ts, updatedTs: ts }).run();
     opened.db.insert(runs).values({ id: 'old-run', repoId: 'fixture', task: 'Historical run', model: 'default', status: 'done', humanAction: 'accepted', verifyVerdict: 'pass', startedTs: ts }).run();
     opened.db.insert(taskExecutions).values({ runId: 'old-run', taskId, taskVersion: 1, taskSnapshotJson: '{"original":"snapshot"}', checkoutId, baseSha: sha, currentTaskVersion: 4, state: 'done', createdTs: ts }).run();
-    opened.db.insert(verificationEvidence).values({ id: randomUUID(), runId: 'old-run', headSha: sha, diffDigest: 'b'.repeat(64), command: 'npm run verify', exitCode: 0, verdict: 'pass', output: 'Old evidence', recordedTs: ts }).run();
-    const before = { task: opened.db.select().from(planningTasks).all(), binding: opened.db.select().from(taskExecutions).all(), evidence: opened.db.select().from(verificationEvidence).all() };
+    opened.sqlite.prepare('INSERT INTO verification_evidence(id, run_id, head_sha, diff_digest, command, exit_code, verdict, output, recorded_ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(randomUUID(), 'old-run', sha, 'b'.repeat(64), 'npm run verify', 0, 'pass', 'Old evidence', ts);
+    const before = { task: opened.db.select().from(planningTasks).all(), binding: opened.db.select().from(taskExecutions).all(), evidence: opened.sqlite.prepare('SELECT * FROM verification_evidence').all() };
     opened.sqlite.close(); opened = undefined; process.env.ACC_MIGRATIONS_DIR = source; opened = openDb(file);
     expect(opened.db.select().from(planningTasks).all()).toEqual(before.task);
     expect(opened.db.select().from(taskExecutions).all()).toEqual(before.binding);
-    expect(opened.db.select().from(verificationEvidence).all()).toEqual(before.evidence);
+    expect(opened.sqlite.prepare('SELECT * FROM verification_evidence').all()).toEqual(before.evidence.map((row) => ({ ...(row as object), attempt_id: null })));
     expect(new PlanningStore(opened.db).snapshot().reviews).toEqual([]);
     expect(new PlanningStore(opened.db).snapshot().tasks[0].status).toBe('awaiting_review');
     expect(() => opened!.sqlite.prepare("UPDATE verification_evidence SET output='replacement'").run()).toThrow('immutable');
