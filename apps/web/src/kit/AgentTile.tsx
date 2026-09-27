@@ -7,9 +7,8 @@ import { cx } from './cx';
 
 /**
  * Running-agent tile — icon, name, one-line status, slim progress + %.
- * pct=null is the honest "running (opaque)" state (versioned-adapter fallback):
- * indeterminate bar and an em-dash in the RESERVED percent slot — no guessed number,
- * no layout shift (council S2/B3).
+ * pct=null means progress is unknown. Say so explicitly; neither turn consumption
+ * nor the width of a decorative partial bar measures task completion.
  */
 export function AgentTile({
   icon,
@@ -36,15 +35,17 @@ export function AgentTile({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <GradientProgress pct={pct ?? undefined} indeterminate={pct == null} tone={tone} slim />
+        {pct == null ? <span className="text-label text-text3">Progress unknown</span> : <>
+        <GradientProgress pct={pct} tone={tone} slim />
         <span
           className={cx(
             'w-9 shrink-0 text-right text-label tabular-nums',
-            pct == null ? 'text-text3' : toneText[tone],
+            toneText[tone],
           )}
         >
-          {pct == null ? '—' : `${pct}%`}
+          {`${pct}%`}
         </span>
+        </>}
       </div>
     </Card>
   );

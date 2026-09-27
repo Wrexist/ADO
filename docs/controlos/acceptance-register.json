@@ -1104,8 +1104,33 @@
     {
       "id": "T38",
       "title": "Turntak kontra framsteg",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ22. **Status:** not_run.\n\n**Givet:** Agenten har förbrukat 8 av 20 tillåtna turns.\n\n**När:** Körningskortet renderas.\n\n**Godkänt endast om:** Det står budget/turnförbrukning eller okänd framstegsgrad, aldrig att uppgiften är 40 procent klar.\n\n**Gäller:** always."
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ22. **Status:** passed (local Windows evidence).\n\n**Givet:** Agenten har förbrukat 8 av 20 tillåtna turns.\n\n**När:** Körningskortet renderas.\n\n**Godkänt endast om:** Det står budget/turnförbrukning eller okänd framstegsgrad, aldrig att uppgiften är 40 procent klar.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "scripts/probe-turn-progress.mts",
+        "apps/server/src/runner/progress.test.ts",
+        "apps/web/src/kit/AgentTile.tsx",
+        "docs/controlos/turn-progress.md",
+        "docs/controlos/turn-progress-evidence.json"
+      ],
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows x64, Node v22.18.0, Chromium 153.0.8010.12",
+        "command": "node --import tsx scripts/probe-turn-progress.mts",
+        "result": "Passed: the real adapter consumes eight reported turns with configured cap 20 while process completion is held. Authenticated HTTP/SSE delivers the running state to the built renderer. At 1536/390 pixels the card explicitly says Progress unknown, renders no percentage/progressbar and does not overflow. After completion, eight turns are persisted without human acceptance.",
+        "scope": "Offline provider fixture through real adapter/runner, authenticated HTTP/SSE and built Chromium renderer. Provider reports 8 turns with configured cap 20; process completion is held until screenshots, then stored turns are checked. No real model, billing, sandbox or packaged-desktop acceptance.",
+        "sourceSha256": {
+          "scripts/probe-turn-progress.mts": "5f9efd11426c463b782aced58100b250ec197583d1a57d475e3c222bb0643028",
+          "apps/server/src/runner/adapter.ts": "2dc0bdfc4900c0bbe91f6a3bd5586e7ea6f9ef514f9bc935372cec79858e3d90",
+          "apps/server/src/runner/index.ts": "6595c6fa1147179b940492694febc1a60c70802800d5e5197a0168af9589b917",
+          "apps/web/src/kit/AgentTile.tsx": "ca0369f5dbf87416168164497389cf2d388d9460768babb197524844d657964f",
+          "apps/web/src/pages/AgentsPage.tsx": "c6558e943c53b9d67ef1b07cbba70ea03db38f97b8957be35d3959b3a304639a",
+          "apps/web/src/lib/selectors.ts": "22a51424cfc91748ab5dc1591bf66bf5b65547fb3daf869fff0a42a26f03d359",
+          "packages/shared/src/state.ts": "0f69df24441326dfc71d2ae8a64831673adc16d62e500eed0a463e04996c9251",
+          "apps/server/src/runner/progress.test.ts": "d53b7e62863cbda7479136e5fb75428ce04c75b3a6062f1679660c93d3102483"
+        },
+        "artifactEvidence": "docs/controlos/turn-progress-evidence.json"
+      }
     },
     {
       "id": "T39",

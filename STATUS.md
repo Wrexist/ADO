@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## T38: förbrukade turns är inte uppgiftens framsteg
+
+Den breda `npm run smoke` passerade också: anslutning, desktop-runtime, dator-/mobilvyer, tema och uppgiftsgranskning. Logg: `controlos-turn-progress-smoke.log`. Vyerna använder uttryckligen demodata.
+
+Körningskort med okänd framstegsgrad visar nu uttryckligen `Progress unknown`, utan procentsiffra eller dekorativt delvis fylld stapel. T38 har provats genom riktig adapter, körmotor, autentiserad HTTP/SSE och byggd webb med en isolerad offline-provider: 8 rapporterade turns och konfigurerat tak 20. Processavslutet hölls kvar medan kortet granskades vid 1536/390 px; inget 40-procentspåstående eller progressbar renderades. Efter avslut sparades 8 turns utan mänskligt godkännande. Bilderna är granskade. [Reproducerbart prov och avgränsning](docs/controlos/turn-progress.md), [käll-/artefakt-/bildhashar](docs/controlos/turn-progress-evidence.json).
+
+Det första provet upptäckte att snabba statusuppdateringar kunde få samma händelse-ID och tappas. Fryst klocka reproducerade felet: bara första uppdateringen överlevde. Händelserna får nu oberoende UUID:n; regressionen bevarar samtliga fyra uppdateringar. Inga fördröjningar lades till för att dölja felet.
+
+Slutlig `npm run verify` passerade med typkontroll, lint, 387 tester i 84 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Det särskilda browserprovet passerade på Chromium 153.0.8010.12, med granskade dator- och mobilbilder. Provet har separat godkänd lint. Loggar: `controlos-turn-progress-final-verify.log`, `controlos-turn-progress-probe-final.log`, `controlos-turn-progress-final-lint.log`; bilder: `smoke-shots/turn-progress-1536.png` och `smoke-shots/turn-progress-390.png`.
+
+14/46 scenarier är nu lokalt godkända. T38 visar korrekt rendering av rapporterad förbrukning; det är inte en verklig modellkörning, kvotmätning eller paketerad desktop-acceptans. REQ22 och samtliga R1–R4-grindar är fortsatt öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## Samma historikskydd vid normal omstart
 
 Normal avstämning och återspelning av befintliga kvitton använder nu samma regel som återställningspanelen: nyare eller tvetydig historik får inte skrivas över. Alla skrivningar av automationers senaste körning kontrollerar filinnehållet mot den inlästa definitionen och använder bevakad, flushad filersättning. Ändrade/oläsbara filer och hårda länkar vägras. Redan matchande historik kontrolleras utan omskrivning.

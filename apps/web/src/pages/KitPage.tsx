@@ -202,7 +202,7 @@ export function KitPage() {
           </div>
         </Section>
 
-        <Section title="AgentTile" note="pct=null renders the versioned-adapter fallback: opaque + reserved-width slot">
+        <Section title="AgentTile" note="pct=null states Progress unknown without implying a completion percentage">
           <div className="grid grid-cols-2 gap-3">
             <AgentTile icon="code" name="Code Assistant" statusLine="Analyzing code…" pct={95} tone="success" />
             <AgentTile icon="wand" name="UI Generator" statusLine="Generating UI…" pct={76} tone="info" />

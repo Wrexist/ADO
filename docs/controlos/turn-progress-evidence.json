@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-27T21:35:32.761Z",
+  "scenario": "T38",
+  "baseRevision": "ae93fd6c9fe6d539e771d96fa7b64c99d4a41c5b",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0",
+    "chromium": "153.0.8010.12"
+  },
+  "reportedTurns": 8,
+  "observedCap": 20,
+  "statusDuringRender": "running",
+  "taskProgress": "unknown",
+  "completionPercentRendered": false,
+  "viewports": [
+    1536,
+    390
+  ],
+  "sourceSha256": {
+    "scripts/probe-turn-progress.mts": "5f9efd11426c463b782aced58100b250ec197583d1a57d475e3c222bb0643028",
+    "apps/server/src/runner/adapter.ts": "2dc0bdfc4900c0bbe91f6a3bd5586e7ea6f9ef514f9bc935372cec79858e3d90",
+    "apps/server/src/runner/index.ts": "6595c6fa1147179b940492694febc1a60c70802800d5e5197a0168af9589b917",
+    "apps/web/src/kit/AgentTile.tsx": "ca0369f5dbf87416168164497389cf2d388d9460768babb197524844d657964f",
+    "apps/web/src/pages/AgentsPage.tsx": "c6558e943c53b9d67ef1b07cbba70ea03db38f97b8957be35d3959b3a304639a",
+    "apps/web/src/lib/selectors.ts": "22a51424cfc91748ab5dc1591bf66bf5b65547fb3daf869fff0a42a26f03d359",
+    "packages/shared/src/state.ts": "0f69df24441326dfc71d2ae8a64831673adc16d62e500eed0a463e04996c9251"
+  },
+  "assetSha256": {
+    "apps/web/dist/index.html": "1dd9ab5e0dff5e6139242469345a1c7679535933a86b1a01d04346dc326ddefb",
+    "apps/web/dist/assets/index-CsK6za9K.css": "000f5e9041097f229eb9f8b472377ddf9bdcbf7062a923e85822fe6f937c1ac0",
+    "apps/web/dist/assets/index-v1uGrXVc.js": "1ea3f3ab38e98b5cdb7011900279124e02c0b47ae24b4c354294149f0e5c9222"
+  },
+  "screenshotSha256": {
+    "smoke-shots/turn-progress-1536.png": "68b6ba0756dcb4e97f3786c336977a607a9145c391f2ded7179410c16ef8ee0e",
+    "smoke-shots/turn-progress-390.png": "9777ff6ec595207a94184a8c71d04a5427a5a3c00248d25d6f90812df3804f62"
+  },
+  "command": "node --import tsx scripts/probe-turn-progress.mts",
+  "scope": "Offline provider fixture through real adapter/runner, authenticated HTTP/SSE and built Chromium renderer. Provider reports 8 turns with configured cap 20; process completion is held until screenshots, then stored turns are checked. No real model, billing, sandbox or packaged-desktop acceptance."
+}

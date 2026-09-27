@@ -495,7 +495,7 @@ export class Runner {
 
     const agentEvent = (status: 'running' | 'done' | 'failed', pct: number | null) =>
       ({
-        id: `agent-evt:${agentId}:${Date.now()}:${Math.round(pct ?? -1)}`,
+        id: `agent-evt:${agentId}:${randomUUID()}`,
         type: 'agent.upserted',
         ts: new Date().toISOString(),
         source: { kind: 'runner', ref: runId },

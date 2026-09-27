@@ -25,7 +25,7 @@ explicit recheck can release a quarantined lock only with an authenticated,
 matching empty-job receipt. Older attempts without that evidence remain locked.
 This does not claim OS sandbox isolation.
 
-`npm run restore -- BACKUP.sqlite NEW_PROFILE_DIRECTORY` validates the backup checksum and SQLite integrity before creating a new profile. Existing profiles are never overwritten. Backups include known profile JSON files. CLI and legacy backups contain credentials in cleartext; encrypted desktop credentials require the original OS account/key provider. Protect all backups like the live profile, and reconnect services after recovery onto another host. Git working copies and external host backups are separate. A real-profile restore drill is still required.
+`npm run restore -- BACKUP.sqlite NEW_PROFILE_DIRECTORY` validates the backup checksum and SQLite integrity before creating a new profile. Existing profiles are never overwritten. New backups omit the connections file and desktop access key; restoring a legacy backup also skips its connections file. Historical prompts and other user-authored data may still contain secrets. Protect backups like the live profile and reconnect services explicitly. Git working copies and external host backups are separate. A real-profile restore drill is still required. See [profile recovery](profile-recovery.md).
 
 ## Expansion sequence
 

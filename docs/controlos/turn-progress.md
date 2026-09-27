@@ -1,0 +1,13 @@
+# T38: turn consumption is not task completion
+
+An agent card with no measured completion percentage now says **Progress unknown**. It renders neither a numeric percentage nor a decorative partial progress bar. A provider turn count and configured turn cap are resource consumption/limits; their ratio is never used as task progress.
+
+The local T38 probe creates an isolated synthetic Git repository and profile, registers it through the authenticated API, and dispatches through the production runner with an offline spawner. The production stream adapter consumes a result reporting 8 turns. The spawner checks the configured cap is 20 and holds process completion until the browser checks finish. The run remains active, its agent state has `pct: null`, and the built renderer receives that state over real authenticated HTTP/SSE. At both 1536 and 390 pixels, its card says Progress unknown, has no percentage text or progressbar, and does not overflow. After release, the persisted run has 8 turns and no human acceptance.
+
+This exercises the real adapter/runner/transport/renderer chain with synthetic provider output, including the distinction between stream completion and process exit. It does not claim a real model performed eight turns, live interim usage reporting, quota measurement, sandbox enforcement, or packaged desktop acceptance. Those are separate requirements.
+
+Run `node --import tsx scripts/probe-turn-progress.mts` from the repository root. It builds the web bundle for same-origin access, keeps its own fixture profile in the temporary directory for inspection, and writes ignored screenshots plus [source, artifact and screenshot hashes](turn-progress-evidence.json). No model, external provider or user project is used. The final screenshots were visually reviewed.
+
+The first probe exposed a real status-event collision: event IDs combined run ID, millisecond and percentage, so several null-percentage updates in one millisecond were deduplicated. The failed fixture database retained Starting and Working but lost the following text update. A deterministic frozen-clock regression reproduced the failure (only Starting survived), then passed after status events received independent UUIDs. `apps/server/src/runner/progress.test.ts` checks all four rapid updates, the latest snapshot, unknown progress and persisted eight-turn usage. No sleeps were added to conceal the collision.
+
+Logs: `controlos-turn-progress-probe.log` (failed before the event fix), `controlos-turn-progress-collision-before.log`, `controlos-turn-progress-collision-after.log`, and `controlos-turn-progress-probe-final.log` (passed). Evidence is local Windows/Chromium acceptance of T38, not completion of REQ22 or R1–R4.
