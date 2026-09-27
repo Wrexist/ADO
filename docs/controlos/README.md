@@ -10,6 +10,8 @@ Trusted local execution only. Worktrees preserve the original Git checkout; they
 
 The durable queue restores only versioned queued jobs. Previously running attempts are never automatically retried; writer locks stay quarantined because server death does not establish descendant death. No lease expiry releases such a lock. Manual database deletion is not a supported recovery action.
 
+A rejected process-completion promise also retains the durable writer lock, including when the subsequent stop request throws. The run fails with an explicit unknown-outcome note; unrelated repositories can use the freed capacity slot. A stream error alone holds the lock until process completion is observed. These checks do not establish descendant termination: process identity, OS-level tree containment and safe quarantine release remain R1 work.
+
 Explicit repository verification runs `npm run verify` against an isolated result, recording revision, content digest, exit status, bounded redacted output and timestamp. Changed output invalidates evidence. It verifies that script, not every task-specific criterion. Human acceptance of new runs requires matching evidence and current content. Acceptance does not merge or deploy.
 
 ## Recovery

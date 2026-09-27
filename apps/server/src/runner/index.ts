@@ -69,6 +69,8 @@ export class Runner {
   private seq = 0; // guarantees unique run ids even for same-millisecond dispatches
   private queue: Array<{ id: string; input: DispatchInput }> = [];
   private handles = new Map<string, SpawnHandle>();
+  /** A rejected exit promise is not evidence that the writer has stopped. */
+  private unconfirmedProcesses = new Set<string>();
   private stopped = false;
   private jobs = new Set<Promise<void>>();
   private busyDirectories = new Set<string>();
@@ -273,7 +275,8 @@ export class Runner {
     this.busyDirectories.add(this.resourceKey(input.repoId, cwd));
     const startedMs = Date.now();
     // The whole run is wrapped so ANY throw (spawn, DB write, a zod-invalid publish,
-    // handle.done rejecting) still marks the run failed AND releases the slot. Before,
+    // handle.done rejecting) still marks the run failed AND releases the capacity slot.
+    // The durable writer lock is retained if process completion was not observed. Before,
     // active-- lived past the last await with no catch: one throw leaked a slot forever
     // (and surfaced as an unhandledRejection), eventually wedging the runner.
     try {
@@ -283,11 +286,17 @@ export class Runner {
       await this.runBody(runId, input, workspace?.path ?? cwd, startedMs, workspace?.baseSha);
     } catch (err) {
       this.log(`runner: ${runId} crashed: ${(err as Error).message}`);
-      this.failRun(runId, input, startedMs, (err as Error).message);
+      const reason = this.unconfirmedProcesses.has(runId)
+        ? `process outcome unknown; writer lock retained: ${(err as Error).message}`
+        : (err as Error).message;
+      this.failRun(runId, input, startedMs, reason);
     } finally {
       this.killed.delete(runId);
       this.activeRuns.delete(runId);
-      this.db.delete(executionLocks).where(and(eq(executionLocks.runId, runId), eq(executionLocks.owner, this.owner))).run();
+      if (!this.unconfirmedProcesses.has(runId)) {
+        this.db.delete(executionLocks).where(and(eq(executionLocks.runId, runId), eq(executionLocks.owner, this.owner))).run();
+      }
+      this.unconfirmedProcesses.delete(runId);
       this.busyDirectories.delete(this.resourceKey(input.repoId, cwd));
       this.active--;
       this.drainNext();
@@ -323,6 +332,11 @@ export class Runner {
 
     const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider });
     this.handles.set(runId, handle);
+    this.unconfirmedProcesses.add(runId);
+    const processDone = handle.done.then((code) => {
+      this.unconfirmedProcesses.delete(runId);
+      return code;
+    });
 
     const timeout = setTimeout(() => {
       timedOut = true;
@@ -368,10 +382,11 @@ export class Runner {
     try {
       // Both promises are observed immediately. EOF is not process exit: retain the
       // timeout and stop handle until the process and stream have both settled.
-      [exitCode] = await Promise.all([handle.done, consume()]);
+      [exitCode] = await Promise.all([processDone, consume()]);
     } catch (error) {
-      handle.kill();
-      await handle.done.catch(() => -1);
+      try { handle.kill(); }
+      catch (stopError) { this.log(`runner: ${runId} stop request failed: ${(stopError as Error).message}`); }
+      await processDone.catch(() => -1);
       throw error;
     } finally {
       clearTimeout(timeout);

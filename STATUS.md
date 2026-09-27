@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1-tillägg efter PR #7
+
+Utgår från inmergad `main` på `0bcd846`, med ändringen på `codex/controlos-r1-uncertain-exit`. Om processens avslutspromise avvisas behålls nu det beständiga skrivlåset även om stoppanropet kastar fel. Körningen markeras som misslyckad med okänt processutfall; nästa jobb för samma repo får vänta. Ett strömfel håller kvar låset tills processavslut har observerats.
+
+Lokalt `npm run verify` passerade på Windows, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 253 tester och byggning. Tre nya regressionstester täcker felvägarna och kvarvarande lås efter återöppning av en SQLite-profil; ett annat repo kan fortfarande köras. Logg: ignorerade `controlos-r1-verify.log`. Webbens storleksvarning kvarstår. Smoke och fjärr-CI har inte körts i denna etapp.
+
+Detta bevisar inte stopp av hela processträd. Processidentitet, OS-inneslutning och säker frigöring av karantänlås återstår; ingen full R1-grind eller acceptansscenario har markerats godkänt. Nuläget nedan avser föregående stabiliseringsetapp.
+
 Arbetet fortsätter i samma ADO-projekt från `bb19caba68c1cda13249c8d722a9b6647133dc8f`, på `codex/controlos-stabilization`. Detta är en stabiliseringsetapp, inte en färdig ControlOS-v1. Originalarbetskopian och användarens nedladdade underlag har bevarats.
 
 ## Genomfört

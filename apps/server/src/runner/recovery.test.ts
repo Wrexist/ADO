@@ -4,10 +4,55 @@ import { Bus } from '../bus';
 import { executionLocks, runs } from '../db/schema';
 import { Runner } from './index';
 import type { Spawner } from './spawner';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const tick = () => new Promise((r) => setTimeout(r, 20));
 const spawner: Spawner = { spawn: () => ({ lines: (async function* () {})(), done: Promise.resolve(0), kill() {} }) };
 describe('durable execution', () => {
+  it.each([false, true])('quarantines a rejected process outcome across restart (stop throws: %s)', async (stopThrows) => {
+    const root = mkdtempSync(join(tmpdir(), 'controlos-exit-'));
+    const path = join(root, 'profile.sqlite');
+    let connection = openDb(path);
+    let calls = 0;
+    let kills = 0;
+    const uncertain: Spawner = { spawn() {
+      calls++;
+      return {
+        lines: (async function* () {})(),
+        done: Promise.reject(new Error('exit observation lost')),
+        kill() { kills++; if (stopThrows) throw new Error('stop failed'); },
+      };
+    } };
+    let runner = new Runner(new Bus(connection.db), connection.db, uncertain, { cwdFor: (id) => join(root, id), maxConcurrent: 1 });
+    try {
+      const first = runner.dispatch({ repoId: 'a', task: 'uncertain writer' });
+      runner.dispatch({ repoId: 'a', task: 'must wait' });
+      await tick();
+      expect(calls).toBe(1);
+      expect(kills).toBe(1);
+      const rows = connection.db.select().from(runs).all();
+      expect(rows.map((r) => r.status)).toEqual(['failed', 'queued']);
+      expect(rows[0].note).toContain('process outcome unknown; writer lock retained');
+      expect(connection.db.select().from(executionLocks).all().map((l) => l.runId)).toEqual([first.runId]);
+      await runner.stop();
+      connection.sqlite.close();
+      connection = openDb(path);
+      runner = new Runner(new Bus(connection.db), connection.db, spawner, { cwdFor: (id) => join(root, id), maxConcurrent: 1 });
+      runner.reconcileOrphans();
+      runner.dispatch({ repoId: 'a', task: 'still blocked after restart' });
+      runner.dispatch({ repoId: 'b', task: 'independent' });
+      await tick();
+      expect(connection.db.select().from(runs).all().slice(-2).map((r) => r.status)).toEqual(['queued', 'done']);
+      expect(connection.db.select().from(executionLocks).all().map((l) => l.runId)).toEqual([first.runId]);
+    } finally {
+      await runner.stop();
+      connection.sqlite.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('restores a committed queued job once after restart', async () => {
     const { db, sqlite } = openDb(':memory:');
     db.insert(runs).values({ id: 'persisted', repoId: 'a', task: 'x', model: 'default', status: 'queued', startedTs: new Date().toISOString(), engineVersion: 1 }).run();

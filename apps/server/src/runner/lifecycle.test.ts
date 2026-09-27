@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { openDb } from '../db';
 import { Bus } from '../bus';
-import { runs } from '../db/schema';
+import { executionLocks, runs } from '../db/schema';
 import { Runner } from './index';
 import type { Spawner } from './spawner';
 
@@ -20,6 +20,35 @@ function harness(timeoutMs = 1000) {
   return { runner, db, sqlite, bus, processes, disable: () => { blocked = true; } };
 }
 describe('runner lifecycle regressions', () => {
+  it('keeps the writer lock after a stream error until process exit is observed', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    let exit!: (code: number) => void;
+    let kills = 0;
+    let calls = 0;
+    const runner = new Runner(new Bus(db), db, { spawn() {
+      calls++;
+      if (calls > 1) return { lines: (async function* () {})(), done: Promise.resolve(0), kill() {} };
+      return {
+        lines: (async function* () { yield ''; throw new Error('stream failed'); })(),
+        done: new Promise<number>((resolve) => { exit = resolve; }),
+        kill() { kills++; },
+      };
+    } }, { cwdFor: () => '/repos/a' });
+    try {
+      runner.dispatch({ repoId: 'a', task: 'first' });
+      runner.dispatch({ repoId: 'a', task: 'queued' });
+      await tick();
+      expect(kills).toBe(1);
+      expect(calls).toBe(1);
+      expect(db.select().from(executionLocks).all()).toHaveLength(1);
+      exit(1);
+      await tick();
+      expect(calls).toBe(2);
+      expect(db.select().from(runs).all().map((r) => r.status)).toEqual(['failed', 'done']);
+      expect(db.select().from(executionLocks).all()).toHaveLength(0);
+    } finally { exit(1); await runner.stop(); sqlite.close(); }
+  });
+
   it('serializes writers and rechecks policy before draining', async () => {
     const h = harness(); h.runner.dispatch({ repoId: 'a', task: 'first' }); h.runner.dispatch({ repoId: 'a', task: 'queued' });
     expect(h.processes).toHaveLength(1); h.disable(); h.processes[0].exit(0); await tick();
