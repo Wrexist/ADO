@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Reject incompatible Claude terminal outcomes and counters, retain unknown absent usage, and prove exit zero cannot turn protocol failure into success; full T30 remains open.
+
 - [x] Reject unbound/mismatched Codex turn lifecycle and malformed completion statuses while retaining valid notification-before-reply ordering; full provider-version/capability acceptance remains open.
 
 - [x] Redact stderr before whitespace trimming and exercise real local child stdout/stderr/provider errors through ClaudeSpawner, runner, SQLite and event publication; full T23 export/UI acceptance remains open.

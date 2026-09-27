@@ -1,4 +1,14 @@
-# ControlOS — verifierat nuläge 2026-09-27
+# ControlOS — verifierat nuläge 2026-09-28
+
+## Claude kräver explicit resultat
+
+Hela `npm run verify` passerade på Windows x64 / Node 22.18.0 / npm 11.7.0: typkontroll, lint, 411 tester i 86 filer och byggning. Logg: `controlos-claude-result-verify.log`.
+
+Claude-adaptern avvisar terminala resultat med saknat eller motstridigt utfall, okänd subtype, feltypad error-flagga eller ogiltiga turn-/tokenräknare. Frånvarande räknare förblir okända. Ett inkompatibelt resultat stoppar körningen med generiskt fel även vid exitkod 0; rå resultattext sparas inte.
+
+Elva regressioner misslyckades före rättningen. 37 riktade tester i fyra filer passerade efteråt, inklusive giltiga resultat, sekretessmaskering och separat process-/strömavslut. [Kontrakt och avgränsning](docs/controlos/claude-result-contract.md). Loggar: `controlos-claude-result-before.log` och `controlos-claude-result-focused.log`.
+
+T30 och samtliga fulla R1–R4-grindar är fortsatt öppna. 15/46 scenarier är lokalt godkända. Okända icke-terminala event använder fortfarande opaque-läget; ingen live-Claude-körning eller full versionsförhandling påstås. Följande avsnitt är historiska kontrollpunkter.
 
 ## Codex kräver matchande livscykel
 

@@ -49,7 +49,7 @@ it('redacts before progress/result truncation in both adapters', () => {
   const text = ('x'.repeat(70) + secret).padEnd(3990, 'x') + secret;
   const updates = [
     ...parseStreamLine(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text }, { type: 'tool_use', name: secret }] } }), [secret]),
-    ...parseStreamLine(JSON.stringify({ type: 'result', result: text }), [secret]),
+    ...parseStreamLine(JSON.stringify({ type: 'result', subtype: 'success', result: text }), [secret]),
     ...codexUpdate('item/completed', { item: { type: 'agentMessage', text } }, [secret]),
   ];
   expect(JSON.stringify(updates)).not.toContain('CANARY');
@@ -64,7 +64,7 @@ it.each(['output', 'error'] as const)('keeps canaries out of stored runs, timeli
     if (mode === 'error') throw new Error(`provider failed https://example.invalid/?token=${encodeURIComponent(secret)}`);
     return { lines: (async function* () {
       yield JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: secret }, { type: 'text', text: 'x'.repeat(70) + secret }] } });
-      yield JSON.stringify({ type: 'result', result: 'x'.repeat(3990) + secret });
+      yield JSON.stringify({ type: 'result', subtype: 'success', result: 'x'.repeat(3990) + secret });
     })(), done: Promise.resolve(0), kill() {}, diagnostics: () => `URL https://example.invalid/?token=${encodeURIComponent(secret)}` };
   } }, { cwdFor: () => process.cwd(), secrets: () => [secret] }, (line) => logs.push(line));
   try {

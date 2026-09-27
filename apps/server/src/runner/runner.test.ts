@@ -20,7 +20,7 @@ describe('stream-json adapter (council B5)', () => {
     const done = parseStreamLine('{"type":"result","subtype":"success","result":"Done.\\nTESTFLIGHT_UPLOADED com.x.y 1.0 (2)"}');
     expect(done[0]).toMatchObject({ kind: 'done', resultText: expect.stringContaining('TESTFLIGHT_UPLOADED com.x.y 1.0 (2)') });
     // non-string result → null, never a guess
-    expect(parseStreamLine('{"type":"result","result":42}')[0]).toMatchObject({ kind: 'done', resultText: null });
+    expect(parseStreamLine('{"type":"result","subtype":"success","result":42}')[0]).toMatchObject({ kind: 'done', resultText: null });
   });
 
   it('degrades unknown/garbled lines to opaque — never throws', () => {

@@ -3,9 +3,9 @@
  *
  * This is an UNSTABLE external interface — its shape changes between Claude Code
  * releases. So parsing is defensive and centralized here: a line we recognize becomes
- * a normalized AgentUpdate; anything we DON'T recognize becomes `{ kind: 'opaque' }`,
+ * a normalized AgentUpdate; unknown optional event types become `{ kind: 'opaque' }`,
  * which the runner renders as "running (opaque)" with no guessed percentage. The agent
- * never crashes and never invents progress, whatever GitHub^H^HClaude ships next.
+ * never invents progress. Incompatible required result fields stop the run.
  */
 
 import { redact } from '../lib/redact';
@@ -30,7 +30,7 @@ interface Line {
   result?: unknown;
 }
 
-/** Parse one JSONL line into zero or more normalized updates. Never throws. */
+/** Parse optional telemetry defensively; reject incompatible terminal evidence. */
 export function parseStreamLine(raw: string, secrets: Array<string | undefined> = []): AgentUpdate[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
@@ -67,6 +67,20 @@ export function parseStreamLine(raw: string, secrets: Array<string | undefined> 
       return []; // tool results — no user-facing update needed
 
     case 'result':
+      {
+        const success = obj.subtype === 'success';
+        const failure = typeof obj.subtype === 'string' && obj.subtype.startsWith('error_');
+        const counter = (value: unknown) => value === undefined || (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0);
+        if ((obj.subtype !== undefined && !success && !failure)
+          || (obj.is_error !== undefined && typeof obj.is_error !== 'boolean')
+          || (!success && !failure && typeof obj.is_error !== 'boolean')
+          || (success && obj.is_error === true) || (failure && obj.is_error === false)
+          || !counter(obj.num_turns)
+          || (obj.usage !== undefined && (!obj.usage || typeof obj.usage !== 'object' || Array.isArray(obj.usage)))
+          || !counter(obj.usage?.input_tokens) || !counter(obj.usage?.output_tokens)) {
+          throw new Error('Claude result protocol is incompatible');
+        }
+      }
       return [
         {
           kind: 'done',
