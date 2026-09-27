@@ -30,7 +30,7 @@ export class AutomationEngine {
     for (const receipt of this.journal?.pending() ?? []) {
       try {
         if (!this.store.get(receipt.automationId)) throw new Error('automation definition is missing');
-        this.store.markRun(receipt.automationId, receipt.runId, receipt.acceptedTs);
+        this.store.recordRecoveredRun(receipt.automationId, receipt.runId, receipt.acceptedTs);
         this.journal!.complete(receipt.runId, new Date(this.now()).toISOString());
       } catch {
         this.recordingFailure = `Automation run ${receipt.runId} has unrecorded history. Further automation starts are paused. Preserve the profile and repair its automation history before restarting.`;
@@ -61,7 +61,8 @@ export class AutomationEngine {
     try {
       const accepted = this.journal?.pending(a.id)[0];
       if (this.journal && accepted?.runId !== runId) throw new Error('missing automation dispatch receipt');
-      this.store.markRun(a.id, runId, accepted?.acceptedTs ?? new Date(this.now()).toISOString());
+      if (pending) this.store.recordRecoveredRun(a.id, runId, pending.acceptedTs);
+      else this.store.markRun(a.id, runId, accepted?.acceptedTs ?? new Date(this.now()).toISOString());
       this.journal?.complete(runId, new Date(this.now()).toISOString());
     }
     catch {

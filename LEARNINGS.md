@@ -116,3 +116,4 @@ One line per learning. The nightly analyzer (parked, p5) consumes this file; kee
 - 2026-09-27: Commit settings to disk before replacing their in-memory map; a failed history save after dispatch must identify the created run. A session stop guard cannot replace durable dispatch reconciliation across restart.
 - 2026-09-27: Commit an automation receipt with the accepted run and outbox event; replay only its JSON history projection after a crash, never dispatch from the receipt.
 - 2026-09-27: JSON projection and SQLite audit are separate commits; a failed audit must retain the pending receipt and explain the partial result, with a fresh content-bound review before retry.
+- 2026-09-27: Fresh acceptance and historical replay need different ordering rules: equal wall-clock timestamps do not identify the same request. Both paths still need guarded file writes.

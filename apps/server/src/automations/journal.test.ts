@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { linkSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
@@ -15,6 +15,42 @@ import { backupDatabase, restoreBackup } from '../backup';
 
 const input = { repoId: 'fixture', name: 'Fixture', task: 'Offline only', enabled: true, trigger: { on: 'manual' as const } };
 const spawner = { spawn() { throw new Error('No agent may start'); } };
+
+it('records distinct explicitly requested runs sharing a timestamp without treating fresh acceptance as stale replay', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-automation-same-time-')), file = join(root, 'automations.json');
+  const { db, sqlite } = openDb(join(root, 'profile.sqlite'));
+  const runner = new Runner(new Bus(db), db, spawner, { cwdFor: () => root, maxConcurrent: 0 });
+  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-27T12:00:00.000Z'));
+  try {
+    const store = new AutomationStore(file), a = store.upsert(input), journal = new AutomationJournal(db);
+    const engine = new AutomationEngine(store, (repoId, task, model, automationId) => runner.dispatch({ repoId, task, model, automationId }), undefined, undefined, undefined, journal);
+    const first = engine.runNow(a.id), second = engine.runNow(a.id);
+    expect(first.runId).not.toBe(second.runId); expect(store.get(a.id)?.lastRunId).toBe(second.runId);
+    expect(journal.pending()).toEqual([]); expect(db.select().from(runs).all()).toHaveLength(2);
+    expect(db.select().from(automationDispatches).all().map(row => row.acceptedTs)).toEqual(['2026-09-27T12:00:00.000Z', '2026-09-27T12:00:00.000Z']);
+  } finally { vi.useRealTimers(); await runner.stop(); sqlite.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
+});
+
+it.each(['newer-history', 'changed-file', 'hard-link'])('preserves %s during normal reconciliation and blocks new dispatch', async (problem) => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-automation-preserve-')), file = join(root, 'automations.json');
+  const { db, sqlite } = openDb(join(root, 'profile.sqlite'));
+  const store = new AutomationStore(file), a = store.upsert(input);
+  const runner = new Runner(new Bus(db), db, spawner, { cwdFor: () => root, maxConcurrent: 0 });
+  try {
+    const { runId } = runner.dispatch({ repoId: 'fixture', task: input.task, automationId: a.id });
+    const journal = new AutomationJournal(db), originalReceipt = journal.pending()[0];
+    if (problem === 'newer-history') store.markRun(a.id, 'newer-recorded-run', '2099-01-01T00:00:00.000Z');
+    if (problem === 'changed-file') writeFileSync(file, '{external unreadable content');
+    if (problem === 'hard-link') linkSync(file, join(root, 'linked.json'));
+    const bytes = readFileSync(file), memory = structuredClone(store.get(a.id)), runRows = db.select().from(runs).all();
+    const dispatch = vi.fn(() => { throw new Error('must not dispatch'); });
+    const engine = new AutomationEngine(store, dispatch, undefined, undefined, undefined, journal);
+    engine.reconcile();
+    expect(readFileSync(file)).toEqual(bytes); expect(store.get(a.id)).toEqual(memory);
+    expect(journal.pending()).toEqual([originalReceipt]); expect(db.select().from(runs).all()).toEqual(runRows);
+    expect(() => engine.runNow(a.id)).toThrow(runId); expect(dispatch).not.toHaveBeenCalled();
+  } finally { await runner.stop(); sqlite.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
+});
 
 it('repairs accepted history on normal server boot and preserves pending receipts in a restored review profile', async () => {
   const root = mkdtempSync(join(tmpdir(), 'controlos-automation-boot-')), database = join(root, 'profile.sqlite');

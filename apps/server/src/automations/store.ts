@@ -8,6 +8,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { AutomationInput, type Automation } from '@ado/shared';
 import { ConnectionFile } from '../connections/file';
 
+export function canProjectAutomationHistory(definition: Automation | undefined, runId: string, acceptedTs: string) {
+  const oldTime = definition?.lastRunTs ? Date.parse(definition.lastRunTs) : NaN, acceptedTime = Date.parse(acceptedTs);
+  return Number.isFinite(acceptedTime) && (!definition?.lastRunId || definition.lastRunId === runId || (Number.isFinite(oldTime) && oldTime < acceptedTime));
+}
+
 export class AutomationStore {
   private data: Record<string, Automation> = {};
 
@@ -56,11 +61,10 @@ export class AutomationStore {
 
   /** Guarded recovery projection; a pending SQLite receipt remains until separately audited. */
   recordRecoveredRun(id: string, runId: string, atTs: string) {
-    const { file } = this.recoverySnapshot(), a = this.data[id];
+    const a = this.data[id];
     if (!a) throw new Error('Automation definition is missing');
-    if (a.lastRunId === runId && a.lastRunTs === atTs) return;
-    const next = { ...this.data, [id]: { ...a, lastRunId: runId, lastRunTs: atTs } };
-    file.write(next); this.data = next;
+    if (!canProjectAutomationHistory(a, runId, atTs)) throw new Error('Existing automation history is newer or ambiguous; preserve it for separate review');
+    this.markRun(id, runId, atTs);
   }
 
   /** Create or update. Validates against the shared schema (throws on bad input). */
@@ -96,6 +100,9 @@ export class AutomationStore {
   markRun(id: string, runId: string, atTs: string): void {
     const a = this.data[id];
     if (!a) return;
-    this.persist({ ...this.data, [id]: { ...a, lastRunTs: atTs, lastRunId: runId } });
+    const { file } = this.recoverySnapshot();
+    if (a.lastRunId === runId && a.lastRunTs === atTs) return;
+    const next = { ...this.data, [id]: { ...a, lastRunTs: atTs, lastRunId: runId } };
+    file.write(next); this.data = next;
   }
 }

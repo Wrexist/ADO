@@ -4,6 +4,7 @@ import type { RecoveryAutomationReceipt } from '@ado/shared';
 import type { Db } from '../db';
 import type { Bus } from '../bus';
 import type { AutomationStore } from '../automations/store';
+import { canProjectAutomationHistory } from '../automations/store';
 import { automationDispatches, executionLocks, runs } from '../db/schema';
 
 export class RecoveryAutomationReceipts {
@@ -16,8 +17,7 @@ export class RecoveryAutomationReceipts {
     const locks = this.db.select().from(executionLocks).where(eq(executionLocks.runId, id)).all();
     const fileDigest = this.store.recoveryDigest();
     const digest = createHash('sha256').update(JSON.stringify({ receipt, run, definition, locks, fileDigest })).digest('hex');
-    const oldTime = definition?.lastRunTs ? Date.parse(definition.lastRunTs) : NaN, acceptedTime = Date.parse(receipt.acceptedTs);
-    const eligible = Number.isFinite(acceptedTime) && (!definition?.lastRunId || definition.lastRunId === id || (Number.isFinite(oldTime) && oldTime < acceptedTime));
+    const eligible = canProjectAutomationHistory(definition, id, receipt.acceptedTs);
     return { runId: id, automationId: receipt.automationId, automationName: definition?.name ?? null, repoId: run.repoId, task: run.task, runStatus: run.status, acceptedAt: receipt.acceptedTs, retainedLocks: locks.length, definitionPresent: !!definition, eligible, reason: eligible ? 'History-only review; execution and ownership remain unchanged.' : 'Existing automation history is newer or ambiguous. Preserve it for separate review; this action cannot overwrite it.', digest };
   }
   list() { return this.db.select().from(automationDispatches).where(isNull(automationDispatches.recordedTs)).all().map((row) => this.review(row.runId)); }

@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## Samma historikskydd vid normal omstart
+
+Normal avstämning och återspelning av befintliga kvitton använder nu samma regel som återställningspanelen: nyare eller tvetydig historik får inte skrivas över. Alla skrivningar av automationers senaste körning kontrollerar filinnehållet mot den inlästa definitionen och använder bevakad, flushad filersättning. Ändrade/oläsbara filer och hårda länkar vägras. Redan matchande historik kontrolleras utan omskrivning.
+
+Nya accepterade uppdrag skiljs från återspelning. Två avsiktliga starter kan ha samma tidsstämpel och får ändå varsitt körnings-ID. 30 riktade tester passerade, inklusive bevarade filbytes/minnestillstånd/kvitton vid fel, spärrad ny dispatch och fryst klocka för två nya starter. Hela `npm run verify` passerade med typkontroll, lint, 386 tester i 83 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Loggar: `controlos-automation-projection-final-focused.log` och `controlos-automation-projection-verify.log`.
+
+13/46 fullständiga scenarier är fortsatt lokalt godkända; R1–R4 är öppna. Ingen UI-ändring eller ny paketerad Windows-artefakt ingår i denna kontrollpunkt. [Kontrakt och avgränsning](docs/controlos/automation-persistence.md). Följande avsnitt är historiska kontrollpunkter.
+
 ## Granskning av automationshistorik i återställda profiler
 
 Återställningspanelen kan nu lista och uttryckligen granska kvarvarande automationskvitton. Befintliga recept kräver `RECORD AUTOMATION HISTORY`; saknade recept kräver `ACKNOWLEDGE MISSING AUTOMATION` och återskapas inte. Åtgärden binds till aktuell körning, kvitto, definition, lås och filinnehåll. Inaktuellt underlag, ändrade/oläsbara filer och nyare eller tvetydig historik vägras. Körningar, resultat, godkännanden och lås lämnas oförändrade; övriga aktiveringsblockerare kvarstår.

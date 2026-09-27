@@ -10,6 +10,7 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] Preserve automation memory and disk state on rejected writes; identify already-dispatched runs and stop further session dispatch if history recording fails, with injected and real Windows file-denial regressions.
 - [x] Commit accepted automation receipts with runs and queue events, then repair last-run history across restart without dispatch; verify four actual process-exit boundaries.
 - [x] Add content-bound, typed restored-profile receipt review, including missing-definition acknowledgement, guarded history projection and audited retry after partial failure.
+- [x] Apply the same guarded history projection to normal reconciliation; preserve changed/linked files and newer history while permitting distinct fresh requests with equal timestamps.
 - [ ] Add remote-event occurrence identities and resolve legacy unjournaled or conflicting history without inventing execution evidence.
 
 - [x] Retain the audited base in a separate checkout and implement on `codex/controlos-stabilization`.
