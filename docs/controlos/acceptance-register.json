@@ -303,17 +303,17 @@
         "sourceSha256": {
           "apps/server/drizzle/0012_task_executions.sql": "4b5ed01e7db78d83cffa70d952ec569b87495a91bac97b15931f65c8588a18a4",
           "apps/server/src/runner/taskExecution.ts": "e1bf687e4f15b04f194225994ea8536da38e1187cb2878f64d5c6a034d2e91f8",
-          "apps/server/src/runner/taskExecutionApi.test.ts": "cf458149f97b0ffcada82172257092524aa61621353a9575e930b03a60888536",
-          "apps/server/src/runner/taskExecution.test.ts": "302ec29e0d8c5621c6954d31802d44e4b8548f20058252f3e57d37390cc058ea",
+          "apps/server/src/runner/taskExecutionApi.test.ts": "56f247db96cd4bcf566aed64a44e01329bcdb5ae3cc5ffd7d869f602981572f2",
+          "apps/server/src/runner/taskExecution.test.ts": "b3bf3edcee002ec71b933447734f45c5b286e267ed8bff6ac86d99b6f12e653b",
           "apps/server/src/runner/index.ts": "987df6e1b74ddedbc84b94109cae702bbe3e2bd700d59f4f9bfc1aa2819fc8a0",
           "apps/server/src/runner/workspace.ts": "735cd32b7729206f58fc08acd6c4c6b0e994af65b07bff5be93558382e1c88a0",
           "apps/server/src/projects/checkoutIdentity.ts": "d84e47e4b798f80e916d9367e7ff626437ed66a266c03e1f368c56795bbaccd2",
           "apps/server/src/projects/registry.ts": "5b1d98bd7d00c65f9a74b6025ea961a67c2c6e1d02fcd6c2f8b66fed2e00f132",
-          "apps/server/src/projects/planning.ts": "cfc64bc475fe47f0503dcaf5c4f33b63694f01c640670bbd99cef908eb7dd2f2",
-          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
-          "packages/shared/src/planning.ts": "0e7244f8541602ea1d714d73dbdca59bf935e58c42e8a9e57ab36e62d4b83e94",
+          "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
+          "apps/server/src/app.ts": "719e33e8c6af6c8cc2aa27ec965b6b0c5bf189bb695a06262f5291f22d885d63",
+          "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
           "packages/shared/src/runs.ts": "2c333b556b4f2792ca510cd549d167fb6133c5e30712a44ace910671efa6f4df",
-          "apps/web/src/pages/PlanningPage.tsx": "f852b49796f243beaafce5afe2757279e6afbdaa15c6691b35b0432cb3e315ab",
+          "apps/web/src/pages/PlanningPage.tsx": "4f7a03d1bdd17556dc2aa8cf6b92e6da2f7195a428971356abbd7302ec2e6121",
           "scripts/smoke-task-execution.mjs": "f19a73e3ffa84f5b85f73ee69b09b9a763da64eeaf6ebc16c5e316a0f15f2a6d",
           "scripts/smoke.mjs": "92620d8b1c39ae9c7310cfe3073dbba4af43ca46f75e07b35ea3fa3ec71b4f5b"
         }
@@ -335,7 +335,8 @@
         "apps/server/src/runner/taskReviewApi.test.ts",
         "apps/server/src/runner/taskReviewMigration.test.ts",
         "scripts/smoke-task-review.mjs",
-        "docs/controlos/task-criteria.md"
+        "docs/controlos/task-criteria.md",
+        "docs/controlos/task-revisions.md"
       ],
       "acceptanceEvidence": {
         "date": "2026-09-27",
@@ -345,22 +346,25 @@
         "scope": "Local Git/npm/SQLite and authenticated HTTP, plus explicit DEMO desktop/mobile criterion review and stale-evidence rendering. No real provider, exception waiver, OS-sandbox, continuous filesystem monitoring or full R1-R4 claim.",
         "sourceSha256": {
           "apps/server/drizzle/0013_task_reviews.sql": "850646bb51cc28f3ecd30d22139116bc5a9fffc7acb6e0df4a10c0b7fc745886",
-          "apps/server/drizzle/meta/_journal.json": "396521d7c28ba11f64b9d8160572a9b4268f66d39a1c9eb4c0a7eb810a8daa78",
-          "apps/server/src/db/schema.ts": "8767f328ff1dc3f8495c273fad90804d3ff8693d825c2432cb3d437386b9124e",
-          "apps/server/src/runner/verification.ts": "7d67f83d84fba4e52443986936012bbc2c3a4aa7913aafd4fe809723b08b9c2a",
+          "apps/server/drizzle/meta/_journal.json": "a1be1e581e8cb56925159e5f781b3059acdd2635d4dc6475d471c2cfebfae355",
+          "apps/server/src/db/schema.ts": "a2c686620dafc3ccb56e263e92fbd9adea9d247f3c17bc61438e42966bee0564",
+          "apps/server/src/runner/verification.ts": "bb3457f388c6037a76f4ea4b1a228e3b806cd64f957d08841f0a69d44c5a5ca4",
           "apps/server/src/runner/approvals.ts": "075afdf5e6b078bce8fc4da8a93cd252f14eb77e7d19afc37c823cd060b89e5d",
           "apps/server/src/runner/taskReview.ts": "9ce2e48c6a29812ae9015bf761fe7582198b234e6cfd292701f8ff6d58c1a905",
-          "apps/server/src/runner/taskReviewApi.test.ts": "086c614545ea022ede5de2178a60434bd9c6d59d8ead26ee590c4acd791e5ed1",
+          "apps/server/src/runner/taskReviewApi.test.ts": "68e38d06d5abc2ed9d55c32968521b0a31a4ae1b19e056e2644fd7929cc32faa",
           "apps/server/src/runner/taskReviewMigration.test.ts": "1c0696e98702ab118cd48da9f009a826e005610b75b7a82105fa00592c496801",
           "apps/server/src/runner/index.ts": "987df6e1b74ddedbc84b94109cae702bbe3e2bd700d59f4f9bfc1aa2819fc8a0",
-          "apps/server/src/projects/planning.ts": "cfc64bc475fe47f0503dcaf5c4f33b63694f01c640670bbd99cef908eb7dd2f2",
-          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
-          "packages/shared/src/planning.ts": "0e7244f8541602ea1d714d73dbdca59bf935e58c42e8a9e57ab36e62d4b83e94",
+          "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
+          "apps/server/src/app.ts": "719e33e8c6af6c8cc2aa27ec965b6b0c5bf189bb695a06262f5291f22d885d63",
+          "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
           "packages/shared/src/runs.ts": "2c333b556b4f2792ca510cd549d167fb6133c5e30712a44ace910671efa6f4df",
-          "apps/web/src/pages/PlanningPage.tsx": "f852b49796f243beaafce5afe2757279e6afbdaa15c6691b35b0432cb3e315ab",
+          "apps/web/src/pages/PlanningPage.tsx": "4f7a03d1bdd17556dc2aa8cf6b92e6da2f7195a428971356abbd7302ec2e6121",
           "apps/web/src/pages/TaskCriterionReview.tsx": "2c350e7773a56d456f8429c67cf893e72a7f820e1a50bd2d08d729b38e74a738",
-          "scripts/smoke-task-review.mjs": "322e1912fd6a1b7042d191c86ee9ce5199e36f5a4684a787a1a67d668909668f",
-          "scripts/smoke.mjs": "92620d8b1c39ae9c7310cfe3073dbba4af43ca46f75e07b35ea3fa3ec71b4f5b"
+          "scripts/smoke-task-review.mjs": "64e3e3b46ba9bf844beba6fbaa257e89f1d7410637b87e561233017e99acbb1c",
+          "scripts/smoke.mjs": "92620d8b1c39ae9c7310cfe3073dbba4af43ca46f75e07b35ea3fa3ec71b4f5b",
+          "apps/server/drizzle/0014_task_reopenings.sql": "3b52b18bcdddeb6213bcc620e87da2c18bfac60eeecf545cfc7b0dcdf42bc740",
+          "apps/server/src/runner/taskReopening.ts": "eb3877238efe240639e360a2397a5a5a613326ade01d6cc36b60d0e0bdbeb882",
+          "apps/web/src/pages/TaskReopeningPanel.tsx": "8df0db1c514ac42e3fa19ce32b8a00f64614402af0a3388c26508492d185479c"
         }
       }
     },
@@ -382,13 +386,13 @@
         "result": "Passed: real SQLite and authenticated HTTP reject a cyclic dependency with its named path. The complete plan and revision history remain unchanged, including after profile reopen. Real browser create/edit flows at 1536/390 pixels display the cycle and verify unchanged API state. Multi-hop and cross-project dependency cycles are also rejected.",
         "scope": "Local planning dependency transaction and desktop/mobile browser scenario with synthetic content. No provider, pilot, offline-device, task-execution or criterion-acceptance claim.",
         "sourceSha256": {
-          "packages/shared/src/planning.ts": "0e7244f8541602ea1d714d73dbdca59bf935e58c42e8a9e57ab36e62d4b83e94",
+          "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
           "apps/server/drizzle/0011_planning.sql": "80357053d3a276aa3e775dc810161897c70ccdcc0a9845b7523beb106bfa0f24",
-          "apps/server/src/projects/planning.ts": "cfc64bc475fe47f0503dcaf5c4f33b63694f01c640670bbd99cef908eb7dd2f2",
+          "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
           "apps/server/src/projects/planning.test.ts": "e3e333860109c94f26cf93c91fff83d6e04dba04809277bc7beffdbd908a547e",
           "apps/server/src/projects/planningApi.test.ts": "190fc8ecd3070b038b85f9cc6f91ec21113e3db1044dfd168580edf75d27c71e",
-          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
-          "apps/web/src/pages/PlanningPage.tsx": "f852b49796f243beaafce5afe2757279e6afbdaa15c6691b35b0432cb3e315ab",
+          "apps/server/src/app.ts": "719e33e8c6af6c8cc2aa27ec965b6b0c5bf189bb695a06262f5291f22d885d63",
+          "apps/web/src/pages/PlanningPage.tsx": "4f7a03d1bdd17556dc2aa8cf6b92e6da2f7195a428971356abbd7302ec2e6121",
           "scripts/smoke-planning.mjs": "9eab7b15f2a4aae7ff3478db32b4688a03d36366cf8d12025d7aa66a24d8a3ae"
         }
       }
@@ -773,7 +777,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
+          "apps/server/src/app.ts": "719e33e8c6af6c8cc2aa27ec965b6b0c5bf189bb695a06262f5291f22d885d63",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

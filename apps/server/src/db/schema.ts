@@ -104,6 +104,11 @@ export const taskReviews = sqliteTable('task_reviews', {
   actorId: text('actor_id').notNull(), recordedTs: text('recorded_ts').notNull(), invalidatedTs: text('invalidated_ts'), invalidationReason: text('invalidation_reason'),
 });
 
+export const taskReopenings = sqliteTable('task_reopenings', {
+  id: text('id').primaryKey(), taskId: text('task_id').notNull(), runId: text('run_id').notNull(), fromVersion: integer('from_version').notNull(), toVersion: integer('to_version').notNull(),
+  reason: text('reason').notNull(), idempotencyKey: text('idempotency_key').notNull(), requestHash: text('request_hash').notNull(), actorId: text('actor_id').notNull(), recordedTs: text('recorded_ts').notNull(),
+});
+
 export const approvalPolicyVersions = sqliteTable('approval_policy_versions', {
   version: text('version').primaryKey(), repoId: text('repo_id').notNull(), digest: text('digest').notNull(),
   snapshotJson: text('snapshot_json').notNull(), createdTs: text('created_ts').notNull(),

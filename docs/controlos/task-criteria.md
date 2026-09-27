@@ -51,8 +51,9 @@ desktop/mobile evidence inspection, per-criterion decisions, separate keyboard
 confirmation, stale rejection, recheck and history. It is UI evidence, not proof
 of actual provider execution. Actual API/Git/SQLite behavior is covered separately.
 
-Current verification still requires `npm run verify`. Project-specific commands,
-an explicit revise/retry workflow for an awaiting-review task, criterion evidence
+An explicit [revise/retry workflow](task-revisions.md) now returns a completed task
+to a versioned draft without altering previous attempts. Current verification
+still requires `npm run verify`. Project-specific commands, criterion evidence
 attachments, device-specific owner identity, live provider acceptance, deployment
 operations and complete R1–R4 acceptance remain open. No failed criterion is
 silently waived, and this feature performs no merge, deployment or publication.

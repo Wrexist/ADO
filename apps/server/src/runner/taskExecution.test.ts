@@ -11,6 +11,7 @@ import { executionLocks, runs } from '../db/schema';
 import { PlanningStore } from '../projects/planning';
 import { ProjectRegistry } from '../projects/registry';
 import { Runner } from './index';
+import { TaskReopeningStore } from './taskReopening';
 import type { Spawner } from './spawner';
 
 async function fixture() {
@@ -98,6 +99,7 @@ it('preserves quarantine across sibling dispatch and locks task editing after an
     const { runId } = runner.dispatchTask(task.id, h.request(task.version)); await until(() => !runner.isLive(runId));
     const blocked = h.plan().snapshot().tasks[0]; expect(blocked.status).toBe('blocked');
     expect(() => h.plan().saveTask({ ...input, version: blocked.version }, task.id)).toThrow('stop is not confirmed');
+    expect(() => new TaskReopeningStore(h.db).reopen(task.id, { runId, version: blocked.version, reason: 'Retry after uncertain outcome', idempotencyKey: randomUUID() })).toThrow('stop is not confirmed');
     const next = h.plan().saveTask(h.input('Sibling must wait'));
     runner.dispatchTask(next.id, h.request(next.version, true));
     expect(h.db.select().from(executionLocks).all()).toHaveLength(1); expect(starts).toBe(1);

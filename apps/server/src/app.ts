@@ -36,6 +36,7 @@ import { PROVIDERS, ProviderSpawner } from './runner/providers';
 import { Verifier } from './runner/verification';
 import { ApprovalStore } from './runner/approvals';
 import { TaskReviewStore } from './runner/taskReview';
+import { TaskReopeningStore } from './runner/taskReopening';
 import { ResultReviewRequest, ResultAcceptanceRequest } from '@ado/shared';
 import { type Spawner } from './runner/spawner';
 import { HeuristicParser } from './command/parser';
@@ -660,6 +661,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   };
   app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
   app.post('/api/planning/tasks/:id/dispatch', async (req, reply) => planningMutation(reply, () => runner.dispatchTask((req.params as { id: string }).id, req.body)));
+  app.post('/api/planning/tasks/:id/reopen', async (req, reply) => planningMutation(reply, () => new TaskReopeningStore(db, (runId) => verifier.isActive(runId)).reopen((req.params as { id: string }).id, req.body)));
   app.put('/api/planning/tasks/:id', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body, (req.params as { id: string }).id) })));
   app.post('/api/planning/milestones', async (req, reply) => planningMutation(reply, () => ({ milestone: planning.saveMilestone(req.body) })));
   app.put('/api/planning/milestones/:id', async (req, reply) => planningMutation(reply, () => ({ milestone: planning.saveMilestone(req.body, (req.params as { id: string }).id) })));

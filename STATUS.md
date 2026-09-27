@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: uttrycklig revidering och separat nytt försök
+
+Avslutade uppgifter kan nu återöppnas med exakt uppgiftsversion, aktuellt försök, skäl och innehållsbunden återförsöksnyckel. Återöppning återkallar uppgiftsacceptans och väntande granskningar, sparar oföränderlig historik och återför uppgiften till utkast i samma transaktion. Lagringsfel lämnar inte en halv återöppning. Samma begäran ger samma åtgärds-ID även efter omstart eller senare redigering. Inget jobb startas av återöppningen. Se [kontrakt och gränser](docs/controlos/task-revisions.md).
+
+Tidigare körningar, arbetskopior, verifieringsbevis och mänskliga körningsbeslut bevaras som historik. Kriteriehistoriken hämtar ursprunglig text från den oföränderliga uppgiftsdefinitionen, så ett gammalt omdöme inte byter betydelse när nästa version redigeras. Det gamla försöket kan inte godkänna den nya uppgiften eller starta ett nytt verifieringskommando efter återöppningen. Ett nytt jobb kräver en sparad redo-version och en separat granskad start; det får ett nytt körnings-ID och en ny arbetskopia.
+
+Aktiva försök, karantänlås och pågående verifiering/resultatgranskning på värden spärrar återöppning. Verifierarens aktivitetsspärr är ännu inte beständig återhämtning för hjälpprocesser efter serverkrasch; det återstår inom R1. Tidigare ändringar kopieras inte automatiskt till ett nytt försöks bas.
+
+Slutlig `npm run verify` passerade med typkontroll, lint, 327 tester i 62 filer och byggning på Windows x64, Node 22.18.0 och npm 11.7.0. API/Git/SQLite-proven täcker bland annat rollback, oförändrat tidigare resultat, nya kriterier med bevarad gammal text, separat andra försök, historisk verifiering som nekas, karantän, återöppnad profil och ett riktigt verifieringskommando som hålls igång med explicita testsignaler. Hela `npm run smoke` passerade vid 1536/390 px med DEMO-fixtures för återöppning, förlorat svar, identiskt återförsök, redigering, tangentbord och bevarad historik utan automatisk dispatch. Bilderna har granskats. Slutloggar: `controlos-task-reopening-final-verify.log` och `controlos-task-reopening-smoke.log` (ignorerade). Webbens chunkvarning kvarstår, cirka 557 kB före gzip.
+
+T05/T06/T07/T20/T22/T43 har omprovats och källhasharna uppdaterats. Inget ytterligare fullständigt scenario markeras godkänt i denna etapp: 6 av 46 är lokalt godkända, 40 inte fullständigt provade, och R1–R4 är öppna. Ingen riktig modell, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: versionsbundna kriteriebeslut och ogiltigförklarad acceptans
 
 Uppgifter kan nu godkännas genom en separat kriteriegranskning. Alla kriterier måste redovisas exakt en gång med bevisanteckning; obligatoriska kriterier kräver ett godkänt omdöme. Vyn visar det lagrade verifieringskommandot, utdata, bevis-ID, commit och innehållshash. Ett förberett `task.accept`-beslut binds till exakt uppgiftsversion, ursprunglig definition, kriteriebeslut, verifieringspost, resultat och policy. En andra bekräftelse förbrukar beslutet och sparar uppgiftsacceptans atomiskt. Detta är mänskliga kriterieomdömen, inte automatiskt härledda testresultat. Se [kontrakt och begränsningar](docs/controlos/task-criteria.md).

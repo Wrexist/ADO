@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db';
-import { runs, verificationEvidence } from '../db/schema';
+import { runs, verificationEvidence, taskExecutions, planningTasks } from '../db/schema';
 import { workspaceEvidence } from './workspace';
 import { spawnMerged } from '../lib/spawnMerged';
 import { redact } from '../lib/redact';
@@ -17,6 +17,7 @@ export interface AcceptanceTarget { headSha?: string; diffDigest?: string; polic
 export class Verifier {
   private active = new Set<string>();
   constructor(private db: Db, private secrets: () => Array<string | undefined>, private approvals = new ApprovalStore(db)) {}
+  isActive(id: string) { return this.active.has(id); }
 
   private invalidateResult(run: typeof runs.$inferSelect) {
     this.db.transaction(() => {
@@ -104,6 +105,11 @@ export class Verifier {
     try {
       const run = this.db.select().from(runs).where(eq(runs.id, id)).get();
       if (!run || run.status !== 'done' || !run.workspacePath || !run.baseSha || !run.headSha || !run.diffDigest) throw new Error('A completed isolated run with captured evidence is required');
+      const execution = this.db.select().from(taskExecutions).where(eq(taskExecutions.runId, id)).get();
+      if (execution) {
+        const task = this.db.select().from(planningTasks).where(eq(planningTasks.id, execution.taskId)).get();
+        if (!task || task.version !== execution.currentTaskVersion || !['awaiting_review', 'accepted'].includes(task.status)) throw new Error('This task attempt is historical; verification cannot write to its retained working copy');
+      }
       // A new verification attempt invalidates old approval even if preflight fails.
       this.db.transaction(() => {
         this.approvals.invalidateRun(id, 'New verification requested');

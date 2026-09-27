@@ -51,6 +51,7 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     while (!launched.length && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
     expect(launched).toHaveLength(1); expect(launched[0].cwd).not.toBe(repo); expect(launched[0].prompt).toContain('Exact revised task');
     const activeTask = (await get('/api/planning')).tasks[0]; expect(activeTask.status).toBe('active');
+    expect((await post(`/api/planning/tasks/${task.id}/reopen`, { runId, version: activeTask.version, reason: 'Must not reopen an active process', idempotencyKey: randomUUID() })).statusCode).toBe(409);
     expect((await app.inject({ method: 'PUT', url: `/api/planning/tasks/${task.id}`, headers: auth, payload: { ...input, version: activeTask.version } })).statusCode).toBe(409);
     writeFileSync(join(launched[0].cwd, 'finish.signal'), 'finish');
     while (server.runner.isLive(runId) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));

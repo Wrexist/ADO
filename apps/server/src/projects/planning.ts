@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { InboxInput, InboxItem, MilestoneInput, PlanningExecution, PlanningMilestone, PlanningTask, TaskInput, TaskReview } from '@ado/shared';
+import { InboxInput, InboxItem, MilestoneInput, PlanningExecution, PlanningMilestone, PlanningTask, TaskInput, TaskReview, TaskReopening } from '@ado/shared';
 import type { Db } from '../db';
-import { taskReviews } from '../db/schema';
+import { taskReviews, taskReopenings } from '../db/schema';
 import { portfolioProjects as projects, portfolioRepositories as repositories, planningTasks as tasks, planningMilestones as milestones, planningDependencies as dependencies, planningInbox as inbox, planningRevisions as revisions, taskExecutions, executionLocks } from '../db/schema';
 
 const version = z.number().int().positive();
@@ -21,13 +21,19 @@ export class PlanningStore {
 
   snapshot() {
     return this.db.transaction(() => {
-      const all = this.db.select().from(tasks).all(), edges = this.db.select().from(dependencies).all();
+      const all = this.db.select().from(tasks).all(), edges = this.db.select().from(dependencies).all(), executionRows = this.db.select().from(taskExecutions).all();
       return {
         tasks: all.map((t) => taskView(t, edges, all)),
         milestones: this.db.select().from(milestones).all().map(milestoneView),
         inbox: this.db.select().from(inbox).all().map((row) => InboxItem.parse(row)),
-        executions: this.db.select().from(taskExecutions).all().map((row) => PlanningExecution.parse(row)),
-        reviews: this.db.select().from(taskReviews).all().map(({ criteriaJson, ...row }) => TaskReview.parse({ ...row, criteria: JSON.parse(criteriaJson) })),
+        executions: executionRows.map((row) => PlanningExecution.parse(row)),
+        reviews: this.db.select().from(taskReviews).all().map(({ criteriaJson, ...row }) => {
+          const execution = executionRows.find((execution) => execution.runId === row.runId);
+          if (!execution) throw new Error('Task review execution is missing');
+          const definition = PlanningTask.parse(JSON.parse(execution.taskSnapshotJson));
+          return TaskReview.parse({ ...row, criteria: JSON.parse(criteriaJson), definitionCriteria: definition.acceptance });
+        }),
+        reopenings: this.db.select().from(taskReopenings).all().map((row) => TaskReopening.parse(row)),
       };
     });
   }

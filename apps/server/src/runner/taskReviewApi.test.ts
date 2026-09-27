@@ -1,20 +1,21 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { buildServer } from '../app';
 import { openDb } from '../db';
+import { workspaceEvidence } from './workspace';
 import type { PlanningSnapshot, RunDetail } from '@ado/shared';
 
-async function fixture() {
+async function fixture(holdVerification = false) {
   const root = mkdtempSync(join(tmpdir(), 'controlos-task-review-')), repo = join(root, 'repo'); mkdirSync(repo);
   const git = (args: string[], cwd = repo) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
   git(['init', '-q']); git(['config', 'user.name', 'Fixture']); git(['config', 'user.email', 'fixture@example.test']);
   writeFileSync(join(repo, 'package.json'), JSON.stringify({ scripts: { verify: 'node verify.cjs' } }));
-  writeFileSync(join(repo, 'verify.cjs'), 'console.log("Fixture verification passed")');
+  writeFileSync(join(repo, 'verify.cjs'), holdVerification ? "const fs=require('node:fs');fs.writeFileSync('verification-started.signal','fixture');setInterval(()=>{if(fs.existsSync('verification-finish.signal')){fs.unlinkSync('verification-started.signal');fs.unlinkSync('verification-finish.signal');console.log('Fixture verification passed');process.exit(0)}},10)" : 'console.log("Fixture verification passed")');
   git(['add', '.']); git(['commit', '-qm', 'A']); const baseSha = git(['rev-parse', 'HEAD']);
   const auth = { host: '127.0.0.1:8787', 'x-acc-token': 'criterion-fixture-key' };
   const env = { port: 8787, webOrigin: 'http://localhost:5173', accToken: auth['x-acc-token'], dbPath: join(root, 'profile.sqlite'), projectDirs: [], demo: false };
@@ -118,4 +119,65 @@ it('rechecks accepted dependency content before spawning and retains the invalid
     expect(plan.reviews[0].invalidatedTs).not.toBeNull();
     expect((await h.get(`/api/runs/${next}`)).run.note).toContain('Dependency acceptance is stale');
   } finally { await h.close(); }
+}, 120000);
+
+it('reopens an exact accepted task atomically and starts a distinct reviewed attempt without altering prior work', async () => {
+  const h = await fixture(); const route = `/api/planning/tasks/${h.task.id}`;
+  try {
+    await h.verify(); const acceptedRequest = await h.prepare(); expect((await h.post(route + '/accept', acceptedRequest)).statusCode).toBe(200);
+    const oldRun = await h.detail(), oldContent = await workspaceEvidence(oldRun.workspacePath!, oldRun.baseSha!);
+    const pending = (await h.post(`/api/runs/${h.runId}/approval`, { operation: 'result.accept', headSha: oldRun.headSha, diffDigest: oldRun.diffDigest, policyVersion: oldRun.approvalPolicyVersion })).json().approval;
+    const before = await h.plan();
+    const request = { runId: h.runId, version: before.tasks[0].version, reason: 'Owner identified a missing edge case', idempotencyKey: randomUUID() };
+    expect((await h.server.app.inject({ method: 'POST', url: route + '/reopen', headers: { host: h.auth.host }, payload: request })).statusCode).toBe(401);
+    expect((await h.post(route + '/reopen', { ...request, status: 'ready' })).statusCode).toBe(400);
+    expect((await h.post(route + '/reopen', { ...request, version: request.version - 1 })).statusCode).toBe(409);
+    h.sqlite.exec("CREATE TRIGGER reject_reopening BEFORE INSERT ON task_reopenings BEGIN SELECT RAISE(ABORT,'fixture reopening audit failure'); END");
+    expect((await h.post(route + '/reopen', request)).statusCode).toBe(409); expect(await h.plan()).toEqual(before);
+    expect(h.sqlite.prepare('SELECT revoked_ts FROM operation_approvals WHERE id=?').get(pending.id)).toEqual({ revoked_ts: null });
+    h.sqlite.exec('DROP TRIGGER reject_reopening');
+    const reopened = await h.post(route + '/reopen', request); expect(reopened.statusCode, reopened.body).toBe(200);
+    expect(reopened.json().task.status).toBe('draft'); expect(h.starts).toBe(1);
+    expect((await h.post(`/api/runs/${h.runId}/verify`)).statusCode).toBe(409);
+    const revised = await h.plan(); expect(revised.reopenings[0]).toMatchObject({ taskId: h.task.id, runId: h.runId, fromVersion: request.version, toVersion: reopened.json().task.version, reason: request.reason });
+    expect(revised.reviews[0].invalidationReason).toBe('Task reopened for revision');
+    expect(h.sqlite.prepare('SELECT revoked_ts FROM operation_approvals WHERE id=?').get(pending.id)).not.toEqual({ revoked_ts: null });
+    expect((await h.post(route + '/reopen', request)).json()).toEqual(reopened.json());
+    expect((await h.post(route + '/reopen', { ...request, reason: 'Different reason' })).statusCode).toBe(409);
+    expect((await h.post(route + '/accept', acceptedRequest)).statusCode).toBe(409);
+    expect(() => h.sqlite.prepare("UPDATE task_reopenings SET reason='rewritten'").run()).toThrow('immutable');
+    const edited = await h.server.app.inject({ method: 'PUT', url: route, headers: h.auth, payload: { ...h.input, title: 'Revised edge-case task', acceptance: [{ id: randomUUID(), text: 'New edge-case criterion', required: true }], version: reopened.json().task.version } });
+    expect(edited.statusCode, edited.body).toBe(200);
+    const next = await h.dispatch(h.task.id, edited.json().task.version); await h.wait(next);
+    const nextRun = (await h.get(`/api/runs/${next}`)).run;
+    expect(next).not.toBe(h.runId); expect(nextRun.workspacePath).not.toBe(oldRun.workspacePath); expect(nextRun.task).toContain('Revised edge-case task'); expect(h.starts).toBe(2);
+    expect(await workspaceEvidence(oldRun.workspacePath!, oldRun.baseSha!)).toEqual(oldContent);
+    expect((await h.detail()).humanAction).toBe('accepted'); // Historical run decision remains distinct from the revised task.
+    expect((await h.plan()).tasks[0].status).toBe('awaiting_review'); expect((await h.plan()).executions).toHaveLength(2);
+    expect((await h.plan()).reviews[0].definitionCriteria).toEqual(h.input.acceptance);
+    expect((await h.post(route + '/approval', { ...await h.request(), runId: h.runId })).statusCode).toBe(409);
+    await h.reopen(); const after = await h.plan(); expect(after.reopenings).toEqual(revised.reopenings); expect(after.reviews).toEqual(revised.reviews);
+    expect((await h.post(route + '/reopen', request)).json().reopeningId).toBe(reopened.json().reopeningId);
+    expect(h.starts).toBe(2); expect(h.git(['status', '--porcelain'])).toBe('');
+  } finally { await h.close(); }
+}, 120000);
+
+it('refuses reopening while an independent verification command is still running', async () => {
+  const h = await fixture(true), run = await h.detail();
+  const verification = h.post(`/api/runs/${h.runId}/verify`);
+  let released = false;
+  const release = () => { if (!released) { writeFileSync(join(run.workspacePath!, 'verification-finish.signal'), 'finish'); released = true; } };
+  try {
+    const started = join(run.workspacePath!, 'verification-started.signal'), deadline = Date.now() + 30000;
+    while (!existsSync(started) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(existsSync(started)).toBe(true);
+    const current = (await h.plan()).tasks[0];
+    const request = { runId: h.runId, version: current.version, reason: 'Revision must wait for verification', idempotencyKey: randomUUID() };
+    const response = await h.post(`/api/planning/tasks/${h.task.id}/reopen`, request);
+    expect(response.statusCode).toBe(409); expect(response.json().error).toContain('still active');
+    expect((await h.plan()).reopenings).toEqual([]);
+    release();
+    expect((await verification).statusCode).toBe(200);
+    expect((await h.post(`/api/planning/tasks/${h.task.id}/reopen`, request)).statusCode).toBe(200);
+  } finally { release(); await verification; await h.close(); }
 }, 120000);

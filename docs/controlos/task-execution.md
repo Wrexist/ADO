@@ -44,6 +44,10 @@ against current verification in a separate operation. Failed/cancelled/interrupt
 run status and blocked task status with diagnostic context; a richer attempt
 state model remains open. Existing run-result acceptance does not accept a task.
 
+Completed tasks can be [explicitly reopened](task-revisions.md) for revision and
+a separately reviewed new attempt. Reopening preserves previous work and never
+starts a process by itself.
+
 ## Evidence and limits
 
 `taskExecutionApi.test.ts` exercises authenticated HTTP handlers, a real child
