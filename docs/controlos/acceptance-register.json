@@ -286,13 +286,38 @@
     {
       "id": "T05",
       "title": "Exit 0 utan verifiering",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ04, REQ22. **Status:** not_run.\n\n**Givet:** Agenten avslutar med exit 0 men inga acceptanstester har körts.\n\n**När:** Körningen avslutas.\n\n**Godkänt endast om:** execution_status=succeeded men task_status=awaiting_review. Aldrig verifierat klar.\n\n**Gäller:** always.",
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ04, REQ22. **Status:** passed (local Windows evidence).\n\n**Givet:** Agenten avslutar med exit 0 men inga acceptanstester har körts.\n\n**När:** Körningen avslutas.\n\n**Godkänt endast om:** execution_status=succeeded men task_status=awaiting_review. Aldrig verifierat klar.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/runner/lifecycle.test.ts",
-        "apps/server/src/runner/verification.test.ts"
+        "apps/server/src/runner/taskExecutionApi.test.ts",
+        "apps/server/src/runner/taskExecution.test.ts",
+        "scripts/smoke-task-execution.mjs",
+        "docs/controlos/task-execution.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows x64, Node 22.18.0, npm 11.7.0, Chromium via Playwright",
+        "command": "npm run verify; npm run smoke",
+        "result": "Passed: a real offline child process exits zero in an isolated Git worktree through authenticated HTTP dispatch of an exact task revision. The run exposes executionStatus=succeeded while its task remains awaiting_review, with no independent verification or human acceptance. The original checkout is unchanged and reopening the profile preserves the states. Browser fixtures at 1536/390 pixels show explicit review and the separate process/task outcome.",
+        "scope": "Local real-process/SQLite/API scenario plus explicit DEMO browser rendering. No real provider/model, OS-sandbox, criterion acceptance or pilot claim.",
+        "sourceSha256": {
+          "apps/server/drizzle/0012_task_executions.sql": "4b5ed01e7db78d83cffa70d952ec569b87495a91bac97b15931f65c8588a18a4",
+          "apps/server/src/runner/taskExecution.ts": "e1bf687e4f15b04f194225994ea8536da38e1187cb2878f64d5c6a034d2e91f8",
+          "apps/server/src/runner/taskExecutionApi.test.ts": "cf458149f97b0ffcada82172257092524aa61621353a9575e930b03a60888536",
+          "apps/server/src/runner/taskExecution.test.ts": "302ec29e0d8c5621c6954d31802d44e4b8548f20058252f3e57d37390cc058ea",
+          "apps/server/src/runner/index.ts": "f635d6779cf4886e4609dd24b3aafb710422a9722adf6af25edbc5e514af5b85",
+          "apps/server/src/runner/workspace.ts": "735cd32b7729206f58fc08acd6c4c6b0e994af65b07bff5be93558382e1c88a0",
+          "apps/server/src/projects/checkoutIdentity.ts": "d84e47e4b798f80e916d9367e7ff626437ed66a266c03e1f368c56795bbaccd2",
+          "apps/server/src/projects/registry.ts": "5b1d98bd7d00c65f9a74b6025ea961a67c2c6e1d02fcd6c2f8b66fed2e00f132",
+          "apps/server/src/projects/planning.ts": "0d3c7c02c71955f1a9067f46542e1ee4a2ddd8558707a4b1cb9469e3033dc600",
+          "apps/server/src/app.ts": "7ed5d9e00faace8cafd9258a2954c08f9fc1fc8ba81f4d747bc27a0bcd6964ea",
+          "packages/shared/src/planning.ts": "e790196a3334a92ae7a2842419a5123e796afd29a5725ad880b81d90b4e2b708",
+          "packages/shared/src/runs.ts": "98f8d5e2bd696980ac9c1154ad8ecaf1978b4bbf2a1c2188cc0ac5ca8b8bfc77",
+          "apps/web/src/pages/PlanningPage.tsx": "70142e146d2a954b759bda227b69f6c80fac23ccfa5594a49e0e5dfe3e0c73d4",
+          "scripts/smoke-task-execution.mjs": "f19a73e3ffa84f5b85f73ee69b09b9a763da64eeaf6ebc16c5e316a0f15f2a6d",
+          "scripts/smoke.mjs": "dad4d90b98fc438a9844f4fe6e39f5061410a7b7d62019e217ac2ec1b0f0b575"
+        }
+      }
     },
     {
       "id": "T06",
@@ -328,13 +353,13 @@
         "result": "Passed: real SQLite and authenticated HTTP reject a cyclic dependency with its named path. The complete plan and revision history remain unchanged, including after profile reopen. Real browser create/edit flows at 1536/390 pixels display the cycle and verify unchanged API state. Multi-hop and cross-project dependency cycles are also rejected.",
         "scope": "Local planning dependency transaction and desktop/mobile browser scenario with synthetic content. No provider, pilot, offline-device, task-execution or criterion-acceptance claim.",
         "sourceSha256": {
-          "packages/shared/src/planning.ts": "f421f1262d8fb6db293aef5c1cf6d0fffbec049d32cb3944b7eba709f85baf8d",
+          "packages/shared/src/planning.ts": "e790196a3334a92ae7a2842419a5123e796afd29a5725ad880b81d90b4e2b708",
           "apps/server/drizzle/0011_planning.sql": "80357053d3a276aa3e775dc810161897c70ccdcc0a9845b7523beb106bfa0f24",
-          "apps/server/src/projects/planning.ts": "edabc05b4a12f2f8e1879873734c4686fbd2c3a07591e2ea6aac81bc552375d4",
+          "apps/server/src/projects/planning.ts": "0d3c7c02c71955f1a9067f46542e1ee4a2ddd8558707a4b1cb9469e3033dc600",
           "apps/server/src/projects/planning.test.ts": "e3e333860109c94f26cf93c91fff83d6e04dba04809277bc7beffdbd908a547e",
           "apps/server/src/projects/planningApi.test.ts": "190fc8ecd3070b038b85f9cc6f91ec21113e3db1044dfd168580edf75d27c71e",
-          "apps/server/src/app.ts": "134203a2f9e32199f0ec8b42f70412f1eb984e9b3f3d104aaa4cc6aa2bbf7d25",
-          "apps/web/src/pages/PlanningPage.tsx": "02e1ad12716e77d20c229e562cad7d1269eb100f3b5a61ddae0ade124b991942",
+          "apps/server/src/app.ts": "7ed5d9e00faace8cafd9258a2954c08f9fc1fc8ba81f4d747bc27a0bcd6964ea",
+          "apps/web/src/pages/PlanningPage.tsx": "70142e146d2a954b759bda227b69f6c80fac23ccfa5594a49e0e5dfe3e0c73d4",
           "scripts/smoke-planning.mjs": "9eab7b15f2a4aae7ff3478db32b4688a03d36366cf8d12025d7aa66a24d8a3ae"
         }
       }
@@ -461,7 +486,7 @@
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
+          "apps/server/src/runner/index.ts": "f635d6779cf4886e4609dd24b3aafb710422a9722adf6af25edbc5e514af5b85",
           "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209"
         }
       }
@@ -503,10 +528,10 @@
           "apps/server/src/runner/codex.test.ts": "50f8a3f42f1033ded56733a17a791fcd5c02dbb450afd1f5bef59c83d34270c5",
           "apps/server/src/runner/spawner.ts": "178a51ae136e1d9750a591b2a98f1bc15c6dc7b9a90827381c3248003da5c22b",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
+          "apps/server/src/runner/index.ts": "f635d6779cf4886e4609dd24b3aafb710422a9722adf6af25edbc5e514af5b85",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "e525a49b1aa0bd4572a31b2bd2de44266e922ac2362a2f583ccea07685c550c5"
+          "scripts/smoke.mjs": "dad4d90b98fc438a9844f4fe6e39f5061410a7b7d62019e217ac2ec1b0f0b575"
         }
       }
     },
@@ -717,7 +742,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "134203a2f9e32199f0ec8b42f70412f1eb984e9b3f3d104aaa4cc6aa2bbf7d25",
+          "apps/server/src/app.ts": "7ed5d9e00faace8cafd9258a2954c08f9fc1fc8ba81f4d747bc27a0bcd6964ea",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

@@ -5,6 +5,7 @@ import { mkdir, readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { chromium } from 'playwright';
 import { smokePlanning } from './smoke-planning.mjs';
+import { smokeTaskExecution } from './smoke-task-execution.mjs';
 
 const out = resolve(process.argv[2] ?? 'smoke-shots'); await mkdir(out, { recursive: true });
 const token = randomBytes(24).toString('hex');
@@ -247,6 +248,7 @@ try {
   await desktop.setViewportSize({ width: 1536, height: 1024 });
   await desktop.goto(base); await desktop.getByRole('heading', { name: 'Welcome back' }).waitFor({ timeout: 10000 });
   await smokePlanning(browser, base, token, out);
+  await smokeTaskExecution(browser, base, token, out);
   if (errors.length) throw new Error(errors.join('\n'));
   console.log('Smoke passed: no bundled credential, pairing/rejection/disconnect/reload, desktop runtime access, desktop and mobile routes, process-stop fixtures and redispatch controls.');
 } finally {

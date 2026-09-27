@@ -92,6 +92,8 @@ export interface AccDeps {
   startSystem?: boolean;
   /** Inject a fake process spawner (tests + simulated dispatch demo). */
   spawner?: Spawner;
+  /** Isolated workspace root for offline process integration fixtures. */
+  workspaceRoot?: string;
 }
 
 /**
@@ -463,9 +465,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     deps.spawner ?? new ProviderSpawner(),
     {
       cwdFor,
+      assertCheckout: (id, sourceId, cwd) => registry.assertCheckout(id, sourceId, cwd),
       defaultProvider: env.agentProvider,
       secrets: () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))],
-      workspaceRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'workspaces') : undefined,
+      workspaceRoot: deps.workspaceRoot ?? (!deps.spawner && !env.demo ? join(dirname(env.dbPath), 'workspaces') : undefined),
       receiptRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'process-receipts') : undefined,
       blockedReason: (repoId) =>
         projectSettings.isEnabled(repoId, 'agents')
@@ -655,6 +658,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     try { return work(); } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
   };
   app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
+  app.post('/api/planning/tasks/:id/dispatch', async (req, reply) => planningMutation(reply, () => runner.dispatchTask((req.params as { id: string }).id, req.body)));
   app.put('/api/planning/tasks/:id', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body, (req.params as { id: string }).id) })));
   app.post('/api/planning/milestones', async (req, reply) => planningMutation(reply, () => ({ milestone: planning.saveMilestone(req.body) })));
   app.put('/api/planning/milestones/:id', async (req, reply) => planningMutation(reply, () => ({ milestone: planning.saveMilestone(req.body, (req.params as { id: string }).id) })));
@@ -679,6 +683,9 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     model: r.model,
     provider: r.provider,
     status: r.status as 'queued' | 'running' | 'done' | 'failed',
+    executionStatus: r.status === 'done' ? 'succeeded' : r.status,
+    taskId: runner.taskExecution(r.id)?.taskId ?? null,
+    taskVersion: runner.taskExecution(r.id)?.taskVersion ?? null,
     startedTs: r.startedTs,
     endedTs: r.endedTs,
     durationMs: r.durationMs,

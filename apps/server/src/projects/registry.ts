@@ -1,7 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { realpathSync, statSync } from 'node:fs';
+import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { hostname } from 'node:os';
 import { and, eq, sql } from 'drizzle-orm';
@@ -12,20 +12,25 @@ import { portfolioProjects as projects, portfolioRepositories as repositories, p
 import type { GhRepo } from '../integrations/github/types';
 import { isGitRepo } from '../scanner/git';
 import { readGitLink } from './github';
+import { commonGitIdentity, directoryIdentity as identity, pathKey } from './checkoutIdentity';
 
 const exec = promisify(execFile);
 const remoteObservation = z.object({ externalId: z.string().min(1), name: z.string(), canonicalRemote: z.string(), defaultBranch: z.string().nullable() });
-const pathKey = (path: string) => process.platform === 'win32' ? path.toLowerCase() : path;
-const identity = (path: string) => {
-  const stat = statSync(path, { bigint: true });
-  if (!stat.isDirectory() || stat.ino === 0n) throw new Error('A stable directory identity is required');
-  return `${stat.dev}:${stat.ino}:${stat.birthtimeNs}`;
-};
 
 /** Planning identities. Importing metadata never grants runner permission or changes Git. */
 export class ProjectRegistry {
   readonly hostId = createHash('sha256').update(`${process.platform}:${hostname()}`).digest('hex');
   constructor(private db: Db, private observedRepos: () => Repo[], private cwdFor: (sourceId: string) => string | null) {}
+
+  assertCheckout(id: string, sourceId?: string, cwd?: string) {
+    const checkout = this.db.select().from(checkouts).where(eq(checkouts.id, id)).get();
+    if (!checkout || checkout.hostId !== this.hostId) throw new Error('Checkout is not registered on this host');
+    const allowed = this.cwdFor(checkout.sourceId);
+    if (!allowed || (sourceId && sourceId !== checkout.sourceId)) throw new Error('Checkout scanner identity changed; import it again');
+    const path = realpathSync(allowed);
+    if (pathKey(path) !== checkout.canonicalPath || (cwd && pathKey(realpathSync(cwd)) !== pathKey(path)) || identity(path) !== checkout.pathIdentity || commonGitIdentity(path) !== checkout.gitIdentity) throw new Error('Checkout or Git directory identity changed; execution refused');
+    return checkout;
+  }
 
   observeGitHub(repos: GhRepo[], observedTs: string) {
     this.db.transaction(() => {

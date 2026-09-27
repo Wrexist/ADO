@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: exakt uppgiftsrevision i körning och separat granskningsstatus
+
+Uppgifter kan nu startas genom en separat granskning i `/tasks`. Startbegäran binds till uppgiftsversion, registrerad arbetskopia, basrevision och vald provider. Servern bygger prompten från den sparade uppgiften. Samma begärandenyckel ger samma körning; ändrat innehåll nekas. Uppgift, körning och händelse sparas atomiskt vid köläggning, claim och avslut. Exit 0 ger `succeeded` på körningen och `awaiting_review` på uppgiften, aldrig automatisk acceptans. Se [kontrakt och kvarvarande gränser](docs/controlos/task-execution.md).
+
+Köade jobb kontrollerar projekt, beroenden, behörighet och katalog-/Git-identitet igen innan start; vald basrevision måste fortfarande stämma. Registrerade arbetskopior av samma repo delar skrivspärr. Äldre karantänlås behålls och beaktas även när ett nytt jobb väljer en annan arbetskopia. Osäkert processtopp spärrar även redigering av den berörda uppgiften. Vid misslyckad lagring av avslut ligger aktiv status och skrivlås kvar; ingen lyckad agenthändelse publiceras i förväg.
+
+`npm run verify` passerade med typkontroll, lint, 320 tester i 60 filer och byggning på Windows x64, Node 22.18.0 och npm 11.7.0. Nytt API-test använder en riktig lokal testprocess, ett temporärt Git-repo och återöppnad SQLite-profil. Separata tester provar omstart, ändrad bas/projekt/katalog, syskonarbetskopior, äldre lås och injicerade lagringsfel. Hela `npm run smoke` passerade, inklusive tangentbordsbekräftelse och ny körningsgranskning vid 1536/390 px. Bilderna har granskats; webbdelen använder uttryckliga DEMO-svar för körningen. Loggar: `controlos-task-execution-full-verify.log` och `controlos-task-execution-smoke.log` (ignorerade). Webbens chunkvarning kvarstår, cirka 546 kB före gzip.
+
+T05 är nu lokalt godkänd med källhashar; T07/T20/T22/T43 har omprovats. Totalt är 5 av 46 scenarier lokalt godkända, 41 ännu inte fullständigt provade. Aktuella bevis och godkännande per acceptanskriterium, stabil behörighetsmigrering, verifierad sandbox och full R1–R4 återstår. Ingen riktig provider/model, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R2: uppgifter, Inbox, milstolpar och atomiska beroenden
 
 Den nya vyn `/tasks` sparar uppgifter och milstolpar i en egen planeringsdomän. Uppgifter har mål, avgränsning, acceptanskriterier, prioritet, projekt-/repokoppling och beroenden. Projektägarskap kan inte flyttas genom redigering. GitHub-issues är enkelriktade referenslänkar. Versionskontroll nekar gamla ändringar; fält, beroenden och oföränderlig revisionshistorik sparas atomiskt. Beroendecykler visas med namn och ID:n och lämnar ingen halv uppdatering. Kriteriernas ID:n och obligatorisk/frivillig status bevaras vid omordning av oförändrad text.

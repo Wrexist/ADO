@@ -10,7 +10,10 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Bus } from '../bus';
 import type { Db } from '../db';
-import { executionLocks, runs } from '../db/schema';
+import { executionLocks, runs, portfolioCheckouts } from '../db/schema';
+import { TaskDispatchRequest } from '@ado/shared';
+import { TaskExecutionStore, taskPrompt, type TaskRunBinding } from './taskExecution';
+import { commonGitIdentity } from '../projects/checkoutIdentity';
 import { parseStreamLine, type AgentUpdate } from './adapter';
 import type { Spawner, SpawnHandle } from './spawner';
 import { createHash, randomUUID } from 'node:crypto';
@@ -25,6 +28,7 @@ export interface DispatchInput {
   model?: string;
   provider?: string;
   idempotencyKey?: string;
+  taskBinding?: TaskRunBinding;
 }
 
 interface RunnerOpts {
@@ -37,6 +41,7 @@ interface RunnerOpts {
   secrets?: () => Array<string | undefined>;
   /** repoId → absolute cwd (the allow-list; a dispatch outside it is rejected). */
   cwdFor: (repoId: string) => string | null;
+  assertCheckout?: (checkoutId: string, sourceId: string, cwd: string) => unknown;
   /**
    * Per-project switch (project settings → "Agent dispatch"). Returning a string blocks the
    * dispatch with that reason. Checked FIRST so every dispatch path — command box, prompts,
@@ -84,6 +89,7 @@ export class Runner {
   /** Runs the user killed from the dashboard — so the exit path records WHY it failed. */
   private killed = new Set<string>();
   private opts: Required<Pick<RunnerOpts, 'maxConcurrent' | 'turnCap' | 'timeoutMs'>> & RunnerOpts;
+  private taskExecutions: TaskExecutionStore;
 
   constructor(
     private bus: Bus,
@@ -93,6 +99,7 @@ export class Runner {
     private log: (msg: string) => void = () => {},
   ) {
     this.opts = { ...DEFAULTS, ...opts };
+    this.taskExecutions = new TaskExecutionStore(db);
     this.log = (message) => log(redact(message, this.opts.secrets?.()));
   }
 
@@ -197,11 +204,23 @@ export class Runner {
   }
 
   /** Accept a dispatch. Returns the runId, or throws if blocked/not allow-listed. */
+  dispatchTask(taskId: string, input: unknown) {
+    const request = TaskDispatchRequest.parse(input);
+    const task = this.taskExecutions.revision(taskId, request.version);
+    const existing = this.db.select().from(runs).where(eq(runs.idempotencyKey, request.idempotencyKey)).get();
+    const checkout = this.db.select().from(portfolioCheckouts).where(eq(portfolioCheckouts.id, request.checkoutId)).get();
+    if (!checkout) throw new Error('Checkout not found');
+    return this.dispatch({ repoId: existing?.repoId ?? checkout.sourceId, task: taskPrompt(task), provider: request.provider, model: request.model, idempotencyKey: request.idempotencyKey,
+      taskBinding: { taskId, taskVersion: request.version, checkoutId: request.checkoutId, baseSha: request.baseSha } });
+  }
+
+  taskExecution(runId: string) { return this.taskExecutions.get(runId); }
+
   dispatch(input: DispatchInput): { runId: string } {
     if (this.stopped) throw new Error('runner is stopping; no new dispatches accepted');
     input = { ...input, provider: input.provider ?? this.opts.defaultProvider ?? 'claude' };
     if (!['claude', 'codex'].includes(input.provider!)) throw new Error('Unsupported provider');
-    const requestHash = createHash('sha256').update(JSON.stringify([input.repoId, input.task, input.model ?? 'default', input.provider])).digest('hex');
+    const requestHash = createHash('sha256').update(JSON.stringify([input.repoId, input.task, input.model ?? 'default', input.provider, ...(input.taskBinding ? [input.taskBinding] : [])])).digest('hex');
     if (input.idempotencyKey) {
       if (input.idempotencyKey.length > 200) throw new Error('idempotency key too long');
       const existing = this.db.select().from(runs).where(eq(runs.idempotencyKey, input.idempotencyKey)).get();
@@ -214,13 +233,19 @@ export class Runner {
     if (blocked) throw new Error(blocked);
     const cwd = this.opts.cwdFor(input.repoId);
     if (!cwd) throw new Error(`repo '${input.repoId}' is not in the scanner allow-list`);
+    if (input.taskBinding) {
+      if (!this.opts.workspaceRoot || !this.opts.assertCheckout) throw new Error('Task dispatch requires an isolated workspace and checkout identity validation');
+      this.opts.assertCheckout(input.taskBinding.checkoutId, input.repoId, cwd);
+    }
 
     const runId = `run-${input.repoId}-${Date.now()}-${++this.seq}-${randomUUID()}`;
     const now = new Date().toISOString();
-    this.bus.commit((tx) => tx
+    this.bus.commit((tx) => { tx
       .insert(runs)
       .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', provider: input.provider, status: 'queued', startedTs: now, engineVersion: 1, idempotencyKey: input.idempotencyKey, requestHash })
-      .run(), [this.buildEvent(runId, input, 'queued', null)]);
+      .run();
+      if (input.taskBinding) this.taskExecutions.enqueue(runId, input.taskBinding, input.task);
+    }, [this.buildEvent(runId, input, 'queued', null)]);
 
     // Reflect as a queued build immediately (backs the Build Queue), then let the
     // semaphore-aware drain start it now or hold it until a slot frees.
@@ -245,7 +270,7 @@ export class Runner {
       // same checkout remain serialized even when they have different logical IDs.
       const index = this.queue.findIndex((q) => {
         const cwd = this.opts.cwdFor(q.input.repoId);
-        return !cwd || Boolean(this.opts.blockedReason?.(q.input.repoId)) || (!this.busyDirectories.has(this.resourceKey(q.input.repoId, cwd)) && !this.db.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(q.input.repoId, cwd))).get());
+        return !cwd || Boolean(this.opts.blockedReason?.(q.input.repoId)) || (!this.busyDirectories.has(this.resourceKey(q.input.repoId, cwd)) && !this.db.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(q.input.repoId, cwd))).get() && !this.repositoryBusy(q.input.repoId, cwd));
       });
       if (index < 0) return;
       const [next] = this.queue.splice(index, 1);
@@ -261,13 +286,18 @@ export class Runner {
         this.failRun(next.id, next.input, null, 'repo left the allow-list before it could run');
         continue;
       }
+      try { this.assertTaskCanRun(next.id, next.input.repoId, cwd); }
+      catch (error) { this.failRun(next.id, next.input, null, (error as Error).message); continue; }
       let claimed: boolean;
       try {
         claimed = this.bus.commit((tx) => {
         if (tx.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(next.input.repoId, cwd))).get()) return false;
+        if (this.repositoryBusy(next.input.repoId, cwd)) return false;
         const updated = tx.update(runs).set({ status: 'running' }).where(and(eq(runs.id, next.id), eq(runs.status, 'queued'))).run();
         if (!updated.changes) return false;
+        this.taskExecutions.validate(next.id);
         tx.insert(executionLocks).values({ resource: this.resourceKey(next.input.repoId, cwd), runId: next.id, owner: this.owner, acquiredTs: new Date().toISOString() }).run();
+        this.taskExecutions.transition(next.id, 'running');
         return true;
         }, (claimed) => claimed ? [this.buildEvent(next.id, next.input, 'running', Date.now())] : []);
       } catch (error) {
@@ -292,10 +322,41 @@ export class Runner {
     return process.platform === 'win32' ? path.toLowerCase() : path;
   }
 
+  /** Preserve legacy lock keys, and additionally serialize registered sibling checkouts. */
+  private repositoryBusy(repoId: string, cwd: string) {
+    const path = process.platform === 'win32' ? resolve(cwd).toLowerCase() : resolve(cwd);
+    const all = this.db.select().from(portfolioCheckouts).all();
+    const checkout = all.find((c) => c.sourceId === repoId || c.canonicalPath === path);
+    if (!checkout) return false;
+    const siblings = all.filter((c) => c.repositoryId === checkout.repositoryId);
+    for (const lock of this.db.select().from(executionLocks).all()) {
+      const binding = this.taskExecutions.get(lock.runId);
+      if (binding) { if (siblings.some((c) => c.id === binding.checkoutId)) return true; continue; }
+      const owner = this.db.select().from(runs).where(eq(runs.id, lock.runId)).get();
+      if (!owner) return true;
+      if (siblings.some((c) => c.sourceId === owner.repoId || c.canonicalPath === lock.resource)) return true;
+      const ownerPath = owner.workspacePath ?? this.opts.cwdFor(owner.repoId) ?? this.bus.snapshot().state.repos[owner.repoId]?.localPath;
+      if (!ownerPath) return true;
+      try { if (siblings.some((c) => c.gitIdentity === commonGitIdentity(ownerPath))) return true; }
+      catch { return true; } // Cannot prove the old writer owns a different repository.
+    }
+    return false;
+  }
+
+  private assertTaskCanRun(runId: string, sourceId: string, cwd: string) {
+    const binding = this.taskExecutions.validate(runId);
+    if (!binding) return;
+    if (!this.opts.assertCheckout || !this.opts.workspaceRoot) throw new Error('Task execution boundary is unavailable');
+    this.opts.assertCheckout(binding.checkoutId, sourceId, cwd);
+  }
+
   /** Mark a run failed end-to-end (DB + build + agent). Best-effort; never throws. */
   private failRun(runId: string, input: DispatchInput, startedMs: number | null, reason: string): void {
     try {
-      this.bus.commit((tx) => tx
+      const changed = this.bus.commit((tx) => {
+        const current = tx.select().from(runs).where(eq(runs.id, runId)).get();
+        if (!current || ['done', 'failed'].includes(current.status)) return false;
+        tx
         .update(runs)
         .set({
           status: 'failed',
@@ -306,7 +367,11 @@ export class Runner {
           processTermination: this.handles.get(runId)?.terminationConfirmed?.() ? 'confirmed' : this.unconfirmedProcesses.has(runId) ? 'unconfirmed' : undefined,
         })
         .where(eq(runs.id, runId))
-        .run(), [this.buildEvent(runId, input, 'failed', startedMs)]);
+        .run();
+        this.taskExecutions.transition(runId, 'failed');
+        return true;
+      }, (changed) => changed ? [this.buildEvent(runId, input, 'failed', startedMs)] : []);
+      if (!changed) return;
     } catch (error) {
       this.log(`runner: ${runId} terminal state could not be persisted: ${(error as Error).message}`);
       return;
@@ -326,7 +391,8 @@ export class Runner {
   private async run(runId: string, input: DispatchInput, cwd: string): Promise<void> {
     this.active++;
     this.activeRuns.add(runId);
-    this.busyDirectories.add(this.resourceKey(input.repoId, cwd));
+    const resource = this.db.select().from(executionLocks).where(eq(executionLocks.runId, runId)).get()?.resource ?? this.resourceKey(input.repoId, cwd);
+    this.busyDirectories.add(resource);
     const startedMs = Date.now();
     // The whole run is wrapped so ANY throw (spawn, DB write, a zod-invalid publish,
     // handle.done rejecting) still marks the run failed AND releases the capacity slot.
@@ -334,10 +400,12 @@ export class Runner {
     // active-- lived past the last await with no catch: one throw leaked a slot forever
     // (and surfaced as an unhandledRejection), eventually wedging the runner.
     try {
-      const workspace = this.opts.workspaceRoot ? await prepareWorkspace(this.opts.workspaceRoot, cwd) : null;
+      this.assertTaskCanRun(runId, input.repoId, cwd);
+      const workspace = this.opts.workspaceRoot ? await prepareWorkspace(this.opts.workspaceRoot, cwd, this.taskExecutions.get(runId)?.baseSha) : null;
       if (workspace) this.db.update(runs).set({ workspacePath: workspace.path, baseSha: workspace.baseSha, branch: workspace.branch }).where(eq(runs.id, runId)).run();
       if (this.stopped || this.killed.has(runId) || this.opts.blockedReason?.(input.repoId)) throw new Error('Run cancelled before process start');
-      await this.runBody(runId, input, workspace?.path ?? cwd, startedMs, workspace?.baseSha);
+      this.assertTaskCanRun(runId, input.repoId, cwd);
+      await this.runBody(runId, input, workspace?.path ?? cwd, startedMs, workspace?.baseSha, cwd);
     } catch (err) {
       this.log(`runner: ${runId} crashed: ${(err as Error).message}`);
       const reason = this.unconfirmedProcesses.has(runId)
@@ -355,13 +423,13 @@ export class Runner {
         }
       } catch (error) { this.log(`runner: ${runId} writer lock retained after storage failure: ${(error as Error).message}`); }
       this.unconfirmedProcesses.delete(runId);
-      this.busyDirectories.delete(this.resourceKey(input.repoId, cwd));
+      this.busyDirectories.delete(resource);
       this.active--;
       this.drainNext();
     }
   }
 
-  private async runBody(runId: string, input: DispatchInput, cwd: string, startedMs: number, baseSha?: string): Promise<void> {
+  private async runBody(runId: string, input: DispatchInput, cwd: string, startedMs: number, baseSha?: string, originalCwd = cwd): Promise<void> {
     const agentId = runId;
     let turns: number | null = null;
     let tokensIn: number | null = null;
@@ -372,14 +440,15 @@ export class Runner {
     let opaque = false;
     let statusLine = 'Starting…';
 
-    const upsertAgent = (status: 'running' | 'done' | 'failed', pct: number | null) =>
-      this.bus.publish({
+    const agentEvent = (status: 'running' | 'done' | 'failed', pct: number | null) =>
+      ({
         id: `agent-evt:${agentId}:${Date.now()}:${Math.round(pct ?? -1)}`,
         type: 'agent.upserted',
         ts: new Date().toISOString(),
         source: { kind: 'runner', ref: runId },
         payload: { agent: { id: agentId, name: this.agentName(input), icon: 'code', tone: 'violet', kind: 'runner', status, statusLine, pct } },
       });
+    const upsertAgent = (status: 'running' | 'done' | 'failed', pct: number | null) => this.bus.publish(agentEvent(status, pct));
 
     this.record(runId, 'status', 'Spawned');
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
@@ -387,6 +456,7 @@ export class Runner {
 
     const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot, secrets: this.opts.secrets?.(),
       onProcessIdentity: (identity) => {
+        this.assertTaskCanRun(runId, input.repoId, originalCwd);
         const saved = this.db.update(runs).set({ processIdentity: JSON.stringify(identity), processTermination: 'unconfirmed' })
           .where(and(eq(runs.id, runId), eq(runs.status, 'running'))).run();
         if (saved.changes !== 1) throw new Error('Process identity could not be recorded');
@@ -464,9 +534,8 @@ export class Runner {
     const ok = exitCode === 0 && !resultFailed && !timedOut && !wasKilled;
     statusLine = timedOut ? 'Timed out' : wasKilled ? 'Killed' : ok ? 'Process completed · verification pending' : 'Failed';
     this.record(runId, 'status', statusLine);
-    upsertAgent(ok ? 'done' : 'failed', ok ? 100 : null);
 
-    this.bus.commit((tx) => tx
+    this.bus.commit((tx) => { tx
       .update(runs)
       .set({
         status: ok ? 'done' : 'failed',
@@ -482,7 +551,9 @@ export class Runner {
         diagnostics: handle.diagnostics ? redact(handle.diagnostics(), this.opts.secrets?.()).slice(-4000) : null,
       })
       .where(eq(runs.id, runId))
-      .run(), [this.buildEvent(runId, input, ok ? 'success' : 'failed', startedMs)]);
+      .run();
+      this.taskExecutions.transition(runId, ok ? 'done' : 'failed');
+    }, [this.buildEvent(runId, input, ok ? 'success' : 'failed', startedMs), agentEvent(ok ? 'done' : 'failed', ok ? 100 : null)]);
 
     this.emitActivity(`act:${runId}:end`, input.repoId, ok ? `Agent process completed (unverified): ${input.task}` : `Task failed: ${input.task}`, ok ? 'success' : 'danger', ok ? 'check' : 'bell');
     // Tag the repo with the agent IDS that touched it (avatar stack) via enrichment.

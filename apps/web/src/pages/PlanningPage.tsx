@@ -29,12 +29,20 @@ export function PlanningPage() {
   const [task, setTask] = useState(emptyTask), [editing, setEditing] = useState<PlanningTask | null>(null);
   const [milestone, setMilestone] = useState(emptyMilestone), [editingMilestone, setEditingMilestone] = useState<PlanningMilestone | null>(null);
   const [filter, setFilter] = useState('');
+  const [runReview, setRunReview] = useState<{ task: PlanningTask; checkoutId: string; provider: string; submission: { version: number; checkoutId: string; baseSha: string; provider: string; idempotencyKey: string } | null } | null>(null);
   const taskTitle = useRef<HTMLInputElement>(null), promotionTitle = useRef<HTMLInputElement>(null), milestoneTitle = useRef<HTMLInputElement>(null);
+  const runReviewTitle = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (runReview) runReviewTitle.current?.focus(); }, [runReview?.task.id]);
   useEffect(() => { if (editing) taskTitle.current?.focus(); }, [editing]);
   useEffect(() => { if (promotion) promotionTitle.current?.focus(); }, [promotion?.id]);
   useEffect(() => { if (editingMilestone) milestoneTitle.current?.focus(); }, [editingMilestone]);
   const load = async () => { const [next, projects] = await Promise.all([fetchPlanning(), fetchPortfolio()]); setData(next); setPortfolio(projects); };
   useEffect(() => { void load().catch((e: Error) => setError(e.message)); }, []);
+  useEffect(() => {
+    if (!data?.executions.some((run) => run.state === 'queued' || run.state === 'running')) return;
+    const timer = setTimeout(() => { void fetchPlanning().then(setData).catch((e: Error) => setError(`Run status refresh failed: ${e.message}`)); }, 1500);
+    return () => clearTimeout(timer);
+  }, [data]);
   const act = async (work: () => Promise<unknown>, success: string) => {
     setBusy(true); setError(''); setMessage('');
     try { await work(); await load(); setMessage(success); }
@@ -47,11 +55,30 @@ export function PlanningPage() {
   const editTask = (t: PlanningTask) => {
     setEditing(t); setTask({ projectId: t.projectId, repositoryId: t.repositoryId ?? '', milestoneId: t.milestoneId ?? '', title: t.title, outcome: t.outcome, scope: t.scope, outOfScope: t.outOfScope, priority: t.priority, status: t.status, dependsOn: t.dependsOn, acceptance: t.acceptance.map((c) => c.text).join('\n'), sourceRefs: t.sourceRefs.join('\n') });
   };
-  return <PageShell title="Tasks & Inbox" subtitle="Capture ideas, define outcomes and plan dependencies. Planning never starts an agent.">
+  return <PageShell title="Tasks & Inbox" subtitle="Capture ideas, define outcomes and review explicitly started runs.">
     <div className="mt-5 min-w-0 space-y-5">
       <div className="flex flex-wrap items-center gap-3"><Link className="text-body text-primary" to="/projects">Manage projects</Link><Button variant="outline" disabled={busy} onClick={() => void act(async () => { setEditing(null); setTask(emptyTask); setEditingMilestone(null); setMilestone(emptyMilestone); setPromotion(null); }, 'Planning reloaded.')}>Reload planning</Button></div>
       {error && <p role="alert" className="break-words text-body text-danger">{error}</p>}
       {message && <p role="status" className="text-body text-text2">{message}</p>}
+      {runReview && <Card role="region" aria-label="Review task run" className="min-w-0 break-words p-4">
+        <h2 ref={runReviewTitle} tabIndex={-1} className="text-title font-semibold">Review task run</h2>
+        <p className="mt-2 text-body">{runReview.task.title} · task version {runReview.task.version}</p>
+        <p className="mt-2 whitespace-pre-wrap text-body">{runReview.task.outcome}</p>
+        <p className="mt-2 text-body text-text2">Trusted local execution in a separate Git worktree. This is not an OS sandbox. A successful process leaves the task awaiting review.</p>
+        <form className="mt-3 space-y-3" onSubmit={(event) => {
+          event.preventDefault();
+          const checkout = portfolio?.checkouts.find((c) => c.id === runReview.checkoutId);
+          if (!checkout?.headSha) return;
+          const submission = runReview.submission ?? { version: runReview.task.version, checkoutId: checkout.id, baseSha: checkout.headSha, provider: runReview.provider, idempotencyKey: crypto.randomUUID() };
+          setRunReview({ ...runReview, submission });
+          void act(async () => { await planningRequest(`/tasks/${runReview.task.id}/dispatch`, 'POST', submission); setRunReview(null); }, 'Run accepted. Task acceptance requires separate criterion review.');
+        }}>
+          <label className="block text-body">Run checkout<select aria-label="Run checkout" required disabled={Boolean(runReview.submission)} className={field} value={runReview.checkoutId} onChange={(e) => setRunReview({ ...runReview, checkoutId: e.target.value })}><option value="">Select a committed working copy</option>{portfolio?.checkouts.filter((c) => c.repositoryId === runReview.task.repositoryId && c.headSha).map((c) => <option key={c.id} value={c.id}>{c.canonicalPath} · {c.headSha!.slice(0, 12)}</option>)}</select></label>
+          <p className="break-all text-label text-text2">Reviewed base: {runReview.submission?.baseSha ?? portfolio?.checkouts.find((c) => c.id === runReview.checkoutId)?.headSha ?? 'Select a checkout'}</p>
+          <label className="block text-body">Run provider<select aria-label="Run provider" required disabled={Boolean(runReview.submission)} className={field} value={runReview.provider} onChange={(e) => setRunReview({ ...runReview, provider: e.target.value })}><option value="">Choose provider</option><option value="claude">Claude</option><option value="codex">Codex (experimental, ChatGPT login)</option></select></label>
+          <div className="flex flex-wrap gap-2"><Button type="submit" disabled={busy}>{runReview.submission ? 'Retry same run request' : 'Start reviewed run'}</Button><Button variant="outline" disabled={busy} onClick={() => setRunReview(null)}>Cancel run review</Button></div>
+        </form>
+      </Card>}
       <Card className="p-4">
         <h2 className="text-title font-semibold">Inbox</h2>
         <form className="mt-3 space-y-3" onSubmit={(e) => { e.preventDefault(); const request = capture ?? { idempotencyKey: crypto.randomUUID(), text: idea, projectId: ideaProject || null }; setCapture(request); void act(async () => { await planningRequest('/inbox', 'POST', request); setCapture(null); setIdea(''); }, 'Idea saved on this host.'); }}>
@@ -98,6 +125,8 @@ export function PlanningPage() {
           {t.blockedBy.length > 0 && <p className="mt-2 text-body text-warn">Unresolved dependencies: {t.blockedBy.map((id) => data.tasks.find((dependency) => dependency.id === id)?.title ?? id).join(', ')}</p>}
           <details className="mt-2 text-body"><summary>Scope and acceptance</summary><p className="mt-2 whitespace-pre-wrap">In scope: {t.scope || 'Not defined'}</p><p className="whitespace-pre-wrap">Out of scope: {t.outOfScope || 'Not defined'}</p><ul className="ml-5 list-disc">{t.acceptance.map((c) => <li key={c.id}>{c.text} ({c.required ? 'required' : 'optional'}; no evidence recorded)</li>)}</ul>{t.sourceRefs.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-primary">{url}</a>)}</details>
           <Button disabled={busy || !['draft', 'ready', 'blocked', 'archived'].includes(t.status)} variant="outline" size="sm" className="mt-3" onClick={() => editTask(t)}>Edit {t.title}</Button>
+          {t.status === 'ready' && <Button aria-label={`Review run for ${t.title}`} disabled={busy || t.blockedBy.length > 0 || !t.repositoryId || !portfolio?.checkouts.some((c) => c.repositoryId === t.repositoryId && c.headSha)} variant="outline" size="sm" className="ml-2 mt-3" onClick={() => setRunReview({ task: t, checkoutId: '', provider: '', submission: null })}>Review run</Button>}
+          {data.executions.filter((run) => run.taskId === t.id).map((run) => <p key={run.runId} className="mt-2 text-body"><Link className="text-primary" to={`/agents?run=${encodeURIComponent(run.runId)}`}>Run for task version {run.taskVersion}: {run.state === 'done' ? 'process succeeded' : run.state}</Link>{run.state === 'done' ? ' · Criterion review required.' : ''}</p>)}
         </Card>)}
         {data && !data.tasks.some((t) => !filter || t.projectId === filter) && <p className="text-body text-text2">No tasks in this selection.</p>}
       </section>

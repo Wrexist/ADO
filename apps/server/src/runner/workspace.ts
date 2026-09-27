@@ -10,11 +10,12 @@ async function git(cwd: string, args: string[], raw = false): Promise<string> {
   return raw ? stdout : stdout.trim();
 }
 export interface RunWorkspace { path: string; baseSha: string; branch: string }
-export async function prepareWorkspace(root: string, cwd: string): Promise<RunWorkspace> {
+export async function prepareWorkspace(root: string, cwd: string, expectedBaseSha?: string): Promise<RunWorkspace> {
   // A snapshot of committed code is explicit: never silently omit the owner's edits.
   if (await git(cwd, ['status', '--porcelain'])) throw new Error('Commit or stash local changes before starting an isolated agent job.');
   const baseSha = await git(cwd, ['rev-parse', '--verify', 'HEAD']);
   if (!/^[a-f0-9]{40,64}$/.test(baseSha)) throw new Error('A committed Git revision is required.');
+  if (expectedBaseSha && expectedBaseSha !== baseSha) throw new Error('Checkout revision changed since dispatch review; refresh before starting');
   mkdirSync(root, { recursive: true });
   const id = randomUUID(); const branch = `codex/run-${id}`; const path = join(root, id);
   await git(cwd, ['-c', 'core.hooksPath=', 'worktree', 'add', '-b', branch, '--', path, baseSha]);

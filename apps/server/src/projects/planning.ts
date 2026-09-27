@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { InboxInput, InboxItem, MilestoneInput, PlanningMilestone, PlanningTask, TaskInput } from '@ado/shared';
+import { InboxInput, InboxItem, MilestoneInput, PlanningExecution, PlanningMilestone, PlanningTask, TaskInput } from '@ado/shared';
 import type { Db } from '../db';
-import { portfolioProjects as projects, portfolioRepositories as repositories, planningTasks as tasks, planningMilestones as milestones, planningDependencies as dependencies, planningInbox as inbox, planningRevisions as revisions } from '../db/schema';
+import { portfolioProjects as projects, portfolioRepositories as repositories, planningTasks as tasks, planningMilestones as milestones, planningDependencies as dependencies, planningInbox as inbox, planningRevisions as revisions, taskExecutions, executionLocks } from '../db/schema';
 
 const version = z.number().int().positive();
 const hash = (data: unknown) => createHash('sha256').update(JSON.stringify(data)).digest('hex');
@@ -25,6 +25,7 @@ export class PlanningStore {
         tasks: all.map((t) => taskView(t, edges, all)),
         milestones: this.db.select().from(milestones).all().map(milestoneView),
         inbox: this.db.select().from(inbox).all().map((row) => InboxItem.parse(row)),
+        executions: this.db.select().from(taskExecutions).all().map((row) => PlanningExecution.parse(row)),
       };
     });
   }
@@ -48,6 +49,7 @@ export class PlanningStore {
       if (id && (!existing || existing.version !== request.version)) throw new Error('Task changed or is missing; reload before saving');
       if (existing && existing.projectId !== request.projectId) throw new Error('Task project identity cannot be reassigned');
       if (existing && !['draft', 'ready', 'blocked', 'archived'].includes(existing.status)) throw new Error('Execution or reviewed task requires its dedicated lifecycle operation');
+      if (existing && this.db.select().from(taskExecutions).innerJoin(executionLocks, eq(taskExecutions.runId, executionLocks.runId)).where(eq(taskExecutions.taskId, existing.id)).get()) throw new Error('Task process stop is not confirmed; editing remains blocked');
       this.project(request.projectId);
       if (request.repositoryId && this.db.select().from(repositories).where(eq(repositories.id, request.repositoryId)).get()?.projectId !== request.projectId) throw new Error('Repository must belong to this project');
       if (request.milestoneId && this.db.select().from(milestones).where(eq(milestones.id, request.milestoneId)).get()?.projectId !== request.projectId) throw new Error('Milestone must belong to this project');
