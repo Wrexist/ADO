@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: Time-window proposals should fit the upper user estimate and retain a locked focus even when it yields no option. Bind estimates to task versions, explain exclusions and keep proposals separate from execution eligibility.
+
 - 2026-09-28: Terminal provider evidence needs an explicit, consistent outcome and typed resource counters. Optional opaque telemetry must not make malformed result fields acceptable, even when the child exits zero.
 
 - 2026-09-27: Required provider lifecycle frames need matching thread/turn identities and typed terminal status; an exit code or a completion-shaped frame alone cannot establish completion. Allow notification/reply reordering only when their identities agree.

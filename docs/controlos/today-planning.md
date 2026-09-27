@@ -1,0 +1,11 @@
+# Today proposal foundation
+
+`POST /api/planning/today` is an authenticated, read-only preview over a single database snapshot. It accepts `availableMinutes` (1–1440), nullable `projectId` and `lockedTaskId`, and user estimates containing `taskId`, `taskVersion`, `minMinutes` and `maxMinutes`. Estimates are supplied for this request, not invented or silently persisted. Duplicate estimates, inverted ranges and stale/missing task versions are rejected.
+
+The response contains at most three alternatives, not an agenda to execute together. Each alternative's upper estimate must fit the entire window and is explicitly labelled “User estimate; actual duration is unknown”. Manual task priority orders alternatives, followed by creation time and stable identity. A locked focus excludes every other task, even one with higher priority; a blocked or over-budget focus produces no substitute.
+
+Project focus, active project lifecycle, ready task status, recorded dependencies and retained writer locks on task attempts are eligibility filters. Unknown estimates are excluded instead of treated as zero. Exclusion reasons are returned, along with task versions, generation time and the applicable window. The endpoint writes no task, revision, run or calendar and invokes no provider.
+
+The API regression creates a synthetic on-disk profile through production project/task endpoints. It checks authentication, a 30-minute window, locked focus, missing/over-budget estimates, blocked dependencies, manual priority, the three-choice cap, stale estimate rejection and unchanged plan/history/run state. Reproduce: `npx vitest run apps/server/src/projects/todayApi.test.ts`. Local log: `controlos-today-focused.log`.
+
+This is the planning-domain/API foundation, not complete Today or T08 acceptance. A user-facing editor, retained focus/estimate preferences, freshness display and review of execution policy/environment remain to be implemented. Dependencies here are the recorded planning snapshot, not a fresh filesystem re-verification of accepted work. The response explicitly requires separate execution eligibility review; it does not promise a task can safely be dispatched. No calendar integration or automatic mutation is introduced. REQ06 and T08 remain open.

@@ -1,0 +1,53 @@
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, it } from 'vitest';
+import { TodayProposal } from '@ado/shared';
+import { buildServer } from '../app';
+
+it('proposes bounded alternatives from current task versions without overriding locked focus or mutating planning', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-today-'));
+  const headers = { host: '127.0.0.1:8787', 'x-acc-token': 'today-fixture-key' };
+  const server = await buildServer({ port: 8787, webOrigin: 'http://localhost:5173', accToken: headers['x-acc-token'], dbPath: join(root, 'profile.sqlite'), projectDirs: [], demo: false }, { startSystem: false, startScanner: false });
+  try {
+    const app = server.app;
+    const post = (url: string, payload: object) => app.inject({ method: 'POST', url, headers, payload });
+    const project = (await post('/api/portfolio/projects', { name: 'Today fixture', kind: 'app', goal: 'Local manual plan', lifecycle: 'active', focus: true, manualPriority: 1 })).json().project;
+    const input = { projectId: project.id, repositoryId: null, milestoneId: null, title: 'Focus', outcome: 'Manual result', scope: 'Fixture only', outOfScope: '', acceptance: [{ id: randomUUID(), text: 'Review result', required: true }], dependsOn: [], priority: 1, status: 'ready', sourceRefs: [] };
+    const focus = (await post('/api/planning/tasks', input)).json().task;
+    const higher = (await post('/api/planning/tasks', { ...input, title: 'Higher priority', priority: 5 })).json().task;
+    const blocked = (await post('/api/planning/tasks', { ...input, title: 'Dependent', dependsOn: [higher.id] })).json().task;
+    const extra = [];
+    for (let n = 0; n < 2; n++) extra.push((await post('/api/planning/tasks', { ...input, title: `Additional ${n}`, priority: 0 })).json().task);
+    const request = { availableMinutes: 30, projectId: project.id, lockedTaskId: focus.id, estimates: [{ taskId: focus.id, taskVersion: focus.version, minMinutes: 10, maxMinutes: 25 }, { taskId: higher.id, taskVersion: higher.version, minMinutes: 5, maxMinutes: 10 }, { taskId: blocked.id, taskVersion: blocked.version, minMinutes: 5, maxMinutes: 10 }] };
+    const snapshot = async () => (await app.inject({ url: '/api/planning', headers })).json();
+    const before = await snapshot();
+    expect((await app.inject({ method: 'POST', url: '/api/planning/today', headers: { host: headers.host }, payload: request })).statusCode).toBe(401);
+    const response = await post('/api/planning/today', request);
+    expect(response.statusCode, response.body).toBe(200);
+    const proposal = TodayProposal.parse(response.json());
+    expect(proposal.alternatives.map((a) => a.taskId)).toEqual([focus.id]);
+    expect(proposal.alternatives[0]).toMatchObject({ taskVersion: focus.version, uncertainty: 'User estimate; actual duration is unknown' });
+    expect(proposal.excluded).toContainEqual({ taskId: higher.id, reason: 'outside_focus' });
+    const tooLong = await post('/api/planning/today', { ...request, estimates: [{ ...request.estimates[0], maxMinutes: 31 }] });
+    expect(tooLong.json().alternatives).toEqual([]);
+    expect(tooLong.json().excluded).toContainEqual({ taskId: focus.id, reason: 'outside_window' });
+    const missing = await post('/api/planning/today', { ...request, estimates: [] });
+    expect(missing.json().excluded).toContainEqual({ taskId: focus.id, reason: 'estimate_missing' });
+    const dependency = await post('/api/planning/today', { ...request, lockedTaskId: blocked.id });
+    expect(dependency.json().alternatives).toEqual([]);
+    expect(dependency.json().excluded).toContainEqual({ taskId: blocked.id, reason: 'dependencies' });
+    const unlocked = await post('/api/planning/today', { ...request, lockedTaskId: null });
+    expect(unlocked.json().alternatives.map((a: { taskId: string }) => a.taskId)).toEqual([higher.id, focus.id]);
+    const capped = await post('/api/planning/today', { ...request, lockedTaskId: null, estimates: [...request.estimates, ...extra.map((task) => ({ taskId: task.id, taskVersion: task.version, minMinutes: 5, maxMinutes: 10 }))] });
+    expect(capped.json().alternatives).toHaveLength(3);
+    expect(capped.json().excluded.some((e: { reason: string }) => e.reason === 'lower_priority')).toBe(true);
+    expect((await post('/api/planning/today', { ...request, estimates: [{ ...request.estimates[0], taskVersion: 999 }] })).statusCode).toBe(409);
+    expect((await post('/api/planning/today', { ...request, estimates: [{ ...request.estimates[0], maxMinutes: 2 }] })).statusCode).toBe(400);
+    expect((await post('/api/planning/today', { ...request, lockedTaskId: randomUUID() })).statusCode).toBe(409);
+    expect(await snapshot()).toEqual(before);
+    expect((await app.inject({ url: '/api/runs', headers })).json().runs).toEqual([]);
+    expect((await app.inject({ url: `/api/planning/history/${focus.id}`, headers })).json().revisions).toHaveLength(1);
+  } finally { await server.close(); }
+});

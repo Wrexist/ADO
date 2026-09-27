@@ -28,6 +28,7 @@ import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
 import { ProjectRegistry } from './projects/registry';
 import { PlanningStore } from './projects/planning';
+import { proposeToday } from './projects/today';
 import { ZodError } from 'zod';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
@@ -694,6 +695,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     try { return work(); } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
   };
   app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
+  app.post('/api/planning/today', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return planningMutation(reply, () => db.transaction(() => proposeToday(req.body, planning.snapshot(), registry.snapshot(), new Set(db.select().from(executionLocks).all().map((lock) => lock.runId)))));
+  });
   app.post('/api/planning/tasks/:id/dispatch', async (req, reply) => planningMutation(reply, () => runner.dispatchTask((req.params as { id: string }).id, req.body)));
   app.post('/api/planning/tasks/:id/reopen', async (req, reply) => planningMutation(reply, () => new TaskReopeningStore(db, (runId) => verifier.isActive(runId)).reopen((req.params as { id: string }).id, req.body)));
   app.put('/api/planning/tasks/:id', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body, (req.params as { id: string }).id) })));

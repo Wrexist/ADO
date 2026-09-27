@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Grund för tidsbegränsade Today-förslag
+
+Slutlig `npm run verify` passerade på Windows x64 / Node 22.18.0 / npm 11.7.0: typkontroll, lint, 412 tester i 87 filer och byggning. Logg: `controlos-today-final-verify.log`.
+
+Ett autentiserat, skrivskyddat förslags-API använder nu användarens osäkra tidsintervall bundna till uppgiftsversion. Högst tre alternativ visas i svaret; varje övre uppskattning måste rymmas inom tidsfönstret. Låst fokus kan inte ersättas av en uppgift med högre prioritet. Orsaker redovisas för bortvalda uppgifter, inklusive blockerare, saknad uppskattning och tidsöverskridande. API:t ändrar inte planer, kalender eller körningar.
+
+Ett API-prov med separat lokal profil passerade: 30-minutersfönster, fokuslås, blockerade beroenden, versionskontroll, prioritetsordning, trealternativstak och oförändrad plan/historik/körlista. [Kontrakt och återstående arbete](docs/controlos/today-planning.md). Logg: `controlos-today-focused.log`. Första typkontrollen hittade en skillnad mellan databasens registertyp och kontraktet; gränsen valideras nu med PortfolioSnapshot.
+
+Detta är domän-/API-grunden. Today-gränssnitt, sparade fokus-/uppskattningsval och miljö-/policygranskning för exekvering återstår. T08, REQ06 och R1–R4 är fortsatt öppna; 15/46 scenarier är lokalt godkända. Följande avsnitt är historiska kontrollpunkter.
+
 ## Claude kräver explicit resultat
 
 Hela `npm run verify` passerade på Windows x64 / Node 22.18.0 / npm 11.7.0: typkontroll, lint, 411 tester i 86 filer och byggning. Logg: `controlos-claude-result-verify.log`.
