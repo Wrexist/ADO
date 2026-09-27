@@ -22,7 +22,7 @@ export class CodexSpawner implements Spawner {
   constructor(private readonly executable = () => commandFor('codex', ['app-server'])) {}
   spawn(opts: SpawnOpts): SpawnHandle {
     const executable = this.executable();
-    const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity);
+    const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
     const { child } = owned;
     const forceKill = owned.kill;
     let diagnostics = ''; child.stderr.on('data', (chunk: Buffer) => { diagnostics = (diagnostics + chunk.toString()).slice(-4000); });

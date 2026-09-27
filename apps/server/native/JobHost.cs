@@ -2,10 +2,12 @@
 // Compile with the Windows .NET Framework compiler; no downloaded native dependency.
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
@@ -76,6 +78,21 @@ internal static class JobHost
         Check(QueryInformationJobObject(job, 1, out info, (uint)Marshal.SizeOf(typeof(Accounting)), IntPtr.Zero));
         return info.Active == 0;
     }
+    static void SaveReceipt(string path, string key, string payload, JavaScriptSerializer json) {
+        if (path == null) return;
+        if (!Path.IsPathRooted(path) || key == null || key.Length != 64) throw new InvalidOperationException("Invalid receipt configuration");
+        byte[] secret = new byte[32];
+        for (int i = 0; i < secret.Length; i++) secret[i] = Convert.ToByte(key.Substring(i * 2, 2), 16);
+        string mac;
+        using (var hmac = new HMACSHA256(secret)) mac = BitConverter.ToString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).Replace("-", "").ToLowerInvariant();
+        byte[] bytes = Encoding.UTF8.GetBytes(json.Serialize(new { payload = payload, mac = mac }));
+        string temporary = path + ".tmp";
+        using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough)) {
+            file.Write(bytes, 0, bytes.Length); file.Flush(true);
+        }
+        // Publish once, only after all bytes have been flushed. Never replace an old receipt.
+        File.Move(temporary, path);
+    }
     static int Main(string[] args) {
         if (args.Length < 3) return 125;
         ProcessInfo process = new ProcessInfo();
@@ -90,6 +107,11 @@ internal static class JobHost
             pipe.Connect(10000);
             var reader = new StreamReader(pipe, new UTF8Encoding(false));
             writer = new StreamWriter(pipe, new UTF8Encoding(false)); writer.AutoFlush = true;
+            string initial = reader.ReadLine();
+            if (initial == null) return 125;
+            var configuration = json.Deserialize<Dictionary<string, object>>(initial);
+            string receiptPath = configuration.ContainsKey("receiptPath") ? configuration["receiptPath"] as string : null;
+            string receiptKey = configuration.ContainsKey("receiptKey") ? configuration["receiptKey"] as string : null;
             job = CreateJobObject(IntPtr.Zero, jobName);
             Check(job != IntPtr.Zero);
             // A unique identity must never attach to an existing job.
@@ -108,9 +130,12 @@ internal static class JobHost
             Check(AssignProcessToJobObject(job, process.Process)); assigned = true;
             long created, exited, kernel, user;
             Check(GetProcessTimes(process.Process, out created, out exited, out kernel, out user));
-            writer.WriteLine(json.Serialize(new { type = "prepared", version = 1, id = id, jobName = jobName, pid = process.Pid, creationTime = created.ToString(System.Globalization.CultureInfo.InvariantCulture) }));
+            string creationTime = created.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            writer.WriteLine(json.Serialize(new { type = "prepared", version = 2, id = id, jobName = jobName, pid = process.Pid, creationTime = creationTime }));
             // The server persists identity before acknowledging. EOF/cancel never runs user code.
-            if (reader.ReadLine() != "resume") Cancel();
+            string acknowledgement = reader.ReadLine();
+            var decision = acknowledgement == null ? new Dictionary<string, object>() : json.Deserialize<Dictionary<string, object>>(acknowledgement);
+            if (!decision.ContainsKey("action") || (string)decision["action"] != "resume") Cancel();
             else {
                 if (ResumeThread(process.Thread) == UInt32.MaxValue) throw new Win32Exception(Marshal.GetLastWin32Error());
                 var watcher = new Thread(delegate() {
@@ -129,10 +154,11 @@ internal static class JobHost
                 Thread.Sleep(10);
             }
             int result = cancelled != 0 ? -1 : unchecked((int)exitCode);
-            writer.WriteLine(json.Serialize(new { type = "empty", version = 1, id = id, activeProcesses = 0, exitCode = result }));
+            SaveReceipt(receiptPath, receiptKey, json.Serialize(new { version = 1, id = id, jobName = jobName, pid = process.Pid, creationTime = creationTime, activeProcesses = 0, exitCode = result, recordedUtc = DateTime.UtcNow.ToString("o") }), json);
+            writer.WriteLine(json.Serialize(new { type = "empty", version = 2, id = id, activeProcesses = 0, exitCode = result }));
             return result;
         } catch (Exception error) {
-            Console.Error.WriteLine("ControlOS process host: " + error.Message);
+            try { Console.Error.WriteLine("ControlOS process host: " + error.Message); } catch { /* owner already exited */ }
             return 125;
         } finally {
             // Assignment failure must not strand a suspended process outside the job.

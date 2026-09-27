@@ -4,7 +4,7 @@ import type { AgentRun, RunDetail, RunHumanAction } from '@ado/shared';
 import { Button, Card, Chip, Icon, cx, type Tone } from '../kit';
 import { useBus } from '../store/bus';
 import { durationLabel, timeAgo } from '../lib/time';
-import { fetchRunDetail, fetchRuns, killRun, setRunOutcome, verifyRun } from '../lib/runs';
+import { fetchRunDetail, fetchRuns, killRun, setRunOutcome, verifyRun, reconcileRun } from '../lib/runs';
 import { dispatchPrompt } from '../lib/prompts';
 
 const STATUS_TONE: Record<AgentRun['status'], Tone> = {
@@ -126,6 +126,11 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
             .catch((error: Error) => setNote(error.message)).finally(() => setBusy(false));
         }}>Run npm verify</Button>}
         <p>Verification: {detail.verifyVerdict ?? 'not independently verified'}</p>
+        {detail.status === 'failed' && detail.processTermination === 'unconfirmed' && <Button size="sm" disabled={busy} onClick={() => {
+          setBusy(true);
+          void reconcileRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Process stop confirmed. The previous attempt remains failed.'); onChanged(); })
+            .catch((error: Error) => setNote(error.message)).finally(() => setBusy(false));
+        }}>Recheck process stop</Button>}
         {(detail.status === 'done' || detail.status === 'failed') && <p className={detail.processTermination === 'unconfirmed' ? 'text-warning' : undefined}>
           {detail.processTermination === 'confirmed' ? 'Agent processes: stopped.' : detail.processTermination === 'unconfirmed'
             ? 'Process stop is unconfirmed. This repository remains locked.' : 'Process stop confirmation: not recorded.'}

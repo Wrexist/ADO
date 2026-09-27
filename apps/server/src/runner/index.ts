@@ -17,6 +17,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { redact } from '../lib/redact';
 import { prepareWorkspace, workspaceEvidence } from './workspace';
+import { readTerminationReceipt } from '../lib/terminationReceipt';
 
 export interface DispatchInput {
   repoId: string;
@@ -32,6 +33,7 @@ interface RunnerOpts {
   timeoutMs?: number;
   defaultProvider?: 'claude' | 'codex';
   workspaceRoot?: string;
+  receiptRoot?: string;
   secrets?: () => Array<string | undefined>;
   /** repoId → absolute cwd (the allow-list; a dispatch outside it is rejected). */
   cwdFor: (repoId: string) => string | null;
@@ -108,8 +110,41 @@ export class Runner {
       }
       this.failRun(o.id, { repoId: o.repoId, task: o.task, model: o.model === 'default' ? undefined : o.model, provider: o.provider }, null, o.engineVersion === 1 ? 'interrupted; previous process outcome unknown; writer lock retained' : 'orphaned on boot');
     }
+    for (const lock of this.db.select().from(executionLocks).all()) this.recoverReceipt(lock.runId);
     this.drainNext();
     return orphans.length;
+  }
+
+  /** Recheck evidence only. Never kill by a persisted PID or retry the old attempt. */
+  reconcileRun(runId: string): boolean {
+    const recovered = this.recoverReceipt(runId);
+    if (recovered) this.drainNext();
+    return recovered;
+  }
+
+  private recoverReceipt(runId: string): boolean {
+    if (!this.opts.receiptRoot || this.isLive(runId)) return false;
+    const run = this.db.select().from(runs).where(eq(runs.id, runId)).get();
+    const lock = this.db.select().from(executionLocks).where(eq(executionLocks.runId, runId)).get();
+    if (!run || !lock || run.status !== 'failed') return false;
+    const receipt = readTerminationReceipt(this.opts.receiptRoot, run.processIdentity);
+    if (!receipt) return false;
+    const ts = new Date().toISOString();
+    return this.bus.commit((tx) => {
+      const current = tx.select().from(runs).where(eq(runs.id, runId)).get();
+      const currentLock = tx.select().from(executionLocks).where(eq(executionLocks.resource, lock.resource)).get();
+      if (!current || current.status !== 'failed' || current.processIdentity !== run.processIdentity || currentLock?.runId !== runId || currentLock.owner !== lock.owner) return false;
+      tx.update(runs).set({ processTermination: 'confirmed', exitCode: receipt.exitCode,
+        note: 'interrupted; durable receipt confirms owned processes stopped; previous attempt not retried',
+      }).where(eq(runs.id, runId)).run();
+      tx.delete(executionLocks).where(eq(executionLocks.resource, lock.resource)).run();
+      return true;
+    }, (recovered) => recovered ? [{
+      id: `process-recovered:${runId}:${receipt.id}`, type: 'activity.appended', ts,
+      source: { kind: 'runner', ref: runId },
+      payload: { item: { id: `process-recovered:${runId}`, icon: 'check', tone: 'info', title: run.repoId,
+        detail: 'Owned processes confirmed stopped; writer lock released. Previous attempt was not retried.', ts, repoId: run.repoId } },
+    }] : []);
   }
 
   /** Append to a run's live timeline (bounded ring; prunes the oldest runs' timelines). */
@@ -348,7 +383,7 @@ export class Runner {
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
     upsertAgent('running', null);
 
-    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider,
+    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot,
       onProcessIdentity: (identity) => {
         const saved = this.db.update(runs).set({ processIdentity: JSON.stringify(identity), processTermination: 'unconfirmed' })
           .where(and(eq(runs.id, runId), eq(runs.status, 'running'))).run();

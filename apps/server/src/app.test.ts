@@ -45,6 +45,14 @@ describe('server security + bus (gate p2 criteria)', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('requires owner authentication to recheck process receipts and never offers a force unlock', async () => {
+    const url = '/api/runs/missing/reconcile';
+    expect((await srv.app.inject({ method: 'POST', url, headers: HOST_OK, payload: {} })).statusCode).toBe(401);
+    const response = await srv.app.inject({ method: 'POST', url, headers: { ...HOST_OK, 'x-acc-token': 'test-token' }, payload: { force: true } });
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error).toContain('writer lock remains');
+  });
+
   it('pairs only a browser presenting the owner token, without returning credentials', async () => {
     for (const token of ['', 'wrong-token', 'test-token']) {
       const res = await srv.app.inject({ method: 'POST', url: '/api/session', headers: { ...HOST_OK, 'x-acc-token': token } });

@@ -93,7 +93,7 @@ describe.skipIf(process.platform !== 'win32')('native process ownership in the r
       expect(firstRow.status).toBe('failed');
       expect(childPids).toHaveLength(3);
       expect(childPids).toContain(JSON.parse(firstRow.processIdentity!).pid);
-      expect(JSON.parse(firstRow.processIdentity!)).toMatchObject({ version: 1, platform: 'win32' });
+      expect(JSON.parse(firstRow.processIdentity!)).toMatchObject({ version: 2, platform: 'win32' });
       if (mode === 'cancel') {
         await expect.poll(() => db.select().from(runs).all()[1].status, { timeout: 10000 }).toBe('done');
         expect(firstRow.processTermination).toBe('confirmed');

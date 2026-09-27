@@ -369,9 +369,13 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R1. **Krav:** REQ11, REQ12. **Status:** not_run.\n\n**Givet:** En childprocess har startat men avslut har inte skrivits.\n\n**När:** Servern kraschar och startar om.\n\n**Godkänt endast om:** Processidentitet och lease avstäms. Ingen parallell ersättare startas utan fastställt säkert läge.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/runner/recovery.test.ts"
+        "apps/server/src/runner/recovery.test.ts",
+        "apps/server/src/runner/receiptRecovery.test.ts",
+        "apps/server/src/lib/terminationReceipt.test.ts",
+        "docs/controlos/native-process-host.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified.",
+      "evidenceLimit": "Local Windows protocol-v2 receipt recovery and transaction rollback tested. Stale identity with a live unrelated PID is injected metadata, not forced OS PID recycling. Full scenario status remains unchanged."
     },
     {
       "id": "T17",
@@ -415,13 +419,13 @@
         "command": "npx vitest run apps/server/src/runner/nativeProcess.test.ts",
         "result": "Passed: real runner and Codex adapter against a local protocol fixture. Two descendant levels ignore interruption; the adapter's grace period expires, all three assigned processes stop, and the writer lock is released only with empty-job confirmation. Companion host-loss scenario retains the lock.",
         "scope": "Windows agent Job Object host only. No POSIX, auxiliary-command, external-broker, OS-sandbox or real-model acceptance claim.",
-        "nativeArtifactSha256": "dad80d39e2f70655acc5c1fbb5d8e3bc36a5c6e9d18530e999cecbe2b4a1450a",
+        "nativeArtifactSha256": "63f346da3091b76e1cb373028120a8d041e5a177d1281a3f81d7576930b81961",
         "sourceSha256": {
-          "apps/server/native/JobHost.cs": "9ce03ae01e9e0b46fc5653a8b84d4894e66c83e15cc757945125e6f9961dad3f",
-          "apps/server/src/lib/ownedProcess.ts": "cb563ede3d52f7f24b5e07422b63700f91b673c05c1f5b9033f4da094a76b1a5",
-          "apps/server/src/runner/codex.ts": "530b1d2d4ac5615bb384744774f0198486d5d6c85691d75abe913245d4cd32ee",
-          "apps/server/src/runner/index.ts": "2e55e0d73cd8f56b7aae0368e36241eb96b3f5bd8c099d49df44b807ea25bf4a",
-          "apps/server/src/runner/nativeProcess.test.ts": "39e5a3f630be890fcc1db9580bd6fc0ba12afd263fa8f4296b3b3397b7a8a860"
+          "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
+          "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
+          "apps/server/src/runner/codex.ts": "36cc4635d690637635ac58b11c99acfa9e9d82d9f6c9394a8eac520cd382c753",
+          "apps/server/src/runner/index.ts": "20c82caf35eabba72b26ef524f8fa77427281d2dc9641d6c17141c1238cbdd59",
+          "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209"
         }
       }
     },
@@ -429,7 +433,13 @@
       "id": "T21",
       "title": "Förväxlad processidentitet",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ13, REQ11. **Status:** not_run.\n\n**Givet:** Ett gammalt PID har återanvänts av en annan process.\n\n**När:** Återställningsrutinen försöker stoppa den gamla körningen.\n\n**Godkänt endast om:** Den orelaterade processen lämnas orörd. PID räcker aldrig som ensam identitet.\n\n**Gäller:** always."
+      "specification": "**Grind:** R1. **Krav:** REQ13, REQ11. **Status:** not_run.\n\n**Givet:** Ett gammalt PID har återanvänts av en annan process.\n\n**När:** Återställningsrutinen försöker stoppa den gamla körningen.\n\n**Godkänt endast om:** Den orelaterade processen lämnas orörd. PID räcker aldrig som ensam identitet.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/receiptRecovery.test.ts",
+        "apps/server/src/lib/terminationReceipt.test.ts",
+        "docs/controlos/native-process-host.md"
+      ],
+      "evidenceLimit": "Local Windows protocol-v2 receipt recovery and transaction rollback tested. Stale identity with a live unrelated PID is injected metadata, not forced OS PID recycling. Full scenario status remains unchanged."
     },
     {
       "id": "T22",
@@ -623,7 +633,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "13a96d731dfb9349f9deeedd6100475ef02d77f42b86df04f92580ab1f4ca8b9",
+          "apps/server/src/app.ts": "7ad7ef5bff5ba064c9f79a5ff02fab349ca25f67b8a8cee8160fb742797f108c",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

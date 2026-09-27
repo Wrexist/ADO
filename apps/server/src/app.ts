@@ -455,6 +455,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       defaultProvider: env.agentProvider,
       secrets: () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))],
       workspaceRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'workspaces') : undefined,
+      receiptRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'process-receipts') : undefined,
       blockedReason: (repoId) =>
         projectSettings.isEnabled(repoId, 'agents')
           ? null
@@ -705,6 +706,11 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         diagnostics: row.diagnostics,
       },
     };
+  });
+  app.post('/api/runs/:id/reconcile', async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    if (!runner.reconcileRun(id)) return reply.code(409).send({ error: 'No matching stop receipt is available. The writer lock remains in place.' });
+    return { ok: true };
   });
   app.post('/api/runs/:id/kill', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;

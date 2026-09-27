@@ -1,18 +1,20 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { mkdirSync, realpathSync } from 'node:fs';
 import { createServer, type Socket } from 'node:net';
-import { isAbsolute } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { processEnv, supervise } from './processControl';
 
 export interface ProcessIdentity {
-  version: 1;
+  version: 2;
   platform: 'win32';
   id: string;
   jobName: string;
   pid: number;
   /** Exact Windows FILETIME, never rounded through a JavaScript number. */
   creationTime: string;
+  receiptKey?: string;
 }
 
 export interface OwnedProcess {
@@ -26,7 +28,7 @@ export interface OwnedProcess {
  * Successful completion means the native host observed zero active job members.
  * Other platforms retain the existing trusted-local process-group adapter.
  */
-export function spawnOwned(command: string, args: string[], cwd: string, onIdentity?: (identity: ProcessIdentity) => boolean | void): OwnedProcess {
+export function spawnOwned(command: string, args: string[], cwd: string, onIdentity?: (identity: ProcessIdentity) => boolean | void, receiptRoot?: string): OwnedProcess {
   if (process.platform !== 'win32') {
     const child = spawn(command, args, { cwd, env: processEnv(), detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     const kill = supervise(child);
@@ -39,11 +41,18 @@ export function spawnOwned(command: string, args: string[], cwd: string, onIdent
   }
   if (!isAbsolute(command)) throw new Error('Windows owned processes require an absolute executable path');
   const id = randomUUID();
+  let receiptPath: string | undefined;
+  const receiptKey = receiptRoot ? randomBytes(32).toString('hex') : undefined;
+  if (receiptRoot) {
+    mkdirSync(receiptRoot, { recursive: true, mode: 0o700 });
+    receiptPath = join(realpathSync(receiptRoot), `${id}.json`);
+  }
   const pipeName = `controlos-${id}`;
   const host = process.env.ACC_PROCESS_HOST ?? fileURLToPath(new URL('../../native/dist/ControlOS.JobHost.exe', import.meta.url));
   if (!isAbsolute(host)) throw new Error('Windows process host path must be absolute');
   let socket: Socket | undefined;
   let prepared = false;
+  let acknowledged = false;
   let report: number | undefined;
   let closed = false;
   let pipeEnded = false;
@@ -56,7 +65,9 @@ export function spawnOwned(command: string, args: string[], cwd: string, onIdent
   const done = new Promise<number>((resolve, reject) => { resolveDone = resolve; rejectDone = reject; });
   void done.catch(() => {});
   const server = createServer();
-  const child = spawn(host, [pipeName, id, command, ...args], { cwd, env: processEnv(), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  // libuv otherwise kills the host with its owner before it can flush a receipt.
+  // The host's control-pipe watchdog owns shutdown; keep our handle referenced.
+  const child = spawn(host, [pipeName, id, command, ...args], { cwd, env: processEnv(), windowsHide: true, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
   const cleanup = () => { clearTimeout(startupTimer); clearTimeout(closeTimer); socket?.destroy(); server.close(); };
   const fail = (reason: string) => {
     if (settled) return;
@@ -77,6 +88,9 @@ export function spawnOwned(command: string, args: string[], cwd: string, onIdent
   server.on('connection', (connection) => {
     if (socket || settled) { connection.destroy(); return; }
     socket = connection;
+    // Configure the receipt before a process can be created, so an owner crash
+    // between identity commit and resume still leaves the host able to attest stop.
+    connection.write(JSON.stringify({ receiptPath, receiptKey }) + '\n');
     let pending = '';
     connection.setEncoding('utf8');
     connection.on('error', (error) => fail(error.message));
@@ -89,15 +103,19 @@ export function spawnOwned(command: string, args: string[], cwd: string, onIdent
         const line = pending.slice(0, end); pending = pending.slice(end + 1);
         try {
           const message = JSON.parse(line) as Record<string, unknown>;
-          if (message.version !== 1 || message.id !== id) throw new Error('native protocol identity mismatch');
+          if (message.version !== 2 || message.id !== id) throw new Error('native protocol identity mismatch');
           if (message.type === 'prepared' && !prepared) {
             if (message.jobName !== `Local\\ControlOS.${id}` || !Number.isSafeInteger(message.pid) || Number(message.pid) <= 0 || typeof message.creationTime !== 'string' || !/^\d+$/.test(message.creationTime)) throw new Error('invalid process identity');
             prepared = true;
-            const identity: ProcessIdentity = { version: 1, platform: 'win32', id, jobName: message.jobName as string, pid: Number(message.pid), creationTime: message.creationTime };
+            const identity: ProcessIdentity = { version: 2, platform: 'win32', id, jobName: message.jobName as string, pid: Number(message.pid), creationTime: message.creationTime, receiptKey };
             // Synchronous durable write must succeed BEFORE execution is authorized.
-            if (onIdentity?.(identity) === false) requestStop();
+            let allowed: boolean | void;
+            try { allowed = onIdentity?.(identity); }
+            catch { throw new Error('identity persistence failed'); }
+            if (allowed === false) requestStop();
             clearTimeout(startupTimer);
-            connection.write(stopping ? 'cancel\n' : 'resume\n');
+            connection.write(JSON.stringify({ action: stopping ? 'cancel' : 'resume' }) + '\n');
+            acknowledged = true;
           } else if (message.type === 'empty' && prepared && report === undefined && message.activeProcesses === 0 && Number.isInteger(message.exitCode)) {
             report = Number(message.exitCode); finish();
           } else throw new Error('unexpected native protocol message');
@@ -109,7 +127,7 @@ export function spawnOwned(command: string, args: string[], cwd: string, onIdent
   const requestStop = () => {
     if (settled || stopping) return;
     stopping = true;
-    if (socket && !socket.destroyed) socket.write('cancel\n');
+    if (acknowledged && socket && !socket.destroyed) socket.write('cancel\n');
     closeTimer ??= setTimeout(() => fail('job stop deadline expired'), 15000);
     closeTimer.unref();
   };

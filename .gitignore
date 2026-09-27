@@ -19,6 +19,7 @@ automations.json
 *.sqlite-shm
 *.sqlite-wal
 backups/
+process-receipts/
 
 # logs & coverage
 *.log

@@ -69,7 +69,7 @@ describe.skipIf(process.platform !== 'win32')('Windows owned process host', () =
     proc.child.stderr.on('data', (data: Buffer) => { stderr += data.toString(); });
     try {
       expect(await proc.done).toBe(0);
-      expect(identity).toMatchObject({ version: 1, platform: 'win32' });
+      expect(identity).toMatchObject({ version: 2, platform: 'win32' });
       expect(identity?.creationTime).toMatch(/^\d+$/);
       expect(JSON.parse(stdout)).toEqual(args);
       expect(stderr.trim()).toBe('diagnostic');

@@ -8,7 +8,9 @@ do not claim the Windows termination guarantee.
 ## Launch and stop protocol
 
 1. The server opens a unique local named pipe and starts the packaged native
-   host with the existing minimal environment allow-list.
+   host with the existing minimal environment allow-list. A private initial
+   message configures the profile receipt path and a per-execution HMAC key
+   before an agent can be created. Neither key nor path enters agent argv/env.
 2. The host creates a uniquely named Job Object with kill-on-close and without
    breakaway permission, then creates the agent suspended and assigns it to
    that job. Arguments use Windows argv quoting, never a command interpreter.
@@ -20,7 +22,8 @@ do not claim the Windows termination guarantee.
    its protocol interrupt attempt before the existing forced-stop deadline.
    Loss of the owner's control connection terminates the assigned job.
 5. Root exit also terminates any remaining job members. The host queries active
-   membership until zero, reports confirmation and exits. Only then does the
+   membership until zero, durably publishes an authenticated receipt, reports
+   confirmation and exits. Only then does the
    Windows process-completion promise resolve. A lost host or missing final
    confirmation rejects that promise and retains the runner's writer lock.
 
@@ -39,6 +42,12 @@ unconfirmed result.
   before execution, three-process cancellation before the next writer, and
   quarantine when the host is killed without delivering confirmation.
 - Existing Codex protocol fixtures run through the same native host on Windows.
+- `receiptRecovery.test.ts`: abrupt owner exit, native receipt, reopened SQLite,
+  atomic recovery, and continuation of a previously queued next job without
+  retrying the interrupted attempt. Injected stale metadata referencing an
+  unrelated live PID never signals that process; this is not forced PID recycling.
+- `terminationReceipt.test.ts`: invalid signatures, identities, oversized data,
+  links, malformed data and missing evidence cannot release a lock.
 
 These fixtures do not invoke a model, spend API credit, alter pilot repositories
 or establish provider login acceptance.
@@ -60,10 +69,24 @@ created through external brokers/services may fall outside the assigned job.
 Same-OS-user interference remains inside the current trust boundary. Autonomous
 sandbox claims are not enabled by this implementation.
 
-After server failure, launch identity survives but a final confirmation may
-have been lost. The restarted runner still quarantines that lock. No recovery
-action kills by stored PID, and absence of a root PID does not release a lock.
-A durable termination receipt and validated quarantine recovery remain work.
+After server failure, a protocol-v2 receipt can confirm zero active job members.
+The host is detached from libuv's parent-exit job so its control-pipe EOF watcher
+can stop its own job and flush the receipt after server death. The server keeps
+its host handle referenced during normal operation. See
+[libuv's Windows implementation](https://raw.githubusercontent.com/libuv/libuv/v1.51.0/src/win/process.c).
+
+At restart or authenticated `POST /api/runs/:id/reconcile`, recovery checks the
+bounded regular receipt file, HMAC, execution ID, job name, exact creation time
+and PID against the durable identity. Confirmation, lock deletion and event
+commit atomically. The old attempt stays failed; an already queued next job may
+then start. No recovery action signals a stored PID. The run view offers this
+evidence recheck, with no force-unlock option.
+
+Missing identity, legacy protocol, missing/invalid receipt, host death before
+publication and launch-before-identity crash windows remain quarantined. No
+receipt is invented from PID absence. The HMAC key is held in the server SQLite
+profile and private host channel; same-user access to those remains trusted.
+Receipt flushing tests cover process crashes, not arbitrary power loss.
 Review/installer/verifier processes using `spawnMerged` also retain their
 previous supervisor and are outside this agent-host acceptance scope.
 

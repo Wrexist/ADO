@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: beständigt stoppkvitto och säker låsåterställning
+
+Windows-värden skriver nu ett autentiserat kvitto efter bekräftat tomt Job Object. Om servern kraschar kan nästa start, eller knappen för ny stoppkontroll, verifiera kvittot och atomiskt frigöra skrivlåset. Den avbrutna körningen förblir misslyckad; bara ett redan accepterat nästa jobb kan fortsätta. Återställningen signalerar aldrig ett lagrat PID. Saknade eller felaktiga kvitton och äldre protokoll behåller låset. Samma OS-användare är fortsatt en gemensam tillitsgräns.
+
+`npm run verify` passerade på Windows x64, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 274 tester i 44 filer och byggning. Testerna omfattar abrupt ägaravslut, återöppnad SQLite-profil, native-kvitto, bevarat lås vid lagringsfel och en orelaterad process vars PID finns i injicerad gammal metadata. Faktisk PID-återanvändning har inte framtvingats. T20/T43 har körts om och källhasharna uppdaterats; inga andra fullständiga scenarier har markerats godkända.
+
+`npm run smoke` passerade inklusive ny stoppkontroll vid 1536/390 px med märkta demofixtures. Loggar: `controlos-receipt-verify.log`, `controlos-receipt-atomic.log` och `controlos-receipt-smoke.log` (ignorerade). Ingen modell eller pilotagent startades. Webbens storleksvarning kvarstår.
+
+Hela R1 är fortfarande öppen: kraschfönster utan beständig identitet/kvitto, POSIX/övriga processadaptrar, verifierad fil-/nätverkssandbox och full native-profilmigrering återstår. Se [protokoll och begränsningar](docs/controlos/native-process-host.md) och [kraschmatris](docs/controlos/execution-recovery.md). Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: Windows-processidentitet och bekräftat stopp
 
 Windows-körningar med Claude/Codex använder nu en native Job Object-värd. Agenten skapas suspenderad, tilldelas jobbet och får inte köras förrän dess exakta identitet har lagrats. Avslut bekräftas först när jobbets aktiva processantal är noll. Tappad värd eller bekräftelse behåller skrivlåset. Bekräftelsen visas i körningsdetaljen; återdispatch från ett obekräftat resultat är spärrad. Se [processvärdens protokoll och begränsningar](docs/controlos/native-process-host.md).

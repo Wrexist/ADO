@@ -57,3 +57,8 @@ export async function verifyRun(id: string): Promise<void> {
   const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/verify`, { method: 'POST', headers: headers(), body: '{}' });
   if (!res.ok) throw new Error(await bodyError(res, 'Verification failed'));
 }
+
+export async function reconcileRun(id: string): Promise<void> {
+  const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/reconcile`, { method: 'POST', headers: headers(), body: '{}' });
+  if (!res.ok) throw new Error(await bodyError(res, 'Stop confirmation is not available'));
+}

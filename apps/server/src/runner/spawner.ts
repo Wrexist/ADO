@@ -17,6 +17,7 @@ export interface SpawnOpts {
   model?: string;
   provider?: string;
   onProcessIdentity?: (identity: ProcessIdentity) => boolean | void;
+  receiptRoot?: string;
 }
 
 export interface SpawnHandle {
@@ -48,7 +49,7 @@ export class ClaudeSpawner implements Spawner {
     if (opts.model) args.push('--model', opts.model);
 
     const executable = commandFor('claude', args);
-    const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity);
+    const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
     const { child, done, kill } = owned;
     child.stdin.end();
     // Best-effort: drop the child's scheduling priority so a build can't pin the box.

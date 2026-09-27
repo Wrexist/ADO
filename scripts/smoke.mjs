@@ -71,6 +71,11 @@ try {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/runs') await route.fulfill({ json: { runs: [runFixture] } });
     else if (path === '/api/runs/demo-stop') await route.fulfill({ json: { run: runFixture } });
+    else if (path === '/api/runs/demo-stop/reconcile') {
+      if (route.request().method() !== 'POST') throw new Error('Recovery must use POST');
+      runFixture.processTermination = 'confirmed';
+      await route.fulfill({ json: { ok: true } });
+    }
     else await route.continue();
   });
   for (const width of [1536, 390]) {
@@ -84,6 +89,12 @@ try {
       if (await page.getByRole('button', { name: 'Dispatch again', exact: true }).isDisabled() !== (state === 'unconfirmed')) throw new Error(`Incorrect redispatch state: ${state}`);
       if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Run detail overflow at ${width}px`);
       await page.screenshot({ path: join(out, `process-stop-${state ?? 'legacy'}-${width}.png`), fullPage: true });
+      if (state === 'unconfirmed') {
+        await page.getByRole('button', { name: 'Recheck process stop', exact: true }).click();
+        await page.getByText('Process stop confirmed. The previous attempt remains failed.', { exact: true }).waitFor();
+        await page.getByText('Agent processes: stopped.', { exact: true }).waitFor();
+        if (await page.getByRole('button', { name: 'Dispatch again', exact: true }).isDisabled()) throw new Error('Confirmed receipt did not update run controls');
+      }
     }
   }
   await desktop.addInitScript((accToken) => { window.__ACC_DESKTOP__ = { serverUrl: '', accToken }; }, token);
