@@ -1,0 +1,13 @@
+# Automation persistence failures
+
+Automation create, update, removal and last-run recording now build a candidate map, write it through the existing temporary-file/rename path, and only then replace the in-memory map. A denied replacement leaves both the previously committed memory and file state intact. The caller receives the error; a failed settings request cannot silently install a new recipe or change its enabled state in memory. Failures after replacement or uncertain storage outcomes still require reopening and reconciling the profile; this is not a multi-resource transaction.
+
+Dispatch and the automation JSON history are still separate commits. If dispatch returns a run ID but recording that ID fails, the engine reports the already-created run and blocks all further manual, event and scheduled dispatch in that engine session. It does not describe the dispatch as skipped, retry it, or report the run as failed. Unlocking the file alone does not clear this session guard.
+
+This is not a durable automation outbox. A crash between dispatch and history recording, or restart after such a failure, still requires reconciliation against the run store before automation is enabled. A session guard cannot prove exactly-once execution across restarts. Persistent automation intent, stable dispatch identity and recovery reconciliation remain required work; these tests do not certify T18 or the complete R1 gate.
+
+`apps/server/src/automations/persistence.test.ts` injects `EPERM` at rename for create/update/remove/history writes, checks committed in-memory state, exact file bytes, reopened state and temporary-file cleanup, then checks a successful subsequent save. A separate engine test creates one run, denies its history write and proves later manual/event/schedule triggers dispatch nothing even after the file becomes writable and the debounce interval expires.
+
+On Windows, the test also starts an owned hidden PowerShell process which opens only its disposable fixture with read/write sharing but without delete sharing. Real replacement attempts fail while reads remain possible; stored memory and bytes survive, and removal succeeds after that handle closes. This demonstrates a supported file-denial failure mode. It does not establish which process caused the earlier intermittent regression-suite `EPERM`.
+
+No production retry, delay, file deletion fallback or relaxed identity check was introduced. Power-loss durability, migration interruption and every other JSON store are outside this regression's scope. The previously packaged restore/migration evidence remains tied to its recorded source and artifact hashes; the new automation changes have not been packaged in that artifact.

@@ -1051,9 +1051,11 @@
         "apps/server/src/lib/persistence.test.ts",
         "apps/server/src/connections/connections.test.ts",
         "docs/controlos/native-credentials.md",
-        "docs/controlos/native-credential-evidence.json"
+        "docs/controlos/native-credential-evidence.json",
+        "apps/server/src/automations/persistence.test.ts",
+        "docs/controlos/automation-persistence.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. Automation rename-failure regression now checks committed memory, exact bytes, reopen state and real Windows replacement denial. It does not cover all stores, migration interruption or power loss; acceptance remains not_run."
     },
     {
       "id": "T36",

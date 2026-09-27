@@ -12,6 +12,7 @@ export type DispatchFn = (repoId: string, task: string, model?: string) => { run
 const DEBOUNCE_MS = 2 * 60 * 1000; // don't refire the same automation within 2 min
 
 export class AutomationEngine {
+  private recordingFailure: string | null = null;
   constructor(
     private store: AutomationStore,
     private dispatch: DispatchFn,
@@ -30,8 +31,13 @@ export class AutomationEngine {
   }
 
   private fire(a: Automation): { runId: string } {
+    if (this.recordingFailure) throw new Error(this.recordingFailure);
     const { runId } = this.dispatch(a.repoId, a.task, a.model);
-    this.store.markRun(a.id, runId, new Date(this.now()).toISOString());
+    try { this.store.markRun(a.id, runId, new Date(this.now()).toISOString()); }
+    catch {
+      this.recordingFailure = `Automation dispatched run ${runId}, but could not save its history. Further automation starts are paused in this session. Inspect the run and repair the profile before restarting.`;
+      throw new Error(this.recordingFailure);
+    }
     this.log(`automation "${a.name}" (${a.repoId}) → ${runId}`);
     return { runId };
   }
@@ -41,7 +47,7 @@ export class AutomationEngine {
     try {
       this.fire(a);
     } catch (err) {
-      this.log(`automation "${a.name}" skipped: ${(err as Error).message}`);
+      this.log(`automation "${a.name}": ${(err as Error).message}`);
     }
   }
 

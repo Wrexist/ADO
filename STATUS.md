@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## Automationer vid nekad lagring
+
+Automationers skapa/ändra/ta bort och körningshistorik uppdaterar nu minnet först efter lyckad lagring. Nekad filersättning behåller föregående sparade tillstånd. Om en körning redan skapats men dess automationshistorik inte kan sparas visar felet körnings-ID och motorn stoppar fler manuella, schemalagda och händelsestyrda starter i den sessionen. Den felaktiga beskrivningen att en sådan körning ”skippats” är borttagen.
+
+16 riktade tester passerade, inklusive injicerad rename-nekning och ett riktigt Windows-filhandtag som tillåter läsning men blockerar ersättning. Hela `npm run verify` passerade med 372 tester i 81 filer, typkontroll, lint och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Webbchunkens varning kvarstår vid cirka 572 kB före gzip. Loggar: `controlos-automation-persistence-focused.log` och `controlos-automation-persistence-verify.log`. Det tidigare intermittenta filfelets exakta orsak är fortfarande okänd; inga automatiska återförsök eller försvagade skrivkontroller infördes.
+
+Skyddet efter misslyckad historiklagring gäller ännu endast sessionen. Beständigt automationsuppdrag, stabil dispatchidentitet och avstämning över omstart återstår. Detta godkänner inte full T35 eller R1. 13/46 fullständiga scenarier är fortsatt lokalt godkända. Den tidigare paketerade artefaktens bevis gäller dess registrerade källhashar, inte dessa nya automationsändringar. [Kontrakt, tester och begränsningar](docs/controlos/automation-persistence.md). Följande avsnitt är historiska kontrollpunkter.
+
 ## Återställningsbindning och paketerad omprovning
 
 Återställda databaser har nu en egen identitet som måste matcha återställningsfilen före normal uppstart. Saknad, utbytt eller nedgraderad fil stoppar uppstart. Kopierade databasbytes kontrollsummeras innan databasen får sitt slutliga namn; avbruten kopiering lämnar en blockerad stagingfil. Befintliga äldre återställningsfiler registreras vid första uppstart. Skyddet kan inte identifiera äldre återställningar vars enda märke redan har raderats, och är ingen säkerhetsgräns mot samma OS-användare.

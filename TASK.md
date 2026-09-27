@@ -7,6 +7,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] Review OpenShip at a pinned source revision and implement neutral light/dark appearance, persistent theme choice, readable contrast and consistent detail-page navigation; see `docs/controlos/openship-design-review.md`.
 - [x] Preserve versioned queued jobs through normal shutdown and add explicit recovery-only cancellation with retained locks and transactional task/audit history.
 - [x] Bind restored profiles to database metadata, reject lost/mismatched markers and corrupt copied bytes, enroll present legacy markers, and verify refusal plus migration in the packaged Windows app.
+- [x] Preserve automation memory and disk state on rejected writes; identify already-dispatched runs and stop further session dispatch if history recording fails, with injected and real Windows file-denial regressions.
+- [ ] Bind automation dispatch intent and history durably across restart; the current session guard is not an automation outbox.
 
 - [x] Retain the audited base in a separate checkout and implement on `codex/controlos-stabilization`.
 - [x] Implement runtime browser pairing, guarded task-file writes, queue recovery/idempotency, repository writer ownership, isolated Git results and content-bound verification.

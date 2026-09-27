@@ -24,8 +24,9 @@ export class AutomationStore {
     this.data = rows as Record<string, Automation>;
   }
 
-  private persist(): void {
-    writeJsonStore(this.filePath, this.data);
+  private persist(next: Record<string, Automation>): void {
+    writeJsonStore(this.filePath, next);
+    this.data = next;
   }
 
   /** All automations, newest first. */
@@ -59,15 +60,14 @@ export class AutomationStore {
       lastRunTs: existing?.lastRunTs ?? null,
       lastRunId: existing?.lastRunId ?? null,
     };
-    this.data[id] = automation;
-    this.persist();
+    this.persist({ ...this.data, [id]: automation });
     return automation;
   }
 
   remove(id: string): boolean {
     if (!this.data[id]) return false;
-    delete this.data[id];
-    this.persist();
+    const next = { ...this.data }; delete next[id];
+    this.persist(next);
     return true;
   }
 
@@ -75,8 +75,6 @@ export class AutomationStore {
   markRun(id: string, runId: string, atTs: string): void {
     const a = this.data[id];
     if (!a) return;
-    a.lastRunTs = atTs;
-    a.lastRunId = runId;
-    this.persist();
+    this.persist({ ...this.data, [id]: { ...a, lastRunTs: atTs, lastRunId: runId } });
   }
 }
