@@ -68,6 +68,9 @@ async function start(): Promise<void> {
   // extraResources). Dev (`npm run build && npx electron dist/main.cjs`): sibling workspaces.
   const webDir = app.isPackaged ? join(process.resourcesPath, 'web') : join(__dirname, '../../web/dist');
   if (app.isPackaged) process.env.ACC_WORKFLOWS_DIR = join(process.resourcesPath, 'workflows');
+  process.env.ACC_PROCESS_HOST = app.isPackaged
+    ? join(process.resourcesPath, 'process-host', 'ControlOS.JobHost.exe')
+    : join(__dirname, '../../server/native/dist/ControlOS.JobHost.exe');
   process.env.ACC_MIGRATIONS_DIR = app.isPackaged
     ? join(process.resourcesPath, 'drizzle')
     : join(__dirname, '../../server/drizzle');

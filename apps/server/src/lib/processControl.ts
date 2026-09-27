@@ -28,11 +28,12 @@ export function commandFor(command: string, args: string[]): { command: string; 
 }
 
 /** Each POSIX child owns a process group; Windows taskkill targets only its PID tree. */
-export function supervise(child: ChildProcess, timeoutMs = 15 * 60_000): () => void {
+export function supervise(child: ChildProcess, timeoutMs = 15 * 60_000, stopOwned?: () => void): () => void {
   let settled = false;
   let escalation: NodeJS.Timeout | undefined;
   const kill = () => {
     if (settled || !child.pid) return;
+    if (stopOwned) { stopOwned(); return; }
     if (process.platform === 'win32') {
       const root = process.env.SystemRoot ?? process.env.SYSTEMROOT;
       if (!root) { child.kill(); return; }
@@ -51,7 +52,7 @@ export function supervise(child: ChildProcess, timeoutMs = 15 * 60_000): () => v
     const finish = () => {
       settled = true; clearTimeout(timer); clearTimeout(escalation); active.delete(child); resolve();
     };
-    child.once('close', finish); child.once('error', finish);
+    child.once('close', finish); child.once('error', () => { if (!child.pid) finish(); });
   });
   active.set(child, { kill, done });
   return kill;

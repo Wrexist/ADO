@@ -21,6 +21,8 @@ files:
 # The built web bundle + drizzle migrations ride beside the asar; the server serves the web
 # same-origin and applies migrations from ACC_MIGRATIONS_DIR at boot.
 extraResources:
+  - from: ../server/native/dist/ControlOS.JobHost.exe
+    to: process-host/ControlOS.JobHost.exe
   - from: ../web/dist
     to: web
   - from: ../server/drizzle

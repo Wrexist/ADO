@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: Windows-processidentitet och bekräftat stopp
+
+Windows-körningar med Claude/Codex använder nu en native Job Object-värd. Agenten skapas suspenderad, tilldelas jobbet och får inte köras förrän dess exakta identitet har lagrats. Avslut bekräftas först när jobbets aktiva processantal är noll. Tappad värd eller bekräftelse behåller skrivlåset. Bekräftelsen visas i körningsdetaljen; återdispatch från ett obekräftat resultat är spärrad. Se [processvärdens protokoll och begränsningar](docs/controlos/native-process-host.md).
+
+`npm run verify` passerade på Windows x64, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 270 tester i 42 testfiler och byggning. `npm run smoke` passerade, inklusive bekräftat/obekräftat/äldre processtillstånd vid 1536 och 390 px. Bilderna använder tydligt märkta API-fixtures, inte riktiga agentresultat. Loggar: ignorerade `controlos-native-final-verify.log` och `controlos-native-smoke.log`.
+
+T20 är lokalt godkänd via riktig körmotor, Codex-adapter, ignorerad interrupt, utlöpt grace-period och två nivåer barnprocesser. T43 har körts om; källhashen är uppdaterad. Ingen modell eller pilotagent startades. Hela R1-grinden är fortfarande öppen: säker återhämtning av karantänlås efter tappat slutkvitto, POSIX/övriga processadaptrar, verifierad fil-/nätverkssandbox och full native-profilmigrering återstår. Windows-installer/uppdatering och fjärr-CI har inte verifierats i denna etapp. Webbens storleksvarning kvarstår.
+
 ## R1: transaktionell händelselogg och återanslutning
 
 Köacceptans, claim och terminal körstatus sparar nu sina build-händelser i samma SQLite-transaktion. Händelseloggen fungerar som lokal outbox med leverans efter commit och återspelning efter omstart. Felande prenumeranter kan inte avbryta dispatch. Misslyckad claim behåller det accepterade jobbet i kön; misslyckad terminal lagring behåller skrivlåset.

@@ -402,12 +402,28 @@
     {
       "id": "T20",
       "title": "Process med barn och barnbarn",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ13. **Status:** not_run.\n\n**Givet:** Testprocessen startar två nivåer barn och ignorerar mjukt stopp.\n\n**När:** Cancel begärs och grace-perioden löper ut.\n\n**Godkänt endast om:** Hela tilldelade trädet stoppas eller läget markeras cancellation_unconfirmed och repolåset behålls.\n\n**Gäller:** always.",
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ13. **Status:** passed (local Windows agent-host evidence).\n\n**Givet:** Testprocessen startar två nivåer barn och ignorerar mjukt stopp.\n\n**När:** Cancel begärs och grace-perioden löper ut.\n\n**Godkänt endast om:** Hela tilldelade trädet stoppas eller läget markeras cancellation_unconfirmed och repolåset behålls.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/lib/processControl.test.ts"
+        "apps/server/src/runner/nativeProcess.test.ts",
+        "apps/server/src/lib/ownedProcess.test.ts",
+        "docs/controlos/native-process-host.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows x64, Node 22.18.0, npm 11.7.0, locally compiled .NET Framework process host",
+        "command": "npx vitest run apps/server/src/runner/nativeProcess.test.ts",
+        "result": "Passed: real runner and Codex adapter against a local protocol fixture. Two descendant levels ignore interruption; the adapter's grace period expires, all three assigned processes stop, and the writer lock is released only with empty-job confirmation. Companion host-loss scenario retains the lock.",
+        "scope": "Windows agent Job Object host only. No POSIX, auxiliary-command, external-broker, OS-sandbox or real-model acceptance claim.",
+        "nativeArtifactSha256": "dad80d39e2f70655acc5c1fbb5d8e3bc36a5c6e9d18530e999cecbe2b4a1450a",
+        "sourceSha256": {
+          "apps/server/native/JobHost.cs": "9ce03ae01e9e0b46fc5653a8b84d4894e66c83e15cc757945125e6f9961dad3f",
+          "apps/server/src/lib/ownedProcess.ts": "cb563ede3d52f7f24b5e07422b63700f91b673c05c1f5b9033f4da094a76b1a5",
+          "apps/server/src/runner/codex.ts": "530b1d2d4ac5615bb384744774f0198486d5d6c85691d75abe913245d4cd32ee",
+          "apps/server/src/runner/index.ts": "2e55e0d73cd8f56b7aae0368e36241eb96b3f5bd8c099d49df44b807ea25bf4a",
+          "apps/server/src/runner/nativeProcess.test.ts": "39e5a3f630be890fcc1db9580bd6fc0ba12afd263fa8f4296b3b3397b7a8a860"
+        }
+      }
     },
     {
       "id": "T21",
@@ -607,7 +623,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "ce2aced00bf1d19edac76f51373f8207cc68993da1fdc70b1eab3743997d7915",
+          "apps/server/src/app.ts": "13a96d731dfb9349f9deeedd6100475ef02d77f42b86df04f92580ab1f4ca8b9",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

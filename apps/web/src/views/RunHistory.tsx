@@ -119,13 +119,17 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       </div>
 
       {/* timeline — live (growing), ended (complete for this boot), or honestly unavailable */}
-      <div className="mt-3 break-all rounded-tile border p-3 text-label text-text2">
+      <div className="mt-3 break-words rounded-tile border p-3 text-label text-text2">
         {detail.status === 'done' && detail.workspacePath && <Button size="sm" disabled={busy} onClick={() => {
           setBusy(true); setNote('Running repository verification...');
           void verifyRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Verification recorded. Review the result before accepting.'); })
             .catch((error: Error) => setNote(error.message)).finally(() => setBusy(false));
         }}>Run npm verify</Button>}
         <p>Verification: {detail.verifyVerdict ?? 'not independently verified'}</p>
+        {(detail.status === 'done' || detail.status === 'failed') && <p className={detail.processTermination === 'unconfirmed' ? 'text-warning' : undefined}>
+          {detail.processTermination === 'confirmed' ? 'Agent processes: stopped.' : detail.processTermination === 'unconfirmed'
+            ? 'Process stop is unconfirmed. This repository remains locked.' : 'Process stop confirmation: not recorded.'}
+        </p>}
         {detail.workspacePath && <p>Working copy: {detail.workspacePath}</p>}
         {detail.branch && <p>Branch: {detail.branch}</p>}
         {detail.baseSha && <p>Base revision: {detail.baseSha}</p>}
@@ -179,7 +183,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
             {confirmKill ? 'Confirm kill' : detail.status === 'queued' ? 'Cancel run' : 'Kill run'}
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => void again()} disabled={busy}>
+          <Button size="sm" variant="outline" onClick={() => void again()} disabled={busy || detail.processTermination === 'unconfirmed'}>
             {busy ? 'Dispatching…' : 'Dispatch again'}
           </Button>
         )}

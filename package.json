@@ -12,13 +12,15 @@
     "apps/*"
   ],
   "scripts": {
-    "setup": "node scripts/bootstrap-env.mjs",
-    "predev": "node scripts/bootstrap-env.mjs",
+    "setup": "node scripts/build-process-host.mjs && node scripts/bootstrap-env.mjs",
+    "predev": "node scripts/build-process-host.mjs && node scripts/bootstrap-env.mjs",
     "dev": "concurrently -n server,web -c magenta,cyan \"npm run dev -w @ado/server\" \"npm run dev -w @ado/web\"",
     "demo": "concurrently -n server,web -c magenta,cyan \"npm run start -w @ado/server -- --demo\" \"npm run dev -w @ado/web\"",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "test": "vitest run",
+    "pretest": "node scripts/build-process-host.mjs",
+    "prebuild": "node scripts/build-process-host.mjs",
     "build": "npm run build --workspaces --if-present",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "smoke": "node scripts/smoke.mjs",

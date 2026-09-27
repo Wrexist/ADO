@@ -2,9 +2,9 @@
  * Uses existing ChatGPT login only; API billing and approval escalation are not enabled.
  * https://learn.chatgpt.com/docs/app-server
  */
-import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { commandFor, processEnv, supervise } from '../lib/processControl';
+import { commandFor } from '../lib/processControl';
+import { spawnOwned } from '../lib/ownedProcess';
 import type { AgentUpdate } from './adapter';
 import type { Spawner, SpawnOpts, SpawnHandle } from './spawner';
 
@@ -22,8 +22,9 @@ export class CodexSpawner implements Spawner {
   constructor(private readonly executable = () => commandFor('codex', ['app-server'])) {}
   spawn(opts: SpawnOpts): SpawnHandle {
     const executable = this.executable();
-    const child = spawn(executable.command, executable.args, { cwd: opts.cwd, env: processEnv(), windowsHide: true, detached: process.platform !== 'win32', stdio: ['pipe', 'pipe', 'pipe'] });
-    const forceKill = supervise(child);
+    const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity);
+    const { child } = owned;
+    const forceKill = owned.kill;
     let diagnostics = ''; child.stderr.on('data', (chunk: Buffer) => { diagnostics = (diagnostics + chunk.toString()).slice(-4000); });
     const reader = createInterface({ input: child.stdout });
     let threadId: string | undefined; let turnId: string | undefined; let stopped = false; let completed = false;
@@ -33,10 +34,9 @@ export class CodexSpawner implements Spawner {
     const shutdown = () => {
       child.stdin.end(); shutdownTimer ??= setTimeout(forceKill, 3000); shutdownTimer.unref();
     };
-    const done = new Promise<number>((resolve) => {
-      child.once('close', (code) => { clearTimeout(shutdownTimer); resolve(completed && !stopped ? code ?? -1 : -1); });
-      child.once('error', (error) => { diagnostics = error.message; reader.close(); resolve(-1); });
-    });
+    const done = owned.done.then((code) => completed && !stopped ? code : -1).finally(() => clearTimeout(shutdownTimer));
+    void done.catch(() => {});
+    child.once('error', (error) => { diagnostics = error.message; reader.close(); });
     const kill = () => {
       stopped = true;
       if (threadId && turnId) send({ id: 99, method: 'turn/interrupt', params: { threadId, turnId } });
@@ -90,6 +90,6 @@ export class CodexSpawner implements Spawner {
         yield { kind: 'done', ok: false, tokensIn, tokensOut, turns: null, resultText: null };
       } finally { if (!completed) forceKill(); }
     }
-    return { lines: (async function* () {})(), updates: updates(), done, kill, diagnostics: () => diagnostics };
+    return { lines: (async function* () {})(), updates: updates(), done, kill, diagnostics: () => diagnostics, terminationConfirmed: owned.terminationConfirmed };
   }
 }

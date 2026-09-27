@@ -8,6 +8,7 @@
  *                         rebuilt for Electron's ABI by electron-builder)
  */
 import { build } from 'esbuild';
+import '../../../scripts/build-process-host.mjs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 

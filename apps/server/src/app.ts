@@ -631,6 +631,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     tokensOut: r.tokensOut,
     turns: r.turns,
     exitCode: r.exitCode,
+    processTermination: r.processTermination,
     note: r.note,
     humanAction: r.humanAction as 'accepted' | 'corrected' | 'redone' | null,
     workspacePath: r.workspacePath,

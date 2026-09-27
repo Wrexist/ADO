@@ -26,12 +26,11 @@ provider-side idempotency or full R1 acceptance. SQLite currently uses WAL with
 
 ## Remaining process boundary
 
-The current process adapters still need durable identity and confirmed tree
-termination. PID-only recovery must not be introduced. Windows Job Objects are
-a candidate for assigning processes before they can create descendants and
-observing group termination, with inheritance and external-process-launch
-limitations to test. They are not a filesystem sandbox. See the official
-[Job Objects documentation](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects).
+Windows Claude/Codex agents now use a native Job Object host with persisted
+identity before resume and confirmed empty-job termination. See the
+[native process host](native-process-host.md) for the protocol, tests and limits.
+POSIX adapters and auxiliary command runners do not claim this guarantee.
+PID-only recovery must not be introduced. Job Objects are not a filesystem sandbox.
 
 Quarantined locks have no expiry or manual database deletion workflow. They
 must remain until a supported recovery path establishes a safe state.

@@ -266,6 +266,7 @@ export class Runner {
           endedTs: new Date().toISOString(),
           durationMs: startedMs ? Date.now() - startedMs : null,
           note: reason.slice(0, 200),
+          processTermination: this.handles.get(runId)?.terminationConfirmed?.() ? 'confirmed' : this.unconfirmedProcesses.has(runId) ? 'unconfirmed' : undefined,
         })
         .where(eq(runs.id, runId))
         .run(), [this.buildEvent(runId, input, 'failed', startedMs)]);
@@ -308,6 +309,7 @@ export class Runner {
       this.failRun(runId, input, startedMs, reason);
     } finally {
       this.killed.delete(runId);
+      this.handles.delete(runId);
       this.activeRuns.delete(runId);
       try {
         const persisted = this.db.select({ status: runs.status }).from(runs).where(eq(runs.id, runId)).get();
@@ -346,7 +348,14 @@ export class Runner {
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
     upsertAgent('running', null);
 
-    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider });
+    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider,
+      onProcessIdentity: (identity) => {
+        const saved = this.db.update(runs).set({ processIdentity: JSON.stringify(identity), processTermination: 'unconfirmed' })
+          .where(and(eq(runs.id, runId), eq(runs.status, 'running'))).run();
+        if (saved.changes !== 1) throw new Error('Process identity could not be recorded');
+        return !this.stopped && !this.killed.has(runId) && !this.opts.blockedReason?.(input.repoId);
+      },
+    });
     this.handles.set(runId, handle);
     this.unconfirmedProcesses.add(runId);
     const processDone = handle.done.then((code) => {
@@ -406,7 +415,6 @@ export class Runner {
       throw error;
     } finally {
       clearTimeout(timeout);
-      this.handles.delete(runId);
     }
 
     if (baseSha) {
@@ -429,6 +437,7 @@ export class Runner {
         tokensOut,
         turns,
         exitCode,
+        processTermination: handle.terminationConfirmed?.() ? 'confirmed' : null,
         note: timedOut ? 'wall-clock timeout' : wasKilled ? 'killed from the dashboard' : resultFailed ? 'agent reported an error' : opaque ? 'opaque stream' : null,
         resultText: resultText ? redact(resultText, this.opts.secrets?.()) : null,
         diagnostics: handle.diagnostics ? redact(handle.diagnostics(), this.opts.secrets?.()).slice(-4000) : null,

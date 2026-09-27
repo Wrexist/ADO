@@ -60,11 +60,37 @@ try {
     await page.screenshot({ path: join(out, `mobile-${route.slice(1)}.png`), fullPage: true });
   }
   const desktop = await browser.newPage();
+  // Explicit API fixtures: exercise terminal process-stop UI without starting an agent.
+  const runFixture = {
+    id: 'demo-stop', repoId: 'demo-process-fixture', task: 'DEMO: process stop confirmation', model: 'fixture', provider: 'codex', status: 'failed',
+    startedTs: new Date().toISOString(), endedTs: new Date().toISOString(), durationMs: 1000, tokensIn: null, tokensOut: null, turns: null,
+    exitCode: null, note: 'Demo fixture; no provider or pilot process was started.', humanAction: null, processTermination: 'unconfirmed',
+    timelineState: 'ended', timeline: [], resultText: null,
+  };
+  await page.route('**/api/runs**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/runs') await route.fulfill({ json: { runs: [runFixture] } });
+    else if (path === '/api/runs/demo-stop') await route.fulfill({ json: { run: runFixture } });
+    else await route.continue();
+  });
+  for (const width of [1536, 390]) {
+    await page.setViewportSize({ width, height: 1024 });
+    for (const state of ['unconfirmed', 'confirmed', null]) {
+      runFixture.processTermination = state;
+      await page.goto(base + '/agents?run=demo-stop'); await pair();
+      const message = state === 'confirmed' ? 'Agent processes: stopped.' : state === 'unconfirmed'
+        ? 'Process stop is unconfirmed. This repository remains locked.' : 'Process stop confirmation: not recorded.';
+      await page.getByText(message, { exact: true }).waitFor();
+      if (await page.getByRole('button', { name: 'Dispatch again', exact: true }).isDisabled() !== (state === 'unconfirmed')) throw new Error(`Incorrect redispatch state: ${state}`);
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Run detail overflow at ${width}px`);
+      await page.screenshot({ path: join(out, `process-stop-${state ?? 'legacy'}-${width}.png`), fullPage: true });
+    }
+  }
   await desktop.addInitScript((accToken) => { window.__ACC_DESKTOP__ = { serverUrl: '', accToken }; }, token);
   await desktop.setViewportSize({ width: 1536, height: 1024 });
   await desktop.goto(base); await desktop.getByRole('heading', { name: 'Welcome back' }).waitFor({ timeout: 10000 });
   if (errors.length) throw new Error(errors.join('\n'));
-  console.log('Smoke passed: no bundled credential, pairing/rejection/disconnect/reload, desktop runtime access, desktop and mobile routes.');
+  console.log('Smoke passed: no bundled credential, pairing/rejection/disconnect/reload, desktop runtime access, desktop and mobile routes, process-stop fixtures and redispatch controls.');
 } finally {
   await browser?.close(); server.kill();
 }

@@ -78,6 +78,8 @@ export const runs = sqliteTable(
     idempotencyKey: text('idempotency_key'),
     requestHash: text('request_hash'),
     diagnostics: text('diagnostics'),
+    processIdentity: text('process_identity'),
+    processTermination: text('process_termination'), // confirmed | unconfirmed | null (legacy/unsupported)
   },
   (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status)],
 );

@@ -44,6 +44,7 @@ export const AgentRun = z.object({
   headSha: z.string().nullable().optional(),
   diffDigest: z.string().nullable().optional(),
   verifyVerdict: z.enum(['pass', 'fail']).nullable().optional(),
+  processTermination: z.enum(['confirmed', 'unconfirmed']).nullable().optional(),
 });
 export type AgentRun = z.infer<typeof AgentRun>;
 

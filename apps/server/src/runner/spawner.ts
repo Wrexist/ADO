@@ -5,10 +5,10 @@
  * S12; claude uses its own auth) and a turn cap, at reduced OS priority.
  */
 import type { AgentUpdate } from './adapter';
-import { spawn } from 'node:child_process';
 import { setPriority } from 'node:os';
 import { createInterface } from 'node:readline';
-import { commandFor, processEnv, supervise } from '../lib/processControl';
+import { commandFor } from '../lib/processControl';
+import { spawnOwned, type ProcessIdentity } from '../lib/ownedProcess';
 
 export interface SpawnOpts {
   cwd: string;
@@ -16,14 +16,16 @@ export interface SpawnOpts {
   turnCap: number;
   model?: string;
   provider?: string;
+  onProcessIdentity?: (identity: ProcessIdentity) => boolean | void;
 }
 
 export interface SpawnHandle {
   lines: AsyncIterable<string>; // stdout, one JSONL line at a time
-  done: Promise<number>; // exit code (or -1 if killed)
+  done: Promise<number>; // exit code; rejects if process termination cannot be established
   kill: () => void;
   diagnostics?: () => string;
   updates?: AsyncIterable<AgentUpdate>;
+  terminationConfirmed?: () => boolean;
 }
 
 export interface Spawner {
@@ -46,14 +48,9 @@ export class ClaudeSpawner implements Spawner {
     if (opts.model) args.push('--model', opts.model);
 
     const executable = commandFor('claude', args);
-    const child = spawn(executable.command, executable.args, {
-      cwd: opts.cwd,
-      env: processEnv(),
-      windowsHide: true,
-      detached: process.platform !== 'win32',
-      // Drain stderr separately into a bounded buffer; never mix diagnostics into JSONL.
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity);
+    const { child, done, kill } = owned;
+    child.stdin.end();
     // Best-effort: drop the child's scheduling priority so a build can't pin the box.
     try {
       if (child.pid) setPriority(child.pid, 10);
@@ -64,12 +61,8 @@ export class ClaudeSpawner implements Spawner {
     const rl = createInterface({ input: child.stdout, crlfDelay: Infinity });
     let diagnostics = '';
     child.stderr.on('data', (chunk: Buffer) => { diagnostics = (diagnostics + chunk.toString()).slice(-4000); });
-    const kill = supervise(child);
-    const done = new Promise<number>((resolve) => {
-      child.on('close', (code) => resolve(code ?? -1));
-      child.on('error', (error) => { diagnostics = error.message; rl.close(); resolve(-1); });
-    });
+    child.on('error', (error) => { diagnostics = error.message; rl.close(); });
 
-    return { lines: rl, done, kill, diagnostics: () => diagnostics };
+    return { lines: rl, done, kill, diagnostics: () => diagnostics, terminationConfirmed: owned.terminationConfirmed };
   }
 }
