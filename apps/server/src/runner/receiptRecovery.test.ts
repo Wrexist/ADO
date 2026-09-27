@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -13,12 +13,13 @@ import { readTerminationReceipt } from '../lib/terminationReceipt';
 import { Runner } from './index';
 
 describe.skipIf(process.platform !== 'win32')('durable native stop recovery', () => {
-  it('recovers a crashed owner from its native receipt without retrying the interrupted attempt', async () => {
+  it('T16: keeps a crashed native owner quarantined until its receipt is available, then admits exactly one new owner', async () => {
     const root = mkdtempSync(join(tmpdir(), 'controlos-owner-crash-'));
     const database = join(root, 'profile.sqlite');
     const receipts = join(root, 'process-receipts');
     const marker = join(root, 'pids.txt');
     const hostMarker = join(root, 'host-pid.txt');
+    const nextMarker = join(root, 'next-start.txt');
     const leaf = `require('node:fs').appendFileSync(${JSON.stringify(marker)},process.pid+'\\n'); setInterval(()=>{},1000); setTimeout(()=>process.exit(),20000);`;
     const agent = `require('node:child_process').spawn(process.execPath,['-e',${JSON.stringify(leaf)}],{stdio:'ignore'}); ${leaf}`;
     const code = `
@@ -49,14 +50,40 @@ describe.skipIf(process.platform !== 'win32')('durable native stop recovery', ()
       const { db, sqlite } = openDb(database);
       const bus = new Bus(db); bus.replayFromDb(() => {});
       const started: string[] = [];
-      const runner = new Runner(bus, db, { spawn(opts) { started.push(opts.prompt); return { lines: (async function* () {})(), done: Promise.resolve(0), kill() {} }; } }, { cwdFor: () => root, receiptRoot: receipts });
+      const owners: string[] = [];
+      const runner = new Runner(bus, db, { spawn(opts) {
+        started.push(opts.prompt);
+        owners.push(db.select().from(executionLocks).all()[0].owner);
+        const proc = spawnOwned(process.execPath, ['-e', `require('node:fs').appendFileSync(${JSON.stringify(nextMarker)},'started');`], opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
+        proc.child.stdin.end(); proc.child.stdout.resume(); proc.child.stderr.resume();
+        return { lines: (async function* () {})(), done: proc.done, kill: proc.kill, terminationConfirmed: proc.terminationConfirmed };
+      } }, { cwdFor: () => root, receiptRoot: receipts });
       try {
         const interrupted = db.select().from(runs).all().find((row) => row.task === 'interrupted')!;
         expect(interrupted.status).toBe('running');
+        const originalLock = db.select().from(executionLocks).all()[0];
+        expect(originalLock.runId).toBe(interrupted.id);
+        const identity = JSON.parse(interrupted.processIdentity!) as ProcessIdentity;
+        expect(identity).toMatchObject({ version: 2, platform: 'win32' });
         await expect.poll(() => Boolean(readTerminationReceipt(receipts, interrupted.processIdentity)), { timeout: 10000 }).toBe(true);
+        // Withhold this actual native receipt to exercise recovery without proof.
+        // Even observed PID disappearance must not free the persisted ownership.
+        const receiptPath = join(receipts, `${identity.id}.json`), held = join(receipts, `${identity.id}.held`);
+        renameSync(receiptPath, held);
         expect(runner.reconcileOrphans()).toBe(2);
+        expect(started).toEqual([]);
+        expect(db.select().from(executionLocks).all()).toEqual([originalLock]);
+        expect(db.select().from(runs).all().find((row) => row.id === interrupted.id)).toMatchObject({ status: 'failed', processTermination: 'unconfirmed', processIdentity: interrupted.processIdentity });
+        expect(db.select().from(runs).all().find((row) => row.id !== interrupted.id)?.status).toBe('queued');
+        for (const pid of readFileSync(marker, 'utf8').trim().split(/\s+/).map(Number)) expect(() => process.kill(pid, 0)).toThrow();
+        expect(runner.reconcileRun(interrupted.id)).toBe(false);
+        expect(started).toEqual([]);
+        renameSync(held, receiptPath);
+        expect(runner.reconcileRun(interrupted.id)).toBe(true);
         await expect.poll(() => db.select().from(runs).all().find((row) => row.task !== 'interrupted')?.status).toBe('done');
         expect(started).toEqual(['previously accepted next job']);
+        expect(owners).toHaveLength(1); expect(owners[0]).not.toBe(originalLock.owner);
+        expect(readFileSync(nextMarker, 'utf8')).toBe('started');
         expect(db.select().from(runs).all().find((row) => row.id === interrupted.id)).toMatchObject({ status: 'failed', processTermination: 'confirmed' });
         expect(db.select().from(executionLocks).all()).toHaveLength(0);
         expect(runner.reconcileRun(interrupted.id)).toBe(false);

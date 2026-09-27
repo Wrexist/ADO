@@ -574,8 +574,8 @@
     {
       "id": "T16",
       "title": "Krasch efter spawn",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ11, REQ12. **Status:** not_run.\n\n**Givet:** En childprocess har startat men avslut har inte skrivits.\n\n**När:** Servern kraschar och startar om.\n\n**Godkänt endast om:** Processidentitet och lease avstäms. Ingen parallell ersättare startas utan fastställt säkert läge.\n\n**Gäller:** always.",
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ11, REQ12. **Status:** passed (local Windows native-host evidence).\n\n**Givet:** En childprocess har startat men avslut har inte skrivits.\n\n**När:** Servern kraschar och startar om.\n\n**Godkänt endast om:** Processidentitet och lease avstäms. Ingen parallell ersättare startas utan fastställt säkert läge.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/runner/recovery.test.ts",
         "apps/server/src/runner/receiptRecovery.test.ts",
@@ -584,10 +584,41 @@
         "apps/server/src/runner/verificationOwnership.test.ts",
         "docs/controlos/verification-processes.md",
         "apps/server/src/runner/spawnFailure.test.ts",
-        "apps/server/src/lib/processLaunch.test.ts"
+        "apps/server/src/lib/processLaunch.test.ts",
+        "apps/server/src/runner/nativeProcess.test.ts",
+        "apps/server/src/lib/terminationReceipt.ts",
+        "apps/server/src/lib/ownedProcess.ts",
+        "apps/server/native/JobHost.cs",
+        "apps/server/src/runner/index.ts",
+        "apps/server/src/runner/executionCapacity.ts"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified.",
-      "evidenceLimit": "Local Windows protocol-v2 receipt recovery and transaction rollback tested. Stale identity with a live unrelated PID is injected metadata, not forced OS PID recycling. Full scenario status remains unchanged."
+      "evidenceLimit": "Windows Job Object recovery is demonstrated. Stale metadata referencing a live unrelated PID is injected, not forced OS PID recycling. POSIX, broker processes and file/network sandboxing are outside this evidence. Missing pre-identity proof can still require retained quarantine.",
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows x64, Node 22.18.0, npm 11.7.0; compiled native Job Object host",
+        "command": "npx vitest run apps/server/src/runner/receiptRecovery.test.ts apps/server/src/runner/nativeProcess.test.ts apps/server/src/lib/terminationReceipt.test.ts; npm run typecheck -w @ado/server; npx eslint apps/server/src/runner/receiptRecovery.test.ts",
+        "result": "Passed: abrupt owner exit after an actual native-contained parent and child have started, before terminal state persists. Reopened recovery without the actual native receipt retains the exact identity and owner lock, marks uncertainty and leaves the next job queued even though old PIDs have disappeared. Restoring the authenticated receipt admits exactly one actual native-hosted next job under a different owner. The interrupted attempt stays failed and is never retried. Companion tests cover invalid identity/signatures, receipt transaction rollback, live unrelated PID protection and native host loss.",
+        "scope": "Local Windows owned Job Object process boundary and SQLite recovery. No provider/model call, pilot change, forced OS PID reuse, POSIX attestation, broker containment or OS file/network sandbox claim.",
+        "sourceSha256": {
+          "apps/server/src/runner/receiptRecovery.test.ts": "001cc52ff2654c15a512d5c349040c6d3895823a7785399e39fddeb459339154",
+          "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209",
+          "apps/server/src/lib/terminationReceipt.test.ts": "7c566275d09a2b96089c262d6e7fc3202f0ae792a8111bb45793e07422fab309",
+          "apps/server/src/lib/terminationReceipt.ts": "2e53d979694545a216a75e213aef3be9d10aa20c85749ed603924b6523329253",
+          "apps/server/src/lib/ownedProcess.ts": "986d1a4b8bcb6f67625e2c6c90625080bba36ccf2ea0129d0dfc840d8f5aa29e",
+          "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
+          "apps/server/src/runner/index.ts": "d96b69b5d02e36618bf0f640ca23565fbb10502c91d66ebe8d32a8fd63e9d2d7",
+          "apps/server/src/runner/executionCapacity.ts": "7e72c98b3e935481a55fb70bdba4ba285b8d4f4dc2eaed128bcff7966f289885",
+          "apps/server/src/runner/recovery.test.ts": "c2b76b9f700a3738724b4cad44386309114d1e382c706d160c29d170bebe0aa5",
+          "apps/server/src/runner/spawnFailure.test.ts": "da1fba8118285a8911217bbafd4fe23dac129dd12f5c052031e53cd64230e61e",
+          "docs/controlos/native-process-host.md": "de433e99341b7293e563f7ba95ad600c0d947b394017bc5dd5407a86856d60c2"
+        },
+        "revalidation": {
+          "date": "2026-09-27",
+          "command": "npx vitest run apps/server/src/runner/receiptRecovery.test.ts apps/server/src/runner/nativeProcess.test.ts apps/server/src/lib/terminationReceipt.test.ts; npm run typecheck -w @ado/server; npx eslint apps/server/src/runner/receiptRecovery.test.ts",
+          "result": "Six targeted native/receipt tests in three files, server typecheck and targeted lint passed. Only receiptRecovery.test.ts and documentation changed; production code is unchanged from full verify at 88c7990 (348 tests and build).",
+          "browser": "Web sources unchanged; latest full desktop/mobile smoke is recorded at e94925d."
+        }
+      }
     },
     {
       "id": "T17",

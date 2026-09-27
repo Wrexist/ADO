@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: avstämning efter verklig native-processstart och serverkrasch
+
+T16:s native-prov omfattar nu både saknat och tillgängligt stoppbevis efter en faktisk ägarkrasch. En separat process startar ett riktigt Windows Job Object med en Node-process och dess barn, sparar identiteten och avslutas abrupt innan körningens slutstatus skrivits. Vid återöppning hålls det faktiska native-kvittot först undan. Körningen blir uttryckligen avbruten/osäker, samma identitet och låsägare bevaras och nästa köade jobb startar inte. Att de gamla PID:erna har försvunnit räcker inte för upplåsning.
+
+När exakt samma autentiserade native-kvitto återställs kan återhämtningen släppa det gamla låset. Ett enda nytt native-ägt jobb startar under ett nytt ägarskap; den avbrutna körningen återstartas inte och förblir misslyckad. Kompletterande prov nekar fel signatur/identitet och behåller låset vid transaktionsfel. Se [processkontraktet](docs/controlos/native-process-host.md). Dokumentationen skiljer också uttryckligen mellan frigjord lokal controllerplats och kvarhållen beständig profilkapacitet.
+
+Sex riktade tester i tre filer passerade på Windows x64, Node 22.18.0/npm 11.7.0. Servertypkontroll och riktad lint passerade. Loggar: `controlos-post-spawn-focused.log`, `controlos-post-spawn-types.log` och `controlos-post-spawn-lint.log` (ignorerade). Denna ändring gäller testbevis och dokumentation; produkt- och webbkoden är oförändrade. Senaste fulla verifieringen är 348 tester och byggning vid `88c7990`, och senaste browserkontrollen hör till `e94925d`.
+
+T16 är lokalt godkänt: totalt 11 av 46 scenarier, med 35 fortfarande inte fullständigt provade. T16-beviset omfattar den egna Windows Job Object-gränsen; det påstår inte framtvingad OS-återanvändning av PID, POSIX-attestering, brokerprocesser eller fil-/nätverkssandbox. Kraschen före sparad processidentitet kan fortfarande kräva permanent karantän. Fulla R1–R4-grindar är öppna. Nästa ändring gäller originalarbetskopians filer och Git-metadata. Ingen modell, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: kvitterad köpost vid serverkrasch, återförsök och avstängd dispatch
 
 T15 har nu ett prov med en separat lyssnande HTTP-server. Ett injicerat fel hindrar claim-transaktionen efter accepterad köläggning. Testet tar emot serverns svar, kontrollerar att posten är köad utan processstart och avslutar sedan serverprocessen utan normal nedstängning. En ny server läser den temporära profilen, tar samma post under ett nytt beständigt ägarskap och startar exakt en riktig lokal Node-process. Ännu en återöppning skapar ingen dubblett. Detta gäller den provade punkten före claim/spawn; strömavbrott och övriga kraschpunkter omfattas inte.

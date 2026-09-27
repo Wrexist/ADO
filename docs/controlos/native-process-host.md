@@ -44,7 +44,11 @@ unconfirmed result.
 - Existing Codex protocol fixtures run through the same native host on Windows.
 - `receiptRecovery.test.ts`: abrupt owner exit, native receipt, reopened SQLite,
   atomic recovery, and continuation of a previously queued next job without
-  retrying the interrupted attempt. Injected stale metadata referencing an
+  retrying the interrupted attempt. T16 withholds the actual native receipt at
+  recovery: the original identity and owner lock remain, the next job stays queued,
+  and even observed disappearance of the old PIDs does not release it. Restoring
+  that exact receipt admits one actual native-hosted next process under a new
+  owner; the interrupted attempt remains failed. Injected stale metadata referencing an
   unrelated live PID never signals that process; this is not forced PID recycling.
 - `terminationReceipt.test.ts`: invalid signatures, identities, oversized data,
   links, malformed data and missing evidence cannot release a lock.
@@ -113,8 +117,10 @@ receipt alone is not used as proof that the supervisor has exited.
 
 The runner marks process outcome uncertain **before** calling `Spawner.spawn`.
 A synchronous exception may occur after process creation, so it does not release
-the repository writer lock. The capacity slot is released; unrelated repositories
-can proceed. The failed run stores `processTermination=unconfirmed`. Restart also
+the repository writer lock. The local controller slot is released, but the retained
+lock still occupies the profile-wide capacity introduced in migration 0016.
+Unrelated repositories can proceed only if capacity remains. The failed run stores
+`processTermination=unconfirmed`. Restart also
 records that state for an interrupted versioned run whose identity was never
 persisted, while retaining its lock and refusing automatic replacement.
 
