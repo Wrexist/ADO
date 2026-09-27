@@ -423,8 +423,8 @@
         "sourceSha256": {
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
-          "apps/server/src/runner/codex.ts": "36cc4635d690637635ac58b11c99acfa9e9d82d9f6c9394a8eac520cd382c753",
-          "apps/server/src/runner/index.ts": "20c82caf35eabba72b26ef524f8fa77427281d2dc9641d6c17141c1238cbdd59",
+          "apps/server/src/runner/codex.ts": "263716a4cc5603ef13232eef414d932d81e9b37600477e785240800a69667794",
+          "apps/server/src/runner/index.ts": "aefc94bcfddda9b6060665dd9ca6b3344305ae6f7e67ee17e4d182127b592abc",
           "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209"
         }
       }
@@ -444,8 +444,34 @@
     {
       "id": "T22",
       "title": "Översvämmad stderr",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ14. **Status:** not_run.\n\n**Givet:** En process skriver mer stderr än pipebuffertens storlek och fortsätter länge.\n\n**När:** Runnern konsumerar loggarna.\n\n**Godkänt endast om:** Ingen pipe-deadlock. Begränsad redigerad ring/spool, förlustflagga när gräns nås och begriplig felorsak.\n\n**Gäller:** always."
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ14. **Status:** passed (local Windows agent-adapter evidence).\n\n**Givet:** En process skriver mer stderr än pipebuffertens storlek och fortsätter länge.\n\n**När:** Runnern konsumerar loggarna.\n\n**Godkänt endast om:** Ingen pipe-deadlock. Begränsad redigerad ring/spool, förlustflagga när gräns nås och begriplig felorsak.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/outputFlood.test.ts",
+        "apps/server/src/runner/codex.test.ts",
+        "apps/server/src/lib/processOutput.test.ts",
+        "docs/controlos/process-output.md"
+      ],
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows x64, Node 22.18.0, npm 11.7.0",
+        "command": "npm run verify; npm run smoke; npx vitest run apps/server/src/lib/processOutput.test.ts apps/server/src/runner/outputFlood.test.ts apps/server/src/runner/codex.test.ts",
+        "result": "Passed: real process fixtures drain over 1 MiB stderr, retain redacted bounded diagnostics with an explicit loss marker, and stop oversized stdout before the run timeout. Runner persists failure and releases its writer lock after native completion. Browser fixture shows the diagnostic loss marker at 1536/390 pixels.",
+        "scope": "Local Windows Claude/Codex agent adapters using offline fixtures. No model call, auxiliary-command or POSIX acceptance claim. Secret handling across all other outputs remains T23 work.",
+        "sourceSha256": {
+          "apps/server/src/lib/processOutput.ts": "530e6e66a77f615d84e3cc09ab01c499a396fd7552233f5c4026bc6e38376e3c",
+          "apps/server/src/lib/processOutput.test.ts": "b5e2331352735e4b364fc83b44f0d1bd9fcfe5b71f87f8fdf1ac4bc719f05b22",
+          "apps/server/src/lib/redact.ts": "99ebf3cec194a8f696b4a21c40498381c51760e04ad4dcf65c9a294ec02ebc2f",
+          "apps/server/src/runner/outputFlood.test.ts": "aa909f44701ccefca47b7e0a7d1eed29f6ed006398e7c44abb65ca2b0b1911da",
+          "apps/server/src/runner/codex.test.ts": "c87763c41d08059c696d23c158e4236c327028a9fd80d576b4200fd95dcf9382",
+          "apps/server/src/runner/spawner.ts": "a09b14c5c3ddea31954a076fa514af2017d0375b4fd5fc2d6f9bbefc5bbd482a",
+          "apps/server/src/runner/codex.ts": "263716a4cc5603ef13232eef414d932d81e9b37600477e785240800a69667794",
+          "apps/server/src/runner/index.ts": "aefc94bcfddda9b6060665dd9ca6b3344305ae6f7e67ee17e4d182127b592abc",
+          "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
+          "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
+          "scripts/smoke.mjs": "f63618df52c09c2be2c92196908e5cebb468158b43ba3fe428ee38149675147c"
+        }
+      }
     },
     {
       "id": "T23",

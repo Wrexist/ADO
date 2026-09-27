@@ -66,6 +66,7 @@ try {
     startedTs: new Date().toISOString(), endedTs: new Date().toISOString(), durationMs: 1000, tokensIn: null, tokensOut: null, turns: null,
     exitCode: null, note: 'Demo fixture; no provider or pilot process was started.', humanAction: null, processTermination: 'unconfirmed',
     timelineState: 'ended', timeline: [], resultText: null,
+    diagnostics: '[diagnostics truncated: output was discarded]\nDEMO diagnostic with [redacted] credential',
   };
   await page.route('**/api/runs**', async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -86,6 +87,7 @@ try {
       const message = state === 'confirmed' ? 'Agent processes: stopped.' : state === 'unconfirmed'
         ? 'Process stop is unconfirmed. This repository remains locked.' : 'Process stop confirmation: not recorded.';
       await page.getByText(message, { exact: true }).waitFor();
+      await page.getByText(runFixture.diagnostics, { exact: true }).waitFor();
       if (await page.getByRole('button', { name: 'Dispatch again', exact: true }).isDisabled() !== (state === 'unconfirmed')) throw new Error(`Incorrect redispatch state: ${state}`);
       if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Run detail overflow at ${width}px`);
       await page.screenshot({ path: join(out, `process-stop-${state ?? 'legacy'}-${width}.png`), fullPage: true });

@@ -300,7 +300,8 @@ export class Runner {
           status: 'failed',
           endedTs: new Date().toISOString(),
           durationMs: startedMs ? Date.now() - startedMs : null,
-          note: reason.slice(0, 200),
+          note: redact(reason, this.opts.secrets?.()).slice(0, 200),
+          diagnostics: this.handles.get(runId)?.diagnostics ? redact(this.handles.get(runId)!.diagnostics!(), this.opts.secrets?.()).slice(-4000) : null,
           processTermination: this.handles.get(runId)?.terminationConfirmed?.() ? 'confirmed' : this.unconfirmedProcesses.has(runId) ? 'unconfirmed' : undefined,
         })
         .where(eq(runs.id, runId))
@@ -383,7 +384,7 @@ export class Runner {
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
     upsertAgent('running', null);
 
-    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot,
+    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot, secrets: this.opts.secrets?.(),
       onProcessIdentity: (identity) => {
         const saved = this.db.update(runs).set({ processIdentity: JSON.stringify(identity), processTermination: 'unconfirmed' })
           .where(and(eq(runs.id, runId), eq(runs.status, 'running'))).run();

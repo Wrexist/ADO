@@ -6,7 +6,7 @@
  */
 import type { AgentUpdate } from './adapter';
 import { setPriority } from 'node:os';
-import { createInterface } from 'node:readline';
+import { boundedDiagnostics, boundedLines } from '../lib/processOutput';
 import { commandFor } from '../lib/processControl';
 import { spawnOwned, type ProcessIdentity } from '../lib/ownedProcess';
 
@@ -18,6 +18,7 @@ export interface SpawnOpts {
   provider?: string;
   onProcessIdentity?: (identity: ProcessIdentity) => boolean | void;
   receiptRoot?: string;
+  secrets?: Array<string | undefined>;
 }
 
 export interface SpawnHandle {
@@ -36,6 +37,7 @@ export interface Spawner {
 /** Env allow-list: only what a child process legitimately needs. NO secrets. */
 
 export class ClaudeSpawner implements Spawner {
+  constructor(private readonly executable = (args: string[]) => commandFor('claude', args)) {}
   spawn(opts: SpawnOpts): SpawnHandle {
     const args = [
       '-p',
@@ -48,7 +50,7 @@ export class ClaudeSpawner implements Spawner {
     ];
     if (opts.model) args.push('--model', opts.model);
 
-    const executable = commandFor('claude', args);
+    const executable = this.executable(args);
     const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
     const { child, done, kill } = owned;
     child.stdin.end();
@@ -59,11 +61,10 @@ export class ClaudeSpawner implements Spawner {
       /* not supported everywhere / needs privileges — non-fatal */
     }
 
-    const rl = createInterface({ input: child.stdout, crlfDelay: Infinity });
-    let diagnostics = '';
-    child.stderr.on('data', (chunk: Buffer) => { diagnostics = (diagnostics + chunk.toString()).slice(-4000); });
-    child.on('error', (error) => { diagnostics = error.message; rl.close(); });
-
-    return { lines: rl, done, kill, diagnostics: () => diagnostics, terminationConfirmed: owned.terminationConfirmed };
+    const lines = boundedLines(child.stdout, kill);
+    const diagnostics = boundedDiagnostics(child.stderr, opts.secrets);
+    let launchFailed = false;
+    child.once('error', () => { launchFailed = true; });
+    return { lines, done, kill, diagnostics: () => launchFailed ? 'Claude process could not be started' : diagnostics(), terminationConfirmed: owned.terminationConfirmed };
   }
 }

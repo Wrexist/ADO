@@ -7,7 +7,7 @@ import type { AgentUpdate } from './adapter';
 
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); });
-function fixture(mode: 'success' | 'approval' | 'api' | 'invalid' | 'stop') {
+function fixture(mode: 'success' | 'approval' | 'api' | 'invalid' | 'stop' | 'oversized' | 'stderr') {
   const cwd = mkdtempSync(join(tmpdir(), 'ado-codex-protocol-')); dirs.push(cwd);
   const file = join(cwd, 'fake.cjs');
   writeFileSync(file, `
@@ -34,6 +34,8 @@ input.on('line', (line) => {
     output({id:m.id,result:{turn:{id:'turn'}}});
     output({method:'turn/started',params:{threadId:'thread',turn:{id:'turn'}}});
     if (mode === 'invalid') { process.stdout.write('invalid json\\n'); return; }
+    if (mode === 'oversized') { process.stdout.write('x'.repeat(5*1024*1024)); return; }
+    if (mode === 'stderr') for(let i=0;i<10000;i++) process.stderr.write('canary-private-value '+ 'x'.repeat(100)+'\\n');
     if (mode === 'stop') return;
     if (mode === 'approval') output({id:0,method:'item/commandExecution/requestApproval',params:{}});
     else finish();
@@ -49,18 +51,23 @@ input.on('line', (line) => {
   }
 });
 `);
-  return new CodexSpawner(() => ({ command: process.execPath, args: [file] })).spawn({ cwd, prompt: 'fixture only', turnCap: 10 });
+  return new CodexSpawner(() => ({ command: process.execPath, args: [file] })).spawn({ cwd, prompt: 'fixture only', turnCap: 10, secrets: ['canary-private-value'] });
 }
 
 describe('Codex app-server boundary (offline protocol fixture)', () => {
-  it.each(['success', 'approval'] as const)('completes %s with normalized evidence and denies approval', async (mode) => {
+  it.each(['success', 'approval', 'stderr'] as const)('completes %s with normalized evidence and denies approval', async (mode) => {
     const handle = fixture(mode); const updates: AgentUpdate[] = [];
     for await (const update of handle.updates!) updates.push(update);
     expect(await handle.done).toBe(0);
     expect(updates).toContainEqual({ kind: 'done', ok: true, tokensIn: 12, tokensOut: 7, turns: null, resultText: 'fixture completed' });
     if (mode === 'approval') expect(updates.some((u) => u.kind === 'progress' && u.text.includes('declined'))).toBe(true);
+    if (mode === 'stderr') {
+      expect(handle.diagnostics!()).toContain('diagnostics truncated');
+      expect(handle.diagnostics!()).not.toContain('canary-private-value');
+      expect(handle.diagnostics!().length).toBeLessThan(4000);
+    }
   });
-  it.each(['api', 'invalid'] as const)('fails closed for %s', async (mode) => {
+  it.each(['api', 'invalid', 'oversized'] as const)('fails closed for %s', async (mode) => {
     const handle = fixture(mode); const updates: AgentUpdate[] = [];
     for await (const update of handle.updates!) updates.push(update);
     expect(await handle.done).not.toBe(0);

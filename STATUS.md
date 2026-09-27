@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: begränsad agentutdata och synlig diagnostikförlust
+
+Claude/Codex dränerar nu stdout med begränsade rader och köer. Överskriden gräns stoppar processen med tydlig felorsak; skrivlåset väntar fortfarande på processutfallet. Stderr redigeras per begränsad rad innan den behålls, och bortkastad utdata ger en synlig förlustmarkering. Se [gränser och evidens](docs/controlos/process-output.md).
+
+`npm run verify` passerade på Windows x64, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 281 tester i 46 filer och byggning. De slutliga flödesfallen passerade separat efter två små felhanteringsjusteringar. `npm run smoke` passerade inklusive diagnostikförlust vid 1536/390 px. Loggar: `controlos-output-verify.log`, `controlos-output-final-targeted.log`, `controlos-output-smoke.log` (ignorerade).
+
+T22 är lokalt godkänd för agentadaptrarna med offlineprocesser; T20/T43 kördes om och källhasharna uppdaterades. Ingen riktig modell eller pilotagent kördes. Övriga processadaptrar, full T23-kontroll av hemligheter, sandbox och profilmigrering återstår; hela R1–R4 är fortsatt öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: beständigt stoppkvitto och säker låsåterställning
 
 Windows-värden skriver nu ett autentiserat kvitto efter bekräftat tomt Job Object. Om servern kraschar kan nästa start, eller knappen för ny stoppkontroll, verifiera kvittot och atomiskt frigöra skrivlåset. Den avbrutna körningen förblir misslyckad; bara ett redan accepterat nästa jobb kan fortsätta. Återställningen signalerar aldrig ett lagrat PID. Saknade eller felaktiga kvitton och äldre protokoll behåller låset. Samma OS-användare är fortsatt en gemensam tillitsgräns.

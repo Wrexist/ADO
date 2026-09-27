@@ -2,7 +2,8 @@
  * Uses existing ChatGPT login only; API billing and approval escalation are not enabled.
  * https://learn.chatgpt.com/docs/app-server
  */
-import { createInterface } from 'node:readline';
+import { boundedDiagnostics, boundedLines } from '../lib/processOutput';
+import { redact } from '../lib/redact';
 import { commandFor } from '../lib/processControl';
 import { spawnOwned } from '../lib/ownedProcess';
 import type { AgentUpdate } from './adapter';
@@ -25,8 +26,9 @@ export class CodexSpawner implements Spawner {
     const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
     const { child } = owned;
     const forceKill = owned.kill;
-    let diagnostics = ''; child.stderr.on('data', (chunk: Buffer) => { diagnostics = (diagnostics + chunk.toString()).slice(-4000); });
-    const reader = createInterface({ input: child.stdout });
+    const stderr = boundedDiagnostics(child.stderr, opts.secrets);
+    let failure = '';
+    const reader = boundedLines(child.stdout, forceKill);
     let threadId: string | undefined; let turnId: string | undefined; let stopped = false; let completed = false;
     let shutdownTimer: NodeJS.Timeout | undefined;
     const send = (message: unknown) => { if (!child.stdin.destroyed) child.stdin.write(JSON.stringify(message) + '\n'); };
@@ -36,7 +38,7 @@ export class CodexSpawner implements Spawner {
     };
     const done = owned.done.then((code) => completed && !stopped ? code : -1).finally(() => clearTimeout(shutdownTimer));
     void done.catch(() => {});
-    child.once('error', (error) => { diagnostics = error.message; reader.close(); });
+    child.once('error', () => { failure = 'Codex process could not be started'; });
     const kill = () => {
       stopped = true;
       if (threadId && turnId) send({ id: 99, method: 'turn/interrupt', params: { threadId, turnId } });
@@ -48,8 +50,9 @@ export class CodexSpawner implements Spawner {
       send({ id: 0, method: 'initialize', params: { clientInfo: { name: 'controlos', title: 'ControlOS', version: '0.2.0' } } });
       try {
         for await (const line of reader) {
-          if (line.length > 4 * 1024 * 1024) throw new Error('Codex protocol frame exceeds the supported limit');
-          const message = object(JSON.parse(line)); const result = object(message.result); const params = object(message.params);
+          let decoded: unknown;
+          try { decoded = JSON.parse(line); } catch { throw new Error('Codex returned invalid protocol JSON'); }
+          const message = object(decoded); const result = object(message.result); const params = object(message.params);
           if (message.error) throw new Error(String(object(message.error).message ?? 'Codex request failed'));
           if (message.id === 0 && !message.method) {
             send({ method: 'initialized', params: {} });
@@ -86,10 +89,10 @@ export class CodexSpawner implements Spawner {
           }
         }
       } catch (error) {
-        diagnostics = (error as Error).message; forceKill();
+        failure = redact((error as Error).message, opts.secrets).slice(0, 3500); forceKill();
         yield { kind: 'done', ok: false, tokensIn, tokensOut, turns: null, resultText: null };
       } finally { if (!completed) forceKill(); }
     }
-    return { lines: (async function* () {})(), updates: updates(), done, kill, diagnostics: () => diagnostics, terminationConfirmed: owned.terminationConfirmed };
+    return { lines: (async function* () {})(), updates: updates(), done, kill, diagnostics: () => [failure.slice(0, 350), stderr()].filter(Boolean).join('\n'), terminationConfirmed: owned.terminationConfirmed };
   }
 }
