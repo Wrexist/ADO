@@ -29,6 +29,7 @@ import { ProjectSettingsStore } from './projects/settings';
 import { ProjectRegistry } from './projects/registry';
 import { PlanningStore } from './projects/planning';
 import { proposeToday } from './projects/today';
+import { TodayPreferencesStore } from './projects/todayPreferences';
 import { ZodError } from 'zod';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
@@ -212,6 +213,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const bus = new Bus(db);
   const registry = new ProjectRegistry(db, () => Object.values(bus.snapshot().state.repos), (id) => scanner?.cwdFor(id) ?? null);
   const planning = new PlanningStore(db);
+  const todayPreferencesStore = new TodayPreferencesStore(db);
   if (!recovery) bus.compact((msg) => app.log.info(msg)); // preserve restored history during review
   bus.replayFromDb((msg) => app.log.warn(msg));
 
@@ -698,6 +700,16 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.post('/api/planning/today', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return planningMutation(reply, () => db.transaction(() => proposeToday(req.body, planning.snapshot(), registry.snapshot(), new Set(db.select().from(executionLocks).all().map((lock) => lock.runId)))));
+  });
+  app.get('/api/planning/today/preferences', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return planningMutation(reply, () => todayPreferencesStore.read());
+  });
+  app.put('/api/planning/today/preferences', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return planningMutation(reply, () => todayPreferencesStore.save(req.body, (choices) => {
+      proposeToday(choices, planning.snapshot(), registry.snapshot(), new Set());
+    }));
   });
   app.post('/api/planning/tasks/:id/dispatch', async (req, reply) => planningMutation(reply, () => runner.dispatchTask((req.params as { id: string }).id, req.body)));
   app.post('/api/planning/tasks/:id/reopen', async (req, reply) => planningMutation(reply, () => new TaskReopeningStore(db, (runId) => verifier.isActive(runId)).reopen((req.params as { id: string }).id, req.body)));

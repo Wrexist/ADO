@@ -16,3 +16,6 @@ export const TodayProposal = z.object({
   scope: z.literal('Manual planning alternatives only; execution eligibility must be reviewed separately'),
 });
 export type TodayProposal = z.infer<typeof TodayProposal>;
+export const TodayPreferencesWrite = TodayRequest.extend({ version: z.number().int().nonnegative() }).strict();
+export const TodayPreferences = TodayPreferencesWrite.extend({ updatedTs: z.string().nullable() }).strict();
+export type TodayPreferences = z.infer<typeof TodayPreferences>;

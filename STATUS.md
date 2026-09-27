@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Sparade Today-val med versionskontroll
+
+Hela `npm run smoke`, slutlig separat typkontroll och lint passerade också. Käll-, bygg- och bildhasharna stämmer efter slutprovet och smoke-byggningen. Loggar: `controlos-today-preferences-smoke.log`, `controlos-today-preferences-final-typecheck.log` och `controlos-today-preferences-final-lint.log`.
+
+Fokus, tidsfönster och uppskattningar kan nu sparas uttryckligen i den lokala profilen och läses in vid nästa sidbesök. En äldre flik får inte skriva över en nyare sparning. Refresh planning behåller utkastets version; Load saved choices ersätter utkastet uttryckligen. Uppskattningar för ändrade uppgifter kräver granskning, med en separat knapp för att bekräfta samma minuter för den aktuella versionen.
+
+API-provet bekräftar omstart, profilseparation, avvisade versionskonflikter, gamla uppgiftsuppskattningar, bevarad tidigare data efter injicerat databasfel och att trasig JSON inte tyst återställs. Första browserprovet upptäckte den saknade bekräftelsen för oförändrade minuter; slutprovet passerar vid 1536/390 px inklusive spara/omladdning, annan skrivare, explicit inläsning och tidigare T08-kontroller. Bilderna är granskade och använder DEMO-data. [Kontrakt](docs/controlos/today-planning.md), [aktuellt käll-/bygg-/bildunderlag](docs/controlos/today-ui-evidence.json).
+
+`npm run verify` passerade med typkontroll, lint, 413 tester i 88 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Loggar: `controlos-today-preferences-focused.log`, `controlos-today-preferences-verify.log` och `controlos-today-preferences-probe-final.log`.
+
+16/46 scenarier är fortsatt lokalt godkända. Migration 0020 har inte provats i en ny paketerad Windows-installation/uppdatering eller native restore. Miljö-/policygranskning för förslagens exekvering återstår; REQ06 och R1–R4 är öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## Today på dator och mobil: T08 lokalt godkänt
 
 Även hela `npm run smoke` passerade, inklusive navigations-/temavyer, anslutning, desktop-runtime och uppgiftsgranskning. Slutlig separat typkontroll och lint passerade. Underlagets käll-, bygg- och bildhashar stämmer efter smoke-byggningen. Loggar: `controlos-today-ui-smoke.log`, `controlos-today-ui-final-typecheck.log` och `controlos-today-ui-final-lint.log`.

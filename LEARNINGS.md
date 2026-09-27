@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: Refreshing task data must not adopt a newer preference version behind an edited form. Keep draft provenance and use an explicit load to resolve concurrent saves; otherwise optimistic concurrency can be bypassed in the UI.
+
 - 2026-09-28: Clear a planning proposal when its inputs change or its request fails. Keep draft estimate versions across refresh and require review after task changes; a previous successful suggestion must not imply a new request succeeded.
 
 - 2026-09-28: Time-window proposals should fit the upper user estimate and retain a locked focus even when it yields no option. Bind estimates to task versions, explain exclusions and keep proposals separate from execution eligibility.

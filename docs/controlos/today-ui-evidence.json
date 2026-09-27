@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-27T22:18:08.585Z",
-  "baseRevision": "7b9e580e768b774917f1ed9fd36613c9cc2ed8a3",
+  "date": "2026-09-27T22:28:50.715Z",
+  "baseRevision": "fcc9dac2a1571d45402584e46a7e68defadf80bd",
   "environment": {
     "platform": "win32",
     "arch": "x64",
@@ -21,27 +21,32 @@
     "stale version rejection",
     "explicit estimate refresh",
     "network failure clears old proposal",
+    "saved choices restored after browser reload",
+    "concurrent writer rejected without overwrite",
+    "explicit load of newer choices",
     "no planning mutation by proposal",
     "zero runs",
     "no horizontal overflow or page errors"
   ],
   "sourceSha256": {
-    "scripts/probe-today.mts": "6008dd2ec573f842fed6795edf62de3191d322a674510cbbd0e981221ea6c9b2",
-    "apps/web/src/pages/TodayPage.tsx": "eef5ea22c42b8770771044f0c1b328db45342202afe3de7a01cbdb9061dace2f",
+    "scripts/probe-today.mts": "141c8d824aa108a978d7c604fd0322273df92568d608435bc773c33415a77006",
+    "apps/web/src/pages/TodayPage.tsx": "88666c905dc256589e8bf09b04eda9e892de934777f375e75e41feeee97cfa59",
     "apps/web/src/main.tsx": "ed0c5c9dadef7306b5903fd041f0294d9c4eccd3b8b917c77791ff5216a6c1ae",
     "apps/web/src/chrome/MobileNav.tsx": "c0d8f0284b17914b1f6bfc062b75d10a4c98e0624a6af639f3088900c18c858c",
     "apps/server/src/projects/today.ts": "0b53a328077130aa11284c0c4eb7c1ef51cf18ede1084d75b4b369ee68af223f",
-    "apps/server/src/app.ts": "c079bf428cb0f4ac6ab527c866e0a1b726ebbb1edbe813ff452d606556a1ab55",
-    "packages/shared/src/today.ts": "ae4241b275e67dffc9fe64ebc03f9e85e115fd511a95de039248ee72bde09b17"
+    "apps/server/src/projects/todayPreferences.ts": "961579b3d5d8d861bcaabcf06dff7b01a557e657aef1645e0d173aa93ff88a4d",
+    "apps/server/drizzle/0020_today_preferences.sql": "52fd0117559f772564fbd209246f5072394e4b24337a78095eabd187555caae5",
+    "apps/server/src/app.ts": "e0ef68cd6485be8d42be29166bab36f80319d06fcbd496ddc64954c6603a49ae",
+    "packages/shared/src/today.ts": "3d7b772b8beaa1cfe6edea40ff9826c669a7a20096fa08c4078f4a449144a213"
   },
   "assetSha256": {
-    "apps/web/dist/index.html": "9b64b9e7250765c7c890ffdb1f03602122c76bc643120f9f2fcc4221b4f36bc1",
-    "apps/web/dist/assets/index-BW_t1ie0.css": "a5aa6fbd2869660610b7b240c80830f1e1c92b0ec7313ec2cd87f00869685964",
-    "apps/web/dist/assets/index-RDQYIwV1.js": "71efc90c698e9892d2c75f3c3000a33c491d2d0c0412d63f51fc25992dbdc06c"
+    "apps/web/dist/index.html": "1a5eb672e0589885ddf67400365cfffd01eb1c7045e159d0c2991bd9db21a562",
+    "apps/web/dist/assets/index-BiRXvTrf.js": "d490e2dd9ded5561cabd2d27e86b8a8166a1d6cdc0e0966f203dc0eb6e5f01cd",
+    "apps/web/dist/assets/index-BW_t1ie0.css": "a5aa6fbd2869660610b7b240c80830f1e1c92b0ec7313ec2cd87f00869685964"
   },
   "screenshotSha256": {
-    "smoke-shots/today-1536.png": "4204e0c25d4b40aa8629fea696cf09edafa3b2ff1c46d65affb3d8b62822b47d",
-    "smoke-shots/today-390.png": "7d1c9b781a040a0009987c0aecbf755cd679d508906d44a3715c704f9aef5013"
+    "smoke-shots/today-1536.png": "079184d90234c1bb93e9fdcca84fe3301e35869c78272370af2cfa5749519468",
+    "smoke-shots/today-390.png": "de1fbf076a2452441cb1b7e7131c19a16faa214ce0dfdc81fd4c7599c47cb999"
   },
-  "scope": "Synthetic local profile through production API and built renderer. Session-only manual planning choices. No agent, calendar, external provider, durable preferences or execution-policy acceptance."
+  "scope": "Synthetic local profile through production API and built renderer, with profile-local saved choices and explicit concurrent-write recovery. No agent, calendar, external provider or execution-policy acceptance."
 }

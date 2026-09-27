@@ -171,6 +171,10 @@ export const planningRevisions = sqliteTable('planning_revisions', {
   id: text('id').primaryKey(), entityId: text('entity_id').notNull(), kind: text('kind').notNull(), version: integer('version').notNull(), snapshotJson: text('snapshot_json').notNull(), recordedTs: text('recorded_ts').notNull(),
 }, (t) => [uniqueIndex('planning_revision_identity').on(t.entityId, t.version)]);
 
+export const todayPreferences = sqliteTable('today_preferences', {
+  id: text('id').primaryKey(), version: integer('version').notNull(), choicesJson: text('choices_json').notNull(), updatedTs: text('updated_ts').notNull(),
+});
+
 export const taskExecutions = sqliteTable('task_executions', {
   runId: text('run_id').primaryKey().references(() => runs.id), taskId: text('task_id').notNull().references(() => planningTasks.id),
   taskVersion: integer('task_version').notNull(), taskSnapshotJson: text('task_snapshot_json').notNull(), checkoutId: text('checkout_id').notNull().references(() => portfolioCheckouts.id),
