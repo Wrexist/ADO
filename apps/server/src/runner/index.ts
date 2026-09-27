@@ -66,6 +66,7 @@ export interface TimelineEntry {
 export class Runner {
   private readonly owner = randomUUID();
   private active = 0;
+  private draining = false;
   private seq = 0; // guarantees unique run ids even for same-millisecond dispatches
   private queue: Array<{ id: string; input: DispatchInput }> = [];
   private handles = new Map<string, SpawnHandle>();
@@ -180,15 +181,14 @@ export class Runner {
 
     const runId = `run-${input.repoId}-${Date.now()}-${++this.seq}-${randomUUID()}`;
     const now = new Date().toISOString();
-    this.db
+    this.bus.commit((tx) => tx
       .insert(runs)
       .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', provider: input.provider, status: 'queued', startedTs: now, engineVersion: 1, idempotencyKey: input.idempotencyKey, requestHash })
-      .run();
+      .run(), [this.buildEvent(runId, input, 'queued', null)]);
 
     // Reflect as a queued build immediately (backs the Build Queue), then let the
     // semaphore-aware drain start it now or hold it until a slot frees.
     this.record(runId, 'status', 'Queued');
-    this.emitBuild(runId, input, 'queued', null);
     this.queue.push({ id: runId, input });
     this.drainNext();
     return { runId };
@@ -196,6 +196,13 @@ export class Runner {
 
   /** Start queued runs up to the concurrency limit; fail any whose cwd is no longer allowed. */
   private drainNext(): void {
+    if (this.stopped || this.draining) return;
+    this.draining = true;
+    try { this.drainQueue(); }
+    finally { this.draining = false; }
+  }
+
+  private drainQueue(): void {
     if (this.stopped) return;
     while (this.active < this.opts.maxConcurrent && !this.stopped) {
       // Skip a busy checkout so unrelated projects can proceed, while writers to the
@@ -218,13 +225,20 @@ export class Runner {
         this.failRun(next.id, next.input, null, 'repo left the allow-list before it could run');
         continue;
       }
-      const claimed = this.db.transaction((tx) => {
+      let claimed: boolean;
+      try {
+        claimed = this.bus.commit((tx) => {
         if (tx.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(next.input.repoId, cwd))).get()) return false;
         const updated = tx.update(runs).set({ status: 'running' }).where(and(eq(runs.id, next.id), eq(runs.status, 'queued'))).run();
         if (!updated.changes) return false;
         tx.insert(executionLocks).values({ resource: this.resourceKey(next.input.repoId, cwd), runId: next.id, owner: this.owner, acquiredTs: new Date().toISOString() }).run();
         return true;
-      });
+        }, (claimed) => claimed ? [this.buildEvent(next.id, next.input, 'running', Date.now())] : []);
+      } catch (error) {
+        this.queue.unshift(next);
+        this.log(`runner: claim deferred; accepted job retained: ${(error as Error).message}`);
+        return;
+      }
       if (!claimed) {
         this.queue.push(next);
         return;
@@ -245,7 +259,7 @@ export class Runner {
   /** Mark a run failed end-to-end (DB + build + agent). Best-effort; never throws. */
   private failRun(runId: string, input: DispatchInput, startedMs: number | null, reason: string): void {
     try {
-      this.db
+      this.bus.commit((tx) => tx
         .update(runs)
         .set({
           status: 'failed',
@@ -254,9 +268,11 @@ export class Runner {
           note: reason.slice(0, 200),
         })
         .where(eq(runs.id, runId))
-        .run();
-    } catch { /* best effort */ }
-    try { this.emitBuild(runId, input, 'failed', startedMs); } catch { /* best effort */ }
+        .run(), [this.buildEvent(runId, input, 'failed', startedMs)]);
+    } catch (error) {
+      this.log(`runner: ${runId} terminal state could not be persisted: ${(error as Error).message}`);
+      return;
+    }
     try {
       this.bus.publish({
         id: `agent-evt:${runId}:fail:${Date.now()}`,
@@ -293,9 +309,12 @@ export class Runner {
     } finally {
       this.killed.delete(runId);
       this.activeRuns.delete(runId);
-      if (!this.unconfirmedProcesses.has(runId)) {
-        this.db.delete(executionLocks).where(and(eq(executionLocks.runId, runId), eq(executionLocks.owner, this.owner))).run();
-      }
+      try {
+        const persisted = this.db.select({ status: runs.status }).from(runs).where(eq(runs.id, runId)).get();
+        if (!this.unconfirmedProcesses.has(runId) && persisted && ['done', 'failed'].includes(persisted.status)) {
+          this.db.delete(executionLocks).where(and(eq(executionLocks.runId, runId), eq(executionLocks.owner, this.owner))).run();
+        }
+      } catch (error) { this.log(`runner: ${runId} writer lock retained after storage failure: ${(error as Error).message}`); }
       this.unconfirmedProcesses.delete(runId);
       this.busyDirectories.delete(this.resourceKey(input.repoId, cwd));
       this.active--;
@@ -304,8 +323,6 @@ export class Runner {
   }
 
   private async runBody(runId: string, input: DispatchInput, cwd: string, startedMs: number, baseSha?: string): Promise<void> {
-    this.db.update(runs).set({ status: 'running' }).where(eq(runs.id, runId)).run();
-
     const agentId = runId;
     let turns: number | null = null;
     let tokensIn: number | null = null;
@@ -327,7 +344,6 @@ export class Runner {
 
     this.record(runId, 'status', 'Spawned');
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
-    this.emitBuild(runId, input, 'running', startedMs);
     upsertAgent('running', null);
 
     const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider });
@@ -403,7 +419,7 @@ export class Runner {
     this.record(runId, 'status', statusLine);
     upsertAgent(ok ? 'done' : 'failed', ok ? 100 : null);
 
-    this.db
+    this.bus.commit((tx) => tx
       .update(runs)
       .set({
         status: ok ? 'done' : 'failed',
@@ -418,9 +434,8 @@ export class Runner {
         diagnostics: handle.diagnostics ? redact(handle.diagnostics(), this.opts.secrets?.()).slice(-4000) : null,
       })
       .where(eq(runs.id, runId))
-      .run();
+      .run(), [this.buildEvent(runId, input, ok ? 'success' : 'failed', startedMs)]);
 
-    this.emitBuild(runId, input, ok ? 'success' : 'failed', startedMs);
     this.emitActivity(`act:${runId}:end`, input.repoId, ok ? `Agent process completed (unverified): ${input.task}` : `Task failed: ${input.task}`, ok ? 'success' : 'danger', ok ? 'check' : 'bell');
     // Tag the repo with the agent IDS that touched it (avatar stack) via enrichment.
     // Must be runIds, not the display name: state.agents is keyed by agentId (===runId),
@@ -454,8 +469,8 @@ export class Runner {
     });
   }
 
-  private emitBuild(runId: string, input: DispatchInput, state: 'queued' | 'running' | 'success' | 'failed', startedMs: number | null): void {
-    this.bus.publish({
+  private buildEvent(runId: string, input: DispatchInput, state: 'queued' | 'running' | 'success' | 'failed', startedMs: number | null) {
+    return {
       id: `build-evt:${runId}:${state}`,
       type: 'build.updated',
       ts: new Date().toISOString(),
@@ -472,7 +487,7 @@ export class Runner {
           elapsedSec: startedMs ? Math.round((Date.now() - startedMs) / 1000) : null,
         },
       },
-    });
+    };
   }
 
   async stop(): Promise<void> {

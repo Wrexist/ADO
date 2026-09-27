@@ -594,8 +594,24 @@
     {
       "id": "T43",
       "title": "SSE efter retention",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ11, REQ22. **Status:** not_run.\n\n**Givet:** Klientens replaycursor är äldre än serverns bevarade eventintervall.\n\n**När:** Klienten återansluter.\n\n**Godkänt endast om:** Servern skickar ny auktoritativ snapshot och cursor. Inga tysta luckor maskeras som live.\n\n**Gäller:** always."
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ11, REQ22. **Status:** passed (local Windows evidence).\n\n**Givet:** Klientens replaycursor är äldre än serverns bevarade eventintervall.\n\n**När:** Klienten återansluter.\n\n**Godkänt endast om:** Servern skickar ny auktoritativ snapshot och cursor. Inga tysta luckor maskeras som live.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/sse-recovery.test.ts",
+        "docs/controlos/execution-recovery.md"
+      ],
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows, Node 22.18.0, npm 11.7.0",
+        "command": "npx vitest run apps/server/src/sse-recovery.test.ts",
+        "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
+        "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
+        "sourceSha256": {
+          "apps/server/src/app.ts": "ce2aced00bf1d19edac76f51373f8207cc68993da1fdc70b1eab3743997d7915",
+          "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
+          "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
+        }
+      }
     },
     {
       "id": "T44",

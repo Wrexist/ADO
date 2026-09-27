@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: transaktionell händelselogg och återanslutning
+
+Köacceptans, claim och terminal körstatus sparar nu sina build-händelser i samma SQLite-transaktion. Händelseloggen fungerar som lokal outbox med leverans efter commit och återspelning efter omstart. Felande prenumeranter kan inte avbryta dispatch. Misslyckad claim behåller det accepterade jobbet i kön; misslyckad terminal lagring behåller skrivlåset.
+
+Abrupta processavslut före och efter commit, injicerade lagringsfel och återanslutning över riktig loopback-HTTP har testats. T43 är lokalt godkänd med miljö och källhashar i acceptansregistret. Se [kraschmatrisen](docs/controlos/execution-recovery.md). Övriga scenarier och hela R1-grinden är fortsatt ej godkända.
+
+Slutlig `npm run verify` passerade på Windows, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 261 tester i 40 testfiler samt byggning. Ignorerad logg: `controlos-outbox-final-verify.log`. Webbens storleksvarning kvarstår. Smoke och fjärr-CI har inte körts för denna ändring. Bekräftat processträdsstopp, beständig processidentitet och verifierad sandbox återstår.
+
 ## R1-tillägg efter PR #7
 
 Utgår från inmergad `main` på `0bcd846`, med ändringen på `codex/controlos-r1-uncertain-exit`. Om processens avslutspromise avvisas behålls nu det beständiga skrivlåset även om stoppanropet kastar fel. Körningen markeras som misslyckad med okänt processutfall; nästa jobb för samma repo får vänta. Ett strömfel håller kvar låset tills processavslut har observerats.

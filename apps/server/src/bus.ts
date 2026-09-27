@@ -22,6 +22,7 @@ export type OutFrame =
   | { kind: 'sample'; sample: Sample };
 
 export type BusSubscriber = (frame: OutFrame) => void;
+type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 const SAMPLE_WINDOW_MS = 2 * 60 * 60 * 1000; // keep ~2h of samples on disk
 const SAMPLE_LOAD = 360; // 1h of 10s samples into the in-memory snapshot
@@ -30,6 +31,8 @@ export class Bus {
   private state: BusState = emptyState();
   private seq = 0;
   private subscribers = new Set<BusSubscriber>();
+  private outbound: OutFrame[] = [];
+  private broadcasting = false;
 
   constructor(private db: Db) {}
 
@@ -103,10 +106,8 @@ export class Bus {
     };
   }
 
-  /** Validate, persist, fold, broadcast. Duplicate ids are ignored (idempotent seeds). */
-  publish(input: unknown): { seq: number; evt: AccEvent } | null {
-    const evt = parseEvent(input);
-    const res = this.db
+  private persist(tx: Transaction | Db, evt: AccEvent): { seq: number; evt: AccEvent } | null {
+    const res = tx
       .insert(events)
       .values({
         id: evt.id,
@@ -120,11 +121,53 @@ export class Bus {
       .run();
     if (res.changes === 0) return null; // already persisted (seed rerun) — no re-broadcast
 
-    const seq = Number(res.lastInsertRowid);
-    this.seq = seq;
+    return { seq: Number(res.lastInsertRowid), evt };
+  }
+
+  /** The event log doubles as a transactional outbox for local state changes.
+   * Nothing reaches memory or subscribers before COMMIT. After a crash, replay
+   * recovers committed events; subscribers are never part of the transaction.
+   */
+  commit<T>(mutate: (tx: Transaction) => T, inputs: unknown[] | ((result: T) => unknown[])): T {
+    const { result, frames } = this.db.transaction((tx) => {
+      const result = mutate(tx);
+      const parsed = (typeof inputs === 'function' ? inputs(result) : inputs).map((input) => parseEvent(input));
+      const frames = parsed.map((evt) => this.persist(tx, evt)).filter((frame) => frame !== null);
+      return { result, frames };
+    });
+    for (const { seq, evt } of frames) {
+      this.seq = seq;
+      this.state = reduce(this.state, evt);
+    }
+    this.broadcast(frames.map(({ seq, evt }) => ({ kind: 'evt', seq, evt })));
+    return result;
+  }
+
+  /** Validate, persist, fold, broadcast. Duplicate ids are ignored (idempotent seeds). */
+  publish(input: unknown): { seq: number; evt: AccEvent } | null {
+    const evt = parseEvent(input);
+    const frame = this.persist(this.db, evt);
+    if (!frame) return null;
+    this.seq = frame.seq;
     this.state = reduce(this.state, evt);
-    for (const fn of this.subscribers) fn({ kind: 'evt', seq, evt });
-    return { seq, evt };
+    this.broadcast([{ kind: 'evt', ...frame }]);
+    return frame;
+  }
+
+  private broadcast(frames: OutFrame[]): void {
+    this.outbound.push(...frames);
+    if (this.broadcasting) return;
+    this.broadcasting = true;
+    try {
+      // Queue reentrant publications so every subscriber sees increasing cursors.
+      for (let index = 0; index < this.outbound.length; index++) {
+        const frame = this.outbound[index];
+        for (const fn of this.subscribers) {
+          try { fn(frame); }
+          catch { this.subscribers.delete(fn); }
+        }
+      }
+    } finally { this.outbound = []; this.broadcasting = false; }
   }
 
   /**
@@ -139,7 +182,7 @@ export class Bus {
 
     const sample: Sample = { ts, cpuPct, memPct, netPct };
     this.state = reduce(this.state, { type: 'system.sample', ts, payload: { cpuPct, memPct, netPct } });
-    for (const fn of this.subscribers) fn({ kind: 'sample', sample });
+    this.broadcast([{ kind: 'sample', sample }]);
     return sample;
   }
 
@@ -169,6 +212,18 @@ export class Bus {
       }
     }
     return out;
+  }
+
+  /** Compaction, corrupt rows and stale cursors must never look like a complete replay. */
+  resumeSince(cursor: number): { kind: 'replay'; frames: Array<{ seq: number; evt: AccEvent }> } | { kind: 'snapshot'; snapshot: ReturnType<Bus['snapshot']> } {
+    if (Number.isSafeInteger(cursor) && cursor >= 0 && cursor <= this.seq) {
+      const frames = this.eventsSince(cursor);
+      let expected = cursor;
+      if (frames.every((frame) => frame.seq === ++expected) && expected === this.seq) {
+        return { kind: 'replay', frames };
+      }
+    }
+    return { kind: 'snapshot', snapshot: this.snapshot() };
   }
 
   snapshot(): { seq: number; state: BusState } {

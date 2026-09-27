@@ -12,6 +12,8 @@ The durable queue restores only versioned queued jobs. Previously running attemp
 
 A rejected process-completion promise also retains the durable writer lock, including when the subsequent stop request throws. The run fails with an explicit unknown-outcome note; unrelated repositories can use the freed capacity slot. A stream error alone holds the lock until process completion is observed. These checks do not establish descendant termination: process identity, OS-level tree containment and safe quarantine release remain R1 work.
 
+Queue acceptance, claims and terminal run state now commit their build events in the same SQLite transaction. The event log serves as the local outbox; delivery starts after commit and boot replay recovers committed events. SSE reconnects fall back to a snapshot when retained history cannot provide a contiguous replay. The [crash and failure matrix](execution-recovery.md) records the tested boundaries and remaining limitations.
+
 Explicit repository verification runs `npm run verify` against an isolated result, recording revision, content digest, exit status, bounded redacted output and timestamp. Changed output invalidates evidence. It verifies that script, not every task-specific criterion. Human acceptance of new runs requires matching evidence and current content. Acceptance does not merge or deploy.
 
 ## Recovery

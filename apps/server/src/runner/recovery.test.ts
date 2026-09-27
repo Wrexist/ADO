@@ -11,6 +11,39 @@ import { join } from 'node:path';
 const tick = () => new Promise((r) => setTimeout(r, 20));
 const spawner: Spawner = { spawn: () => ({ lines: (async function* () {})(), done: Promise.resolve(0), kill() {} }) };
 describe('durable execution', () => {
+  it('keeps an accepted job queued when its atomic claim event cannot be stored', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    let starts = 0;
+    const runner = new Runner(bus, db, { spawn: (opts) => { starts++; return spawner.spawn(opts); } }, { cwdFor: (id) => `/repos/${id}` });
+    try {
+      sqlite.exec("CREATE TRIGGER reject_claim BEFORE INSERT ON events WHEN NEW.type = 'build.updated' AND json_extract(NEW.payload, '$.build.state') = 'running' BEGIN SELECT RAISE(ABORT, 'injected claim failure'); END");
+      const first = runner.dispatch({ repoId: 'a', task: 'accepted' });
+      expect(runner.isLive(first.runId)).toBe(true);
+      expect(db.select().from(runs).all()[0].status).toBe('queued');
+      expect(db.select().from(executionLocks).all()).toHaveLength(0);
+      expect(starts).toBe(0);
+      sqlite.exec('DROP TRIGGER reject_claim');
+      runner.dispatch({ repoId: 'b', task: 'wake queue' });
+      await tick();
+      expect(starts).toBe(2);
+      expect(db.select().from(runs).all().map((r) => r.status)).toEqual(['done', 'done']);
+    } finally { await runner.stop(); sqlite.close(); }
+  });
+
+  it('retains the writer lock when neither success nor failure can be committed', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const runner = new Runner(new Bus(db), db, spawner, { cwdFor: () => '/repos/a' });
+    try {
+      sqlite.exec("CREATE TRIGGER reject_terminal BEFORE INSERT ON events WHEN NEW.type = 'build.updated' AND json_extract(NEW.payload, '$.build.state') IN ('success', 'failed') BEGIN SELECT RAISE(ABORT, 'injected terminal failure'); END");
+      runner.dispatch({ repoId: 'a', task: 'first' });
+      await tick();
+      runner.dispatch({ repoId: 'a', task: 'must wait' });
+      expect(db.select().from(runs).all().map((r) => r.status)).toEqual(['running', 'queued']);
+      expect(db.select().from(executionLocks).all()).toHaveLength(1);
+    } finally { await runner.stop(); sqlite.close(); }
+  });
+
   it.each([false, true])('quarantines a rejected process outcome across restart (stop throws: %s)', async (stopThrows) => {
     const root = mkdtempSync(join(tmpdir(), 'controlos-exit-'));
     const path = join(root, 'profile.sqlite');

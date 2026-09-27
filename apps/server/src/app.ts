@@ -194,7 +194,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   }));
 
   /**
-   * SSE — read-only, token-gated (query param; EventSource can't set headers).
+   * SSE — read-only, token-gated. The browser client uses an authorization header.
    * Fresh connect → full snapshot frame. Reconnect with Last-Event-ID → replay
    * the persisted gap instead, so a laptop sleep never renders stale as live.
    */
@@ -217,15 +217,15 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       reply.raw.write(`${id != null ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
     const lastIdHeader = req.headers['last-event-id'];
-    const lastId = typeof lastIdHeader === 'string' ? Number.parseInt(lastIdHeader, 10) : NaN;
-    const snap = bus.snapshot();
+    const lastId = typeof lastIdHeader === 'string' && /^\d+$/.test(lastIdHeader) ? Number(lastIdHeader) : NaN;
+    const resume = bus.resumeSince(lastId);
 
-    if (Number.isFinite(lastId) && lastId <= snap.seq) {
+    if (resume.kind === 'replay') {
       // resume path: replay only the durable gap (snapshot already carries live samples)
-      for (const { seq, evt } of bus.eventsSince(lastId)) send(seq, 'evt', evt);
+      for (const { seq, evt } of resume.frames) send(seq, 'evt', evt);
     } else {
       // fresh path: authoritative snapshot
-      send(snap.seq, 'snapshot', snap);
+      send(resume.snapshot.seq, 'snapshot', resume.snapshot);
     }
 
     const unsubscribe = bus.subscribe((frame) => {
