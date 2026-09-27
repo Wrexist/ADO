@@ -3,7 +3,8 @@
  * - Host-header allow-list on EVERY route incl. /events — the actual DNS-rebinding
  *   defense (a rebound page is same-origin, so CORS alone cannot help).
  * - X-ACC-Token required on all mutating methods.
- * - /events (SSE) carries the token via query param (EventSource cannot set headers).
+ * - Browser Origin is checked separately from Host and token on every route.
+ * - The current SSE client uses a token header; legacy query-token support remains.
  * - CORS locked to the single web origin (registered in app.ts).
  */
 import { timingSafeEqual } from 'node:crypto';
@@ -33,7 +34,23 @@ export function registerSecurity(app: FastifyInstance, env: Env): void {
       return reply.code(403).send({ error: 'forbidden host' });
     }
 
-    // 2. Token on every mutating method.
+    // No Origin is allowed for local CLI/native clients; it does not replace authentication.
+    // Never infer a trusted origin from proxy headers or the incoming Host header.
+    const origin = req.headers.origin;
+    const allowedOrigins = new Set([env.webOrigin]);
+    if (env.serveWebDir) {
+      allowedOrigins.add(`http://127.0.0.1:${env.port}`);
+      allowedOrigins.add(`http://localhost:${env.port}`);
+    }
+    if (origin !== undefined && (typeof origin !== 'string' || !allowedOrigins.has(origin))) {
+      return reply.code(403).send({ error: 'forbidden origin' });
+    }
+
+  });
+
+  // Authenticate mutations after CORS has attached headers for the trusted web origin,
+  // so that a wrong key remains an observable 401 rather than an opaque browser failure.
+  app.addHook('preHandler', async (req: FastifyRequest, reply: FastifyReply) => {
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
       const presented = req.headers['x-acc-token'];
       if (!tokenMatches(env.accToken, typeof presented === 'string' ? presented : undefined)) {

@@ -4,7 +4,7 @@ import { Button, Card, Chip, EmptyState, cx } from '../kit';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
 import { timeAgo } from '../lib/time';
-import { SEVERITY_TONE, dispatchFix } from '../lib/incidents';
+import { SEVERITY_TONE, dispatchFix, downloadIncidentReport } from '../lib/incidents';
 
 const DIAGNOSED_BY_LABEL: Record<DiagnosedBy, string> = {
   claude: 'AI root-cause (Claude)',
@@ -26,6 +26,8 @@ function IncidentCard({ incident, repos }: { incident: IncidentRecord; repos: { 
   const [repoId, setRepoId] = useState(repos[0]?.id ?? '');
   const [status, setStatus] = useState<FixStatus>('idle');
   const [note, setNote] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const dx = incident.diagnosis;
 
   const onFix = async () => {
@@ -62,9 +64,19 @@ function IncidentCard({ incident, repos }: { incident: IncidentRecord; repos: { 
         </div>
       </div>
 
-      {/* the error itself (raw, honest) */}
+      {/* Captured diagnostic text, redacted before publication. */}
       <p className="mt-3 break-words rounded-tile bg-elevated px-3 py-2 font-mono text-label text-text2">{incident.message}</p>
       {incident.context ? <p className="mt-1.5 text-label text-text3">at {incident.context}</p> : null}
+      <div className="mt-3">
+        <Button size="sm" disabled={exporting} onClick={async () => {
+          setExporting(true); setExportError('');
+          try { await downloadIncidentReport(incident.id); }
+          catch (error) { setExportError((error as Error).message); }
+          finally { setExporting(false); }
+        }}>{exporting ? 'Preparing report…' : 'Download report'}</Button>
+        <p className="mt-1 text-label text-text3">Selected incident only, with known credentials masked. Review project text before sharing.</p>
+        {exportError && <p role="alert" className="mt-1 text-label text-danger">{exportError}</p>}
+      </div>
 
       {/* diagnosis + dispatch-a-fix */}
       {dx ? (

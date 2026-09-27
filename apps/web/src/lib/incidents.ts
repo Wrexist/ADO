@@ -5,6 +5,19 @@ import { ACC_TOKEN, SERVER_URL } from './config';
 
 const headers = () => ({ 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN });
 
+/** Download only the authenticated server's redacted projection; no local/raw fallback. */
+export async function downloadIncidentReport(id: string): Promise<void> {
+  const response = await fetch(`${SERVER_URL}/api/incidents/${encodeURIComponent(id)}/export`, { headers: headers() });
+  if (!response.ok) throw new Error('Could not download report. Reconnect and try again.');
+  const report: unknown = await response.json();
+  if (!report || typeof report !== 'object' || !('format' in report) || report.format !== 'controlos-incident-v1') throw new Error('Unsupported diagnostic report format.');
+  const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }));
+  try {
+    const link = document.createElement('a'); link.href = url; link.download = 'controlos-incident.json';
+    document.body.append(link); link.click(); link.remove();
+  } finally { URL.revokeObjectURL(url); }
+}
+
 export interface ReportInput {
   kind: string;
   message: string;

@@ -1,0 +1,83 @@
+{
+  "date": "2026-09-27T23:15:29.774Z",
+  "baseRevision": "01bd702e1599b58cde3643c8a36b20a88a14189f",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0",
+    "chromium": "153.0.8010.12"
+  },
+  "checks": [
+    "redacted incident over real SSE",
+    "no canary in rendered DOM",
+    "authenticated report download",
+    "no canary in downloaded JSON",
+    "network failure has no raw/local fallback",
+    "1536/390 px without horizontal overflow",
+    "zero runs and no page errors"
+  ],
+  "sourceSha256": {
+    "scripts/probe-incident-export.mts": "abced7fe815cba6b161fe6f07dbd1fd9d941d1a1c4c0b205a6bb644e604353a3",
+    "apps/web/src/pages/DiagnosticsPage.tsx": "9f43e1540b385e11dea5c1648299e6f34894bfbfe3408a01d00c224a59226b82",
+    "apps/web/src/lib/incidents.ts": "5ef20dbaacc201e24bd2a701e5beca11752837f6636025b24e2dc2e54d106da5",
+    "apps/server/src/app.ts": "233d30705b633f3e6c1efffbe5105f84832e13c6f7f8844c14e93e86ea6748c2",
+    "apps/server/src/incidents/export.ts": "5325341b197fe1b26ca8adeb9e10a70a8c5254f32567cf64a9996974b69ff182",
+    "apps/server/src/incidents/reporter.ts": "b5d0b665caae09cff7f28e5c810d3067244f48d0cc210fa77d3544d1b2cb55ab",
+    "apps/server/src/security.ts": "490552a4aa75061b983808f74c2c021d47be326a78ab6e7284910e5c3bd4e9b5"
+  },
+  "assetSha256": {
+    "apps/web/dist/assets/index-CiORGG-C.css": "3462bc54a0e8cc75bf67cdec4f442a48a2b8e908b134163df679375292634f3a",
+    "apps/web/dist/assets/index-DbPlY7aW.js": "6ef8eb7730aef4d158fd6fab9ddc7f680a85dbe9cd4c3e5c7200c70e690a2f4f",
+    "apps/web/dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff": "6e441a6c94788318fa02b6d0a633aa29eebe27b69c6567eb1e59b4edc68ed70e",
+    "apps/web/dist/assets/inter-cyrillic-400-normal-obahsSVq.woff2": "f0bb586459ce8f09b238285040f17e3e9e9538b2c5a7aae0775194e33c36c3c3",
+    "apps/web/dist/assets/inter-cyrillic-500-normal-BasfLYem.woff2": "b77a86ec16aadc157f4a99e8898d71cd75ea264753d9bdf13f962f8c3988cbb0",
+    "apps/web/dist/assets/inter-cyrillic-500-normal-CxZf_p3X.woff": "5be18e0345781cb882a267798518553c0e915174fc70731ab5f085ca64ba1ebc",
+    "apps/web/dist/assets/inter-cyrillic-600-normal-4D_pXhcN.woff": "cc190ed1b64eb650a4ad7e97c7a668cb8b34acd9c4c7f7bf4372c0cbacd35795",
+    "apps/web/dist/assets/inter-cyrillic-600-normal-CWCymEST.woff2": "6c2a37f82a676bcd441b735e4e2cda4edb8873a059ab9c362a84f0711f257041",
+    "apps/web/dist/assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2": "ef572f9187a8be018d9d9c2c6b77c1f6cb2af4199f02fc16c292ea10ab25a2cc",
+    "apps/web/dist/assets/inter-cyrillic-ext-400-normal-DQukG94-.woff": "5cb2f1cc0936f89a42ceae34f5a5720248dc5b8114c12b1c33a7d2ef01a9b6b9",
+    "apps/web/dist/assets/inter-cyrillic-ext-500-normal-B0yAr1jD.woff2": "1c2db92d3cd9b237ca7c9c07af556d542f28ded1db54cd4382cf776501c5291f",
+    "apps/web/dist/assets/inter-cyrillic-ext-500-normal-BmqWE9Dz.woff": "e250c05aebcf49971e0b25f476992dd463c28c0292ebb204d9db542fb5066ca7",
+    "apps/web/dist/assets/inter-cyrillic-ext-600-normal-Bcila6Z-.woff": "a5073285409443f4653c858de58c5dc0bfc2fd33e60d8747388345e7c5ab1ab3",
+    "apps/web/dist/assets/inter-cyrillic-ext-600-normal-Dfes3d0z.woff2": "509fca9c59564f9a846fa69bc647f9b050fc11abf1c9f6f3da71fb2d5ed425bd",
+    "apps/web/dist/assets/inter-greek-400-normal-B4URO6DV.woff2": "c15ddd00a9927b56f5c655a41f976f79bd848a20cce91fc14227751872a1cc27",
+    "apps/web/dist/assets/inter-greek-400-normal-q2sYcFCs.woff": "bdae9d28729e8c68587d5d54e216d771a40d7a6800e824586a6e2f570c2f10df",
+    "apps/web/dist/assets/inter-greek-500-normal-BIZE56-Y.woff2": "cc197d79d33a3615a047baae85f4d1957f6f98b8898313658e160b1d519b1b6f",
+    "apps/web/dist/assets/inter-greek-500-normal-Xzm54t5V.woff": "86d55a4b1b9cbced7e61e76d5d44cf49d0bd1c814d3df2de67b7136ab4fdcece",
+    "apps/web/dist/assets/inter-greek-600-normal-BZpKdvQh.woff": "090b24e22fc4ddf41450d13bdec81c8a74808b9fc7edaf8df06c909b177a8992",
+    "apps/web/dist/assets/inter-greek-600-normal-plRanbMR.woff2": "9c5a897f9d9fcfe60d90631d766ae62b4bf1edd76633fa7a4b2f8c87e036789b",
+    "apps/web/dist/assets/inter-greek-ext-400-normal-DGGRlc-M.woff2": "eadedd9e13c2582430a9fb1519eb86152fdabb483a6f66d90f8d8a52e977a1b7",
+    "apps/web/dist/assets/inter-greek-ext-400-normal-KugGGMne.woff": "4f2b6f92ddfece8812e79774d446218aa6e0773ff8c2d31130fe2bdc23bd22d0",
+    "apps/web/dist/assets/inter-greek-ext-500-normal-2j5mBUwD.woff": "c85d11bde719108cc9a4f6f5b008087f6c36493b47395580d4f5336182b0f0c7",
+    "apps/web/dist/assets/inter-greek-ext-500-normal-C4iEst2y.woff2": "75a9ec9383a3b7a7bf7cfb94f64edf38d9cfdc5f7ffa0cbed2733627a6e4426d",
+    "apps/web/dist/assets/inter-greek-ext-600-normal-B8X0CLgF.woff": "efc7aa9cce5c505dd8cc4c4daf00247fa805f37bcda96079239ba3358ab27dfb",
+    "apps/web/dist/assets/inter-greek-ext-600-normal-DRtmH8MT.woff2": "399f94d75aa73403e40e2353e8c0cc75c38f7362a6ca263b3b02d9723157ffe5",
+    "apps/web/dist/assets/inter-latin-400-normal-C38fXH4l.woff2": "8909904ab6c872eb994093482a88a28eca2cd95912d7b6fecd72103b0dc07edc",
+    "apps/web/dist/assets/inter-latin-400-normal-CyCys3Eg.woff": "e20fa0b4fd2dd26e4d14b3ac3cc922509c3a63fa5e910e90c614544aa042dd45",
+    "apps/web/dist/assets/inter-latin-500-normal-BL9OpVg8.woff": "9b42c108da48b5ed55a3072e815ffee2d271562e6c0dd6998910e8f9c09e0a3d",
+    "apps/web/dist/assets/inter-latin-500-normal-Cerq10X2.woff2": "f3779f1efccc4bdcdf9c0a02ab95bf6bd092ed09c48c08cedc725889edd1d19f",
+    "apps/web/dist/assets/inter-latin-600-normal-CiBQ2DWP.woff": "6a9cb3a509b4eeaf12b7dda6c4aacac3e85d07f4201bf4dd716e332e692b87bd",
+    "apps/web/dist/assets/inter-latin-600-normal-LgqL8muc.woff2": "f9a06e79cd3a2a20951c0f0e28f66dd0e6d3fda73911d640a2125c8fcb78f21a",
+    "apps/web/dist/assets/inter-latin-ext-400-normal-77YHD8bZ.woff": "22ae8360fbad24d2af7c6c9898a346c881774dc87f7cf94bd262c48ad58d7116",
+    "apps/web/dist/assets/inter-latin-ext-400-normal-C1nco2VV.woff2": "6744a7f509ebc6ab220a6cd4ea77e898adf014f03d88dcda5d45d8a9feefb4e9",
+    "apps/web/dist/assets/inter-latin-ext-500-normal-BxGbmqWO.woff": "30d2903ce97f8a89ea0e9c083b42cb8bf97e7bbb5607e7f00352815f19cb0d5b",
+    "apps/web/dist/assets/inter-latin-ext-500-normal-CV4jyFjo.woff2": "2c6fbc42d315528beb06c1096df45487bf4186c4b78b8111d12c9c951f8acca2",
+    "apps/web/dist/assets/inter-latin-ext-600-normal-CIVaiw4L.woff": "22ff20a6170674fb9637c2a072227be86303bb6ec52b829b9d7077405f7196a6",
+    "apps/web/dist/assets/inter-latin-ext-600-normal-D2bJ5OIk.woff2": "e4bdf67b0cd15ca9e184509275be95db942195d3cc2b17f6a0452f2adf75d0bf",
+    "apps/web/dist/assets/inter-vietnamese-400-normal-Bbgyi5SW.woff": "54aa42d325bcdfd623ecb9eac4a5e3c6420c63d7b86e9d8545fb479f653beb57",
+    "apps/web/dist/assets/inter-vietnamese-400-normal-DMkecbls.woff2": "547ad9fdaeb0ae43487f4b8a02e47c36553c0c0cb73c8aa98f93b7b615f6b55d",
+    "apps/web/dist/assets/inter-vietnamese-500-normal-DOriooB6.woff2": "44e36aa5a8f12130029a29bb0e6695d0262b67446ce321e878b1fb56162b5de6",
+    "apps/web/dist/assets/inter-vietnamese-500-normal-mJboJaSs.woff": "18a4a09f751671cd8929d7c66e8fe7d820b511c36e51cf6047ffceab88eec4a4",
+    "apps/web/dist/assets/inter-vietnamese-600-normal-BuLX-rYi.woff": "24a01e7bd947aeef91ae8f7b8edeb23fadaf5ceda34a610ce62d2bbdaea57e83",
+    "apps/web/dist/assets/inter-vietnamese-600-normal-Cc8MFFhd.woff2": "1aeb94ae9db052a4a2fe6f3046f928cff1fdbd7abdf870a9a01c13cae6faeba5"
+  },
+  "screenshotSha256": {
+    "smoke-shots/incident-export-1536.png": "6665b65b960d47724da2d489978c59bae8110d7526d9c6fb25d57d3e8702b492",
+    "smoke-shots/incident-export-390.png": "d84ce18364b2580f73690e303948bc202dd64dd5ebade8770c3d9e3f259ad6de"
+  },
+  "reportSha256": [
+    "a7f11c56c4b02c50337398b43569f2e3595c2ca9c4adbd005e53495816011584",
+    "18b3e6df2ddd5958148a24a4cbf7325915a1b0bb730d685d9f6b73d0074e3b9c"
+  ],
+  "scope": "Synthetic incident through the production reporter, SSE, API and built renderer. No external provider, remote phone or complete T23/T27 acceptance."
+}

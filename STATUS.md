@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Maskerad diagnostikexport och uttrycklig origin-kontroll
+
+Diagnostics kan nu ladda ned en begränsad JSON-rapport för vald incident. Servern projicerar endast tillåtna fält, maskerar kända credentials före trunkering och skickar `no-store`. Ett misslyckat nätverksanrop ger ett synligt fel utan lokal/rå reservrapport. Byggt browserprov vid 1536/390 px verifierade maskerad SSE/DOM, faktisk nedladdning, nätverksfel, noll agentstarter och layout; bilderna är granskade och använder DEMO-data.
+
+Två konkreta glapp reproducerades och rättades: giltig nyckel med fientlig Origin fick tidigare svar, och en sparad connectorhemlighet i ett vanligt URL-värde hamnade i requestloggen. Origin avvisas nu separat från Host/nyckel och före preflight, utan att lita på proxyheaders. Den betrodda webbvyn får fortsatt läsbart 401 vid fel nyckel. Requestloggen maskerar nu också alla aktuella anslutningshemligheter. Den ursprungliga läckan finns endast som syntetisk canary i den ignorerade före-loggen.
+
+Slutligt `npm run verify` passerade med typkontroll, lint, 420 tester i 93 filer och byggning. Hela `npm run smoke` passerade. Käll-, bygg- och bildhasharna för exportprovet stämmer efter smoke. Loggar: `controlos-incident-export-verify-complete.log`, `controlos-incident-export-smoke.log` och `controlos-incident-export-probe.log`. Avgränsning och reproduktion: `docs/controlos/incident-export.md`.
+
+Det tidigare sporadiska automationsfelet kunde inte återges i 1 000 historikskrivningar eller 100 kompletta transaktionsfall; orsaken är fortsatt okänd. T23/T27 och fulla R1–R4-grindar förblir öppna. Antalet lokalt godkända scenarier är fortsatt 16/46.
+
 ## Analytics: okänd användning skiljs från noll
 
 Tokenstatistik redovisar nu antalet körningar med rapporterade input-/outputvärden för hela tidsfönstret och varje repo/modell. Analytics visar Unknown när värden saknas, märker ofullständiga summor som partial och behåller uttryckligt rapporterade nollor. Kostnad anges som okänd utan verifierat pris-/fakturaunderlag. Historiska tokenkurvor beskriver sin okända täckning. Inga historiska räknare skrivs om.

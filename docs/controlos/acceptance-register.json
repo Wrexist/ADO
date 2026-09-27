@@ -917,9 +917,14 @@
         "apps/server/src/runner/codex.test.ts",
         "apps/server/src/incidents/redaction.test.ts",
         "docs/controlos/redaction-evidence.md",
-        "apps/server/src/lib/processOutput.test.ts"
+        "apps/server/src/lib/processOutput.test.ts",
+        "apps/server/src/incidents/export.test.ts",
+        "apps/server/src/incidents/requestLogRedaction.test.ts",
+        "scripts/probe-incident-export.mts",
+        "docs/controlos/incident-export.md",
+        "docs/controlos/incident-export-evidence.json"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. A real local child through ClaudeSpawner now covers stdout, split stderr, encoded URL and provider failure through disk-backed runner storage and event publication. A reproduced trim-before-redact leak for whitespace-suffixed configured values is fixed. Full UI/export/report coverage remains unaccepted."
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. A real local child through ClaudeSpawner now covers stdout, split stderr, encoded URL and provider failure through disk-backed runner storage and event publication. A reproduced trim-before-redact leak for whitespace-suffixed configured values is fixed. Full UI/export/report coverage remains unaccepted. Added bounded incident-report export and built-browser evidence for masked SSE/DOM/download content and no raw fallback on network failure. A real child-process request-log test reproduced a configured connector value leaking in an encoded URL; request serialization now masks all current configured credentials. Full acceptance remains unproven."
     },
     {
       "id": "T24",
@@ -1005,9 +1010,12 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R3. **Krav:** REQ17, REQ15. **Status:** not_run.\n\n**Givet:** En annan webbplats anropar API/SSE, försöker fel Host och fabricerar proxyheaders.\n\n**När:** Läsning eller mutation begärs.\n\n**Godkänt endast om:** Känslig data och mutation nekas. Host, origin, session och betrodd proxygräns prövas separat.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/app.test.ts"
+        "apps/server/src/app.test.ts",
+        "apps/server/src/securityOrigin.test.ts",
+        "apps/server/src/security.ts",
+        "docs/controlos/incident-export.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. An export regression reproduced a hostile Origin receiving a response with a valid key. Explicit server Origin checks now precede CORS preflight and ignore fabricated proxy headers, with independent Host/key tests and trusted-origin 401 preservation. This does not certify private remote connections, device sessions or the complete browser attack scenario."
     },
     {
       "id": "T28",

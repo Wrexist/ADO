@@ -64,6 +64,7 @@ import { ReviewRunner } from './review/runner';
 import { Notifier } from './notify/notifier';
 import { IncidentDiagnoser } from './incidents/diagnoser';
 import { IncidentReporter } from './incidents/reporter';
+import { incidentReport } from './incidents/export';
 import { redact } from './lib/redact';
 import { AutoReviewStore } from './autoreview/store';
 import { ClaudeReviewer } from './autoreview/reviewer';
@@ -193,17 +194,15 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
 
   const { db, sqlite } = openDb(env.dbPath);
-  // The SSE token rides the URL (`/events?token=…`) because EventSource can't set headers,
-  // and the default logger serializes req.url — writing the shared secret to the log file.
-  // Redact it in a custom req serializer (headers are never serialized, so header tokens
-  // stay safe on their own).
+  // Request URLs can contain legacy SSE tokens or accidentally included provider values.
+  // Mask every configured credential before serializing; never serialize request headers.
   const app = Fastify({
     logger: env.dbPath !== ':memory:'
       ? {
           serializers: {
             req: (req: FastifyRequest) => ({
               method: req.method,
-              url: redact(req.url ?? '', [env.accToken]),
+              url: redact(req.url ?? '', [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]),
               remoteAddress: req.ip,
             }),
           },
@@ -218,12 +217,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   if (!recovery) bus.compact((msg) => app.log.info(msg)); // preserve restored history during review
   bus.replayFromDb((msg) => app.log.warn(msg));
 
+  registerSecurity(app, env);
   await app.register(cors, {
     origin: env.webOrigin, // exactly one origin — no wildcards
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id'],
   });
-  registerSecurity(app, env);
   app.addHook('preHandler', async (req, reply) => {
     if (recoveryReview && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !['/api/session', '/api/recovery/prepare', '/api/recovery/activate'].includes(req.url.split('?')[0]) && !/^\/api\/recovery\/runs\/[^/]+\/(cancel-queued|review-automation)$/.test(req.url.split('?')[0])) {
       if (req.url.split('?')[0] === '/api/app-open') return reply.send({ recorded: false, recovery: true });
@@ -912,6 +911,15 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.get('/api/incidents', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return { incidents: bus.snapshot().state.incidents };
+  });
+  app.get('/api/incidents/:id/export', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    const id = (req.params as { id: string }).id;
+    const incident = bus.snapshot().state.incidents.find((item) => item.id === id);
+    if (!incident) return reply.code(404).send({ error: 'unknown incident' });
+    reply.header('Cache-Control', 'no-store');
+    reply.header('Content-Disposition', 'attachment; filename="controlos-incident.json"');
+    return incidentReport(incident, [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]);
   });
   app.post('/api/incidents', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
