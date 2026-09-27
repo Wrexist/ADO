@@ -29,6 +29,7 @@ import { ProjectSettingsStore } from './projects/settings';
 import { ProjectRegistry } from './projects/registry';
 import { PlanningStore } from './projects/planning';
 import { proposeToday } from './projects/today';
+import { todayLockScope } from './projects/todayLocks';
 import { TodayPreferencesStore } from './projects/todayPreferences';
 import { ZodError } from 'zod';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
@@ -699,7 +700,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
   app.post('/api/planning/today', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
-    return planningMutation(reply, () => db.transaction(() => proposeToday(req.body, planning.snapshot(), registry.snapshot(), new Set(db.select().from(executionLocks).all().map((lock) => lock.runId)))));
+    return planningMutation(reply, () => db.transaction(() => {
+      const plan = planning.snapshot(), portfolio = registry.snapshot();
+      return proposeToday(req.body, plan, portfolio, todayLockScope(db, plan, portfolio));
+    }));
   });
   app.get('/api/planning/today/preferences', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
@@ -708,7 +712,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.put('/api/planning/today/preferences', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return planningMutation(reply, () => todayPreferencesStore.save(req.body, (choices) => {
-      proposeToday(choices, planning.snapshot(), registry.snapshot(), new Set());
+      proposeToday(choices, planning.snapshot(), registry.snapshot(), { runIds: new Set(), repositoryIds: new Set(), unknown: false });
     }));
   });
   app.post('/api/planning/tasks/:id/dispatch', async (req, reply) => planningMutation(reply, () => runner.dispatchTask((req.params as { id: string }).id, req.body)));

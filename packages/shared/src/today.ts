@@ -12,7 +12,7 @@ export const TodayRequest = z.object({
 export const TodayProposal = z.object({
   generatedTs: z.string(), availableMinutes: z.number(), lockedTaskId: z.string().uuid().nullable(),
   alternatives: z.array(z.object({ taskId: z.string().uuid(), taskVersion: z.number(), title: z.string(), estimate: TodayEstimate, reason: z.string(), uncertainty: z.literal('User estimate; actual duration is unknown') })).max(3),
-  excluded: z.array(z.object({ taskId: z.string().uuid(), reason: z.enum(['outside_focus', 'inactive_project', 'not_ready', 'dependencies', 'writer_lock', 'estimate_missing', 'outside_window', 'lower_priority']) })),
+  excluded: z.array(z.object({ taskId: z.string().uuid(), reason: z.enum(['outside_focus', 'inactive_project', 'not_ready', 'dependencies', 'writer_lock', 'writer_scope_unknown', 'estimate_missing', 'outside_window', 'lower_priority']) })),
   scope: z.literal('Manual planning alternatives only; execution eligibility must be reviewed separately'),
 });
 export type TodayProposal = z.infer<typeof TodayProposal>;

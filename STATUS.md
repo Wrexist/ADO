@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Today: kvarhållna skrivlås gäller även nya uppgifter i samma repo
+
+Today utesluter nu uppgifter vars registrerade repo omfattas av ett kvarhållet skrivlås, även när uppgiften saknar en egen tidigare körning. Okänd låsägare eller saknad/felkopplad verifieringspost ger en uttrycklig anledning och utesluter repobundna förslag. Oberoende repor kan fortfarande föreslås när omfattningen är känd. Detta använder registrerad metadata; färsk filsystemsidentitet och körmotorns startkontroller är fortfarande separata.
+
+`npm run verify` passerade med typkontroll, lint, 414 tester i 88 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. API-regressionen täcker scanner-, Git-, sökvägs-, GitHub- och verifieringskopplingar, okänd omfattning och oförändrade lås/planeringsdata. Byggt Today-browserprov passerade vid 1536/390 px och slutbilderna granskades. De nya låsfallen har API-testunderlag; browserprovet återverifierar befintliga Today-flöden med DEMO-data. Loggar: `controlos-today-locks-verify.log` och `controlos-today-locks-probe.log`.
+
+16/46 scenarier är fortsatt lokalt godkända; inga nya hela grindar har godkänts. Följande avsnitt är historiska kontrollpunkter.
+
 ## Today: gamla uppskattningar utanför fokus går att rätta
 
 `npm run verify` passerade med typkontroll, lint, 413 tester i 88 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Slutligt riktat browserprov och separat lint passerade; käll-, bygg- och bildhasharna stämmer. Loggar: `controlos-today-retained-verify.log`, `controlos-today-retained-probe-final.log` och `controlos-today-retained-lint.log`.

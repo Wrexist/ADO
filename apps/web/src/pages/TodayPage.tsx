@@ -9,7 +9,7 @@ import { fetchPortfolio } from '../lib/portfolio';
 const field = 'mt-1 w-full min-w-0 rounded-tile border bg-card px-3 py-2 text-body text-text1';
 const reasons: Record<TodayProposal['excluded'][number]['reason'], string> = {
   outside_focus: 'Outside your locked task or project focus', inactive_project: 'Project is not active', not_ready: 'Task is not ready',
-  dependencies: 'Dependencies are not accepted', writer_lock: 'An earlier attempt still holds a writer lock', estimate_missing: 'Add a time estimate',
+  dependencies: 'Dependencies are not accepted', writer_lock: 'A run still holds a writer lock for this task or repository', writer_scope_unknown: 'A retained writer lock has unknown repository scope; review execution recovery', estimate_missing: 'Add a time estimate',
   outside_window: 'Upper estimate exceeds your available time', lower_priority: 'Three higher-priority alternatives already fit',
 };
 type EstimateDraft = { taskVersion: number; min: string; max: string };

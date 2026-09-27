@@ -450,11 +450,12 @@
         "scripts/probe-today.mts",
         "docs/controlos/today-ui-evidence.json",
         "apps/server/src/projects/todayPreferences.ts",
-        "apps/server/src/projects/todayPreferences.test.ts"
+        "apps/server/src/projects/todayPreferences.test.ts",
+        "apps/server/src/projects/todayLocks.ts"
       ],
-      "coverageNote": "T08 revalidated with profile-local saved preferences, explicit reload, concurrent-write rejection and unchanged-estimate review at 1536/390 pixels. Restart/profile isolation and commit-failure/corruption protection have API regression evidence. Execution environment/policy review and native packaged migration 0020 remain open. Built browser regression now covers obsolete hidden estimates after task archival and preserves the stored preference set until explicit save.",
+      "coverageNote": "T08 revalidated with profile-local saved preferences, explicit reload, concurrent-write rejection and unchanged-estimate review at 1536/390 pixels. Restart/profile isolation and commit-failure/corruption protection have API regression evidence. Execution environment/policy review and native packaged migration 0020 remain open. Built browser regression now covers obsolete hidden estimates after task archival and preserves the stored preference set until explicit save. Repository-wide retained writer exclusions and unknown-scope handling have synthetic metadata API regression evidence; this is not fresh filesystem or execution-policy acceptance.",
       "acceptanceEvidence": {
-        "date": "2026-09-27T22:39:59.264Z",
+        "date": "2026-09-27T22:50:58.632Z",
         "environment": "Windows x64 / Node 22.18.0 / Chromium 153.0.8010.12",
         "command": "node --import tsx scripts/probe-today.mts",
         "result": "Locked task respected despite higher-priority alternative; upper estimate must fit 30 minutes, uncertainty is shown, blockers and stale versions are rejected. Keyboard submit, network failure and unchanged planning/run state verified. Screenshots reviewed. Saved choices now survive browser reload; concurrent writes require explicit loading of the newer version. Retained obsolete estimates outside focus can be removed from the draft and saved without changing the selected focus or remaining estimates.",

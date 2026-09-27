@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-27T22:39:59.264Z",
-  "baseRevision": "8e6a3e07e39f5ad63b3a9f90c07be3c77c16621a",
+  "date": "2026-09-27T22:50:58.632Z",
+  "baseRevision": "b6e73f06a7e92a664b4c5411bd121a61d157ba24",
   "environment": {
     "platform": "win32",
     "arch": "x64",
@@ -29,26 +29,27 @@
     "no horizontal overflow or page errors"
   ],
   "sourceSha256": {
-    "scripts/probe-today.mts": "9fed0fa20b965fba09c770904b0efb2785a8e02185c1eed7a8e407fd7e886b83",
-    "apps/web/src/pages/TodayPage.tsx": "7dd4941b3751e78f6044afced9d866b234274e3ae8fca7deb7237023da6e32b9",
+    "scripts/probe-today.mts": "0eec7699a4e45b2089bee37c413ebe8e0e7433538935c2deb12718d0605dc3de",
+    "apps/web/src/pages/TodayPage.tsx": "01277b7eb624111153e512b318bf63cec8deabda3ac843665b407704227c2674",
     "apps/web/src/main.tsx": "ed0c5c9dadef7306b5903fd041f0294d9c4eccd3b8b917c77791ff5216a6c1ae",
     "apps/web/src/chrome/MobileNav.tsx": "c0d8f0284b17914b1f6bfc062b75d10a4c98e0624a6af639f3088900c18c858c",
-    "apps/server/src/projects/today.ts": "0b53a328077130aa11284c0c4eb7c1ef51cf18ede1084d75b4b369ee68af223f",
+    "apps/server/src/projects/today.ts": "166f3e70e8cd0d160a1bde3e634a6cabf2336965e2c08f2f03e32fcac11b210e",
+    "apps/server/src/projects/todayLocks.ts": "c59a160b3c448d5bdc48fc52d486b7f4c5ae888f4b7beac23ebe3572a1e76657",
     "apps/server/src/projects/todayPreferences.ts": "961579b3d5d8d861bcaabcf06dff7b01a557e657aef1645e0d173aa93ff88a4d",
     "apps/server/drizzle/0020_today_preferences.sql": "52fd0117559f772564fbd209246f5072394e4b24337a78095eabd187555caae5",
-    "apps/server/src/app.ts": "e0ef68cd6485be8d42be29166bab36f80319d06fcbd496ddc64954c6603a49ae",
-    "packages/shared/src/today.ts": "3d7b772b8beaa1cfe6edea40ff9826c669a7a20096fa08c4078f4a449144a213"
+    "apps/server/src/app.ts": "134072df941d5013789096d66f31c59682c155fd27c14613f36c75b37d13c78e",
+    "packages/shared/src/today.ts": "332a72424e6039bc3e67aed6a4be342d5a8dee92f6d252aa3613317358ec9265"
   },
   "assetSha256": {
-    "apps/web/dist/index.html": "4017fdaabf71cf1c44d9dad60550047d08da192ffb7ae12b20d89f0b7198de51",
+    "apps/web/dist/index.html": "abf7cac44aa9f303ee85040e189c2c4e68d8903a8584b418f394ef0572de12f2",
     "apps/web/dist/assets/index-BW_t1ie0.css": "a5aa6fbd2869660610b7b240c80830f1e1c92b0ec7313ec2cd87f00869685964",
-    "apps/web/dist/assets/index-ByAPVgVf.js": "bf6674250f03143407b435a061e67317c0b93cfb4f26e4dd3427297bba0a55dd"
+    "apps/web/dist/assets/index-Di4B9Vqc.js": "1930ce2594c86a42e5832ec1a8bdb6a665fc6ca3d96086acf1aa603f3fd43c60"
   },
   "screenshotSha256": {
-    "smoke-shots/today-1536.png": "8bdbdcfa6beca69604a2c39d17d6fb44007d01e193354b7bbf017c87d1921f45",
-    "smoke-shots/today-retained-1536.png": "0d00326347e5c90538aac61f1e3f0f876ad18f141c6ae564e75fe27277119c5d",
-    "smoke-shots/today-390.png": "bdc6f1b1de9f3670d89cbb86b653b97d9d77105d2554768806ba291e9c9a4720",
-    "smoke-shots/today-retained-390.png": "9fe5007120f315d32185982b84fd7c5ff8c71877d252a566637663081fb3db74"
+    "smoke-shots/today-1536.png": "f563aa13d4d263386f5b21b64c9a56ceffe447b2732f0c790ea409bdd4a2b0bb",
+    "smoke-shots/today-retained-1536.png": "ebc2128cfcdf1bfd9bdd7b9c21b32a3587487ab58e81182bee9428584e632194",
+    "smoke-shots/today-390.png": "3a9377b4e81ac233295802307d286354d270371d39721318120d26f0a21ca3af",
+    "smoke-shots/today-retained-390.png": "7abd39282c45caf290f3b90878345760a6d3568772b42538fb7301163a8e3d73"
   },
   "scope": "Synthetic local profile through production API and built renderer, with profile-local saved choices and explicit concurrent-write recovery. No agent, calendar, external provider or execution-policy acceptance."
 }
