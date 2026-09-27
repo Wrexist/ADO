@@ -63,7 +63,7 @@ export class TaskReviewStore {
     let valid = false;
     try {
       if (run?.status === 'done' && run.verifyVerdict === 'pass' && run.humanAction === 'accepted' && run.workspacePath && run.baseSha && run.headSha === review.headSha && run.diffDigest === review.diffDigest) {
-        const current = await workspaceEvidence(run.workspacePath, run.baseSha);
+        const current = await workspaceEvidence(run.workspacePath, run.baseSha, run.workspaceGitIdentity);
         valid = current.headSha === review.headSha && current.diffDigest === review.diffDigest;
       }
     } catch { /* Missing or unreadable content cannot prove acceptance remains current. */ }

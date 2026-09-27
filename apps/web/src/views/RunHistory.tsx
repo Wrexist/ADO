@@ -179,6 +179,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
             ? 'Process stop is unconfirmed. This repository remains locked.' : 'Process stop confirmation: not recorded.'}
         </p>}
         {detail.workspacePath && <p>Working copy: {detail.workspacePath}</p>}
+        {detail.workspacePath && <p>Workspace type: {detail.workspaceKind?.replaceAll('_', ' ') ?? 'not recorded'}</p>}
         {detail.branch && <p>Branch: {detail.branch}</p>}
         {detail.baseSha && <p>Base revision: {detail.baseSha}</p>}
         {detail.headSha && <p>Result revision: {detail.headSha}</p>}

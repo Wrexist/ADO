@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db';
 import { runs, verificationEvidence, taskExecutions, planningTasks } from '../db/schema';
-import { workspaceEvidence } from './workspace';
+import { assertWorkspaceIdentity, workspaceEvidence } from './workspace';
 import { spawnOwned, type OwnedProcess } from '../lib/ownedProcess';
 import { boundedDiagnostics } from '../lib/processOutput';
 import { VerificationOwnership } from './verificationOwnership';
@@ -88,7 +88,7 @@ export class Verifier {
       const run = this.db.select().from(runs).where(eq(runs.id, id)).get();
       if (target.operation !== (taskReview ? 'task.accept' : 'result.accept') || !target.policyVersion || !run || run.engineVersion !== 1 || run.status !== 'done' || run.verifyVerdict !== 'pass' || !run.workspacePath || !run.baseSha || !run.headSha || !run.diffDigest || target.headSha !== run.headSha || target.diffDigest !== run.diffDigest) throw new Error('Review requires the exact independently verified result and operation');
       try {
-        const current = await workspaceEvidence(run.workspacePath, run.baseSha);
+        const current = await workspaceEvidence(run.workspacePath, run.baseSha, run.workspaceGitIdentity);
         if (current.headSha !== run.headSha || current.diffDigest !== run.diffDigest) throw new Error('Result changed after verification; review is stale');
       } catch (error) { this.invalidateResult(run); throw error; }
       const binding = this.binding(run, taskReview);
@@ -109,7 +109,7 @@ export class Verifier {
       const unchangedResult = and(eq(runs.id, id), eq(runs.status, 'done'), eq(runs.verifyVerdict, 'pass'), eq(runs.workspacePath, run.workspacePath), eq(runs.baseSha, run.baseSha), eq(runs.headSha, run.headSha), eq(runs.diffDigest, run.diffDigest));
       const unchangedRow = and(unchangedResult, run.humanAction === null ? isNull(runs.humanAction) : eq(runs.humanAction, run.humanAction));
       try {
-        const current = await workspaceEvidence(run.workspacePath, run.baseSha);
+        const current = await workspaceEvidence(run.workspacePath, run.baseSha, run.workspaceGitIdentity);
         if (current.headSha !== run.headSha || current.diffDigest !== run.diffDigest) throw new Error('Result changed after verification; approval is stale');
       } catch (error) {
         // A simultaneous correction must not preserve stale green evidence or
@@ -149,6 +149,8 @@ export class Verifier {
         const task = this.db.select().from(planningTasks).where(eq(planningTasks.id, execution.taskId)).get();
         if (!task || task.version !== execution.currentTaskVersion || !['awaiting_review', 'accepted'].includes(task.status)) throw new Error('This task attempt is historical; verification cannot write to its retained working copy');
       }
+      try { assertWorkspaceIdentity(run.workspacePath, run.workspaceGitIdentity); }
+      catch (error) { this.invalidateResult(run); throw error; }
       // A new verification attempt invalidates old approval even if preflight fails.
       this.db.transaction(() => {
         attemptId = this.ownership.claim(run);
@@ -156,7 +158,7 @@ export class Verifier {
         new TaskReviewStore(this.db).invalidateRun(id, 'New verification requested');
         this.db.update(runs).set({ verifyVerdict: null, humanAction: null }).where(eq(runs.id, id)).run();
       });
-      const before = await workspaceEvidence(run.workspacePath, run.baseSha);
+      const before = await workspaceEvidence(run.workspacePath, run.baseSha, run.workspaceGitIdentity);
       if (before.headSha !== run.headSha || before.diffDigest !== run.diffDigest) throw new Error('Working copy changed since the run; start a new attempt');
       const pkg = JSON.parse(readFileSync(join(run.workspacePath, 'package.json'), 'utf8')) as { scripts?: Record<string, unknown> };
       if (typeof pkg.scripts?.verify !== 'string') throw new Error('Repository must define an explicit npm verify script');
@@ -179,7 +181,7 @@ export class Verifier {
       if (this.stopped) throw new Error('Verification stopped during shutdown');
       if (this.cancelled.has(id)) throw new Error('Verification was stopped');
       const output = [stdout(), stderr()].filter(Boolean).join('\n');
-      const after = await workspaceEvidence(run.workspacePath, run.baseSha);
+      const after = await workspaceEvidence(run.workspacePath, run.baseSha, run.workspaceGitIdentity);
       if (this.stopped || this.cancelled.has(id)) throw new Error('Verification was stopped');
       const unchanged = after.headSha === before.headSha && after.diffDigest === before.diffDigest;
       const verdict = exitCode === 0 && unchanged ? 'pass' : 'fail';

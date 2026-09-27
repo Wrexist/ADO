@@ -57,7 +57,8 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     while (server.runner.isLive(runId) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
     expect(server.runner.isLive(runId)).toBe(false);
     const run = (await get(`/api/runs/${runId}`)).run;
-    expect(run).toMatchObject({ executionStatus: 'succeeded', exitCode: 0, taskId: task.id, taskVersion: request.version, baseSha, verifyVerdict: null, humanAction: null });
+    expect(run).toMatchObject({ executionStatus: 'succeeded', exitCode: 0, taskId: task.id, taskVersion: request.version, baseSha, workspaceKind: 'isolated_clone', verifyVerdict: null, humanAction: null });
+    expect(run).not.toHaveProperty('workspaceGitIdentity');
     const reviewedTask = (await get('/api/planning')).tasks[0]; expect(reviewedTask.status).toBe('awaiting_review');
     expect(readFileSync(join(repo, 'original.txt'), 'utf8')).toBe('Preserved'); expect(git(['status', '--porcelain'])).toBe('');
     expect((await post(route, request)).json()).toEqual({ runId }); expect(launched).toHaveLength(1);
@@ -66,6 +67,7 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     server = await buildServer(env, { startSystem: false, spawner, workspaceRoot: join(root, 'workspaces') });
     expect((await server.app.inject({ url: '/api/planning', headers: auth })).json().tasks[0]).toEqual(reviewedTask);
     expect((await server.app.inject({ url: `/api/runs/${runId}`, headers: auth })).json().run.executionStatus).toBe('succeeded');
+    expect((await server.app.inject({ url: `/api/runs/${runId}`, headers: auth })).json().run.workspaceKind).toBe('isolated_clone');
     expect(launched).toHaveLength(1);
   } finally { await server?.close(); await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
 }, 120000);

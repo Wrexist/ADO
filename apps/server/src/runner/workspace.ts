@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { mkdirSync, lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { commonGitIdentity } from '../projects/checkoutIdentity';
 
 const exec = promisify(execFile);
 async function git(cwd: string, args: string[], raw = false, isolated = false): Promise<string> {
@@ -12,7 +13,7 @@ async function git(cwd: string, args: string[], raw = false, isolated = false): 
   const { stdout } = await exec('git', args, { cwd, env, windowsHide: true, timeout: 60_000, maxBuffer: 8 * 1024 * 1024 });
   return raw ? stdout : stdout.trim();
 }
-export interface RunWorkspace { path: string; baseSha: string; branch: string }
+export interface RunWorkspace { path: string; baseSha: string; branch: string; kind: 'isolated_clone'; gitIdentity: string }
 export async function prepareWorkspace(root: string, cwd: string, expectedBaseSha?: string): Promise<RunWorkspace> {
   // Dirty source contents are excluded only when the caller explicitly reviewed a base.
   if (!expectedBaseSha && await git(cwd, ['status', '--porcelain'])) throw new Error('Uncommitted source changes require an explicitly reviewed base commit.');
@@ -33,9 +34,13 @@ export async function prepareWorkspace(root: string, cwd: string, expectedBaseSh
     await git(path, ['config', '--local', key, value], false, true);
   }
   if (await git(cwd, ['rev-parse', '--verify', 'HEAD']) !== baseSha) throw new Error('Checkout revision changed during workspace preparation');
-  return { path, baseSha, branch };
+  return { path, baseSha, branch, kind: 'isolated_clone', gitIdentity: commonGitIdentity(path) };
 }
-export async function workspaceEvidence(cwd: string, baseSha: string) {
+export function assertWorkspaceIdentity(cwd: string, expected?: string | null) {
+  if (expected && commonGitIdentity(cwd) !== expected) throw new Error('Workspace Git identity changed; recorded provenance no longer matches');
+}
+export async function workspaceEvidence(cwd: string, baseSha: string, expectedIdentity?: string | null) {
+  assertWorkspaceIdentity(cwd, expectedIdentity);
   const headSha = await git(cwd, ['rev-parse', 'HEAD']);
   const diff = await git(cwd, ['diff', '--no-ext-diff', '--no-textconv', '--binary', baseSha, '--'], true);
   const status = await git(cwd, ['status', '--porcelain']);
@@ -46,5 +51,6 @@ export async function workspaceEvidence(cwd: string, baseSha: string) {
     if (!stat.isFile() || stat.size > 8 * 1024 * 1024) throw new Error('Cannot fingerprint a linked or oversized untracked result; review the working copy directly.');
     hash.update('\0').update(name).update('\0').update(readFileSync(file));
   }
+  assertWorkspaceIdentity(cwd, expectedIdentity);
   return { headSha, diffDigest: hash.digest('hex') };
 }

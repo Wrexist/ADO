@@ -703,6 +703,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     note: r.note,
     humanAction: r.humanAction as 'accepted' | 'corrected' | 'redone' | null,
     workspacePath: r.workspacePath,
+    workspaceKind: r.workspaceKind,
     baseSha: r.baseSha,
     branch: r.branch,
     headSha: r.headSha,

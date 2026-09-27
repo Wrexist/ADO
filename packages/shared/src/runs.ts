@@ -54,6 +54,7 @@ export const AgentRun = z.object({
   /** Human verdict on the run's work (accepted/corrected/redone) — null until someone judges it. */
   humanAction: RunHumanAction.nullable(),
   workspacePath: z.string().nullable().optional(),
+  workspaceKind: z.enum(['worktree', 'isolated_clone', 'snapshot']).nullable().optional(),
   baseSha: z.string().nullable().optional(),
   branch: z.string().nullable().optional(),
   headSha: z.string().nullable().optional(),

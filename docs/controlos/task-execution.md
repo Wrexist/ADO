@@ -140,6 +140,21 @@ during and after the job. The result keeps the agent edit and has no source
 hook, remote path or object alternates. This is a preservation test for managed
 preparation/cancellation; a trusted same-user agent can still address other files.
 
+Migration 0018 records `workspaceKind: isolated_clone` and the physical Git
+identity returned by preparation. Once recorded, the kind, identity, path, base
+revision and branch cannot be changed or cleared. The database rejects incomplete
+provenance and an isolated clone with the source's Git identity. Historical rows
+keep null provenance; the UI displays "not recorded" instead of inferring a type.
+The public API exposes the kind, not the private filesystem identity.
+
+Execution preflight, result hashing, verification and acceptance check the recorded
+identity. A replacement repository with identical commit and content is refused;
+previous verification and acceptance are invalidated. The identity is checked
+before and after hashing, but does not lock the filesystem against same-user
+races. `workspaceProvenance.test.ts` exercises immutable metadata and actual
+repository replacement; API and browser tests cover persistence and both recorded
+and historical display states.
+
 This is trusted local execution, not an OS sandbox. Same-user filesystem races,
 legacy shared worktrees, scanner-ID-based permission migration, default-branch/fetch
 selection and versioned context packets remain

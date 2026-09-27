@@ -23,7 +23,7 @@ it('upgrades the previous profile schema without inventing approvals for histori
     const file = join(root, 'profile.sqlite');
     opened = openDb(file);
     opened.sqlite.prepare('INSERT INTO runs(id,repo_id,task,model,status,human_action,started_ts) VALUES(?,?,?,?,?,?,?)').run('legacy', 'legacy-repo', 'Historical judgment', 'default', 'done', 'accepted', '2026-07-01T00:00:00Z');
-    const before = (opened.sqlite.prepare('SELECT * FROM runs').all() as Array<Record<string, unknown>>).map((row) => ({ ...row, source_git_identity: null }));
+    const before = (opened.sqlite.prepare('SELECT * FROM runs').all() as Array<Record<string, unknown>>).map((row) => ({ ...row, source_git_identity: null, workspace_kind: null, workspace_git_identity: null }));
     opened.sqlite.close(); opened = undefined;
     process.env.ACC_MIGRATIONS_DIR = source;
     opened = openDb(file);

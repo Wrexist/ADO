@@ -69,6 +69,8 @@ export const runs = sqliteTable(
     note: text('note'), // e.g. "orphaned on boot", "opaque stream"
     resultText: text('result_text'), // the agent's final message (capped); null = none captured
     workspacePath: text('workspace_path'),
+    workspaceKind: text('workspace_kind'),
+    workspaceGitIdentity: text('workspace_git_identity'),
     sourceGitIdentity: text('source_git_identity'),
     baseSha: text('base_sha'),
     branch: text('branch'),

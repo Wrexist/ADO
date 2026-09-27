@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: beständig arbetskopietyp och kontroll av utbytt resultat
+
+Migration 0018 sparar nya arbetskopior som `isolated_clone` tillsammans med deras fysiska Git-identitet. Typ, identitet, sökväg, basrevision och branch låses efter registrering. Ofullständig proveniens och en isolerad kopia med originalets identitet nekas av databasen. Historiska rader får ingen gissad klassificering: API och körhistorik visar att typen inte är registrerad. Den privata identiteten lämnas inte ut av API:t.
+
+Startkontroller, resultatets innehållskontroll, verifiering och acceptans jämför den registrerade identiteten. Ett nytt prov ersätter resultatets repo med en annan kopia med exakt samma commit och innehåll. Acceptans och ny verifiering nekas ändå, tidigare grönt resultat återkallas och ingen andra verifieringsprocess startas. API-provet kontrollerar även bevarad typ efter omstart. Se [kontraktet](docs/controlos/task-execution.md).
+
+`npm run verify` passerade med typkontroll, lint, 350 tester i 69 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Hela `npm run smoke` passerade. De fyra nya bilderna för registrerad/okänd typ vid 1536/390 px har granskats; browserproven använder DEMO-data. Loggar: `controlos-workspace-provenance-verify.log` och `controlos-workspace-provenance-smoke.log` (ignorerade). Ett inledande testförsök förväntade fel databasfel vid ofullständig radering; fixturen rättades och slutproven passerade. Chunkvarningen kvarstår, cirka 559 kB före gzip.
+
+12 av 46 fullständiga scenarier är fortsatt lokalt godkända. Identitetskontroller är ingen OS-sandbox eller atomisk spärr mot filsystemsändringar av samma användare. Native-hjälpprocesser, profilmigrering och sandboxgränser återstår inom R1; fulla R1–R4-grindar är öppna. Ingen modell, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: fristående Git-resultat och bevarat original
 
 Nya körningar skapas nu i egna Git-repon från den granskade committen. Git-objekt överförs utan worktree-registrering, delade refs, objektalternates eller installation av originalets hooks/remotes/config. Endast effektivt författarnamn och e-post kopieras. Förberedelsen stänger av globala/systeminställningar och hookmallar i målet, ignorerar ärvda Git-miljööverstyrningar och undviker frivillig indexuppdatering i källan. Ändrad HEAD under förberedelsen stoppar jobbet.

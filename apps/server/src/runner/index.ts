@@ -20,7 +20,7 @@ import type { Spawner, SpawnHandle } from './spawner';
 import { createHash, randomUUID } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 import { redact } from '../lib/redact';
-import { prepareWorkspace, workspaceEvidence } from './workspace';
+import { assertWorkspaceIdentity, prepareWorkspace, workspaceEvidence } from './workspace';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
 import { verificationBlocks } from './verificationOwnership';
 import { ProcessNotStartedError } from '../lib/processLaunch';
@@ -383,8 +383,10 @@ export class Runner {
   }
 
   private assertTaskCanRun(runId: string, sourceId: string, cwd: string) {
-    const sourceIdentity = this.db.select().from(runs).where(eq(runs.id, runId)).get()?.sourceGitIdentity;
+    const provenance = this.db.select().from(runs).where(eq(runs.id, runId)).get();
+    const sourceIdentity = provenance?.sourceGitIdentity;
     if (sourceIdentity && commonGitIdentity(cwd) !== sourceIdentity) throw new Error('Source repository identity changed after claim');
+    if (provenance?.workspacePath) assertWorkspaceIdentity(provenance.workspacePath, provenance.workspaceGitIdentity);
     const binding = this.taskExecutions.validate(runId);
     if (!binding) return;
     if (!this.opts.assertCheckout || !this.opts.workspaceRoot) throw new Error('Task execution boundary is unavailable');
@@ -442,7 +444,7 @@ export class Runner {
       if (taskId) await new TaskReviewStore(this.db).recheckDependencies(taskId);
       this.assertTaskCanRun(runId, input.repoId, cwd);
       const workspace = this.opts.workspaceRoot ? await prepareWorkspace(this.opts.workspaceRoot, cwd, this.taskExecutions.get(runId)?.baseSha) : null;
-      if (workspace) this.db.update(runs).set({ workspacePath: workspace.path, baseSha: workspace.baseSha, branch: workspace.branch }).where(eq(runs.id, runId)).run();
+      if (workspace) this.db.update(runs).set({ workspacePath: workspace.path, workspaceKind: workspace.kind, workspaceGitIdentity: workspace.gitIdentity, baseSha: workspace.baseSha, branch: workspace.branch }).where(eq(runs.id, runId)).run();
       if (this.stopped || this.killed.has(runId) || this.opts.blockedReason?.(input.repoId)) throw new Error('Run cancelled before process start');
       if (taskId) await new TaskReviewStore(this.db).recheckDependencies(taskId);
       this.assertTaskCanRun(runId, input.repoId, cwd);
@@ -576,7 +578,7 @@ export class Runner {
     }
 
     if (baseSha) {
-      const evidence = await workspaceEvidence(cwd, baseSha);
+      const evidence = await workspaceEvidence(cwd, baseSha, this.db.select().from(runs).where(eq(runs.id, runId)).get()?.workspaceGitIdentity);
       this.db.update(runs).set(evidence).where(eq(runs.id, runId)).run();
     }
     const wasKilled = this.killed.has(runId);

@@ -276,10 +276,20 @@ try {
     if (!(await page.getByRole('button', { name: 'Run npm verify', exact: true }).isEnabled())) throw new Error('Confirmed stop should release verification control');
   }
   for (const width of [1536, 390]) {
+    await page.setViewportSize({ width, height: 1024 });
+    for (const kind of ['isolated_clone', null]) {
+      Object.assign(runFixture, { status: 'done', workspacePath: 'DEMO independent result', workspaceKind: kind });
+      await page.goto(base + '/agents?run=demo-stop'); await pair();
+      await page.getByText(`Workspace type: ${kind ? 'isolated clone' : 'not recorded'}`, { exact: true }).waitFor();
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Workspace provenance overflow');
+      await page.screenshot({ path: join(out, `workspace-provenance-${kind ?? 'legacy'}-${width}.png`), fullPage: true });
+    }
+  }
+  for (const width of [1536, 390]) {
     const repositoryWait = 'Waiting for the current or quarantined writer in this repository.';
     const capacityWait = 'Waiting for execution capacity: active or quarantined writers occupy the profile limit (2).';
     Object.assign(runFixture, { status: 'queued', executionStatus: 'queued', timelineState: 'live', waitingReason: repositoryWait,
-      verificationAttempts: [], verificationLocked: false, workspacePath: null, headSha: null, diffDigest: null, approvalPolicyVersion: null, verifyVerdict: null, humanAction: null, processTermination: null });
+      verificationAttempts: [], verificationLocked: false, workspacePath: null, workspaceKind: null, headSha: null, diffDigest: null, approvalPolicyVersion: null, verifyVerdict: null, humanAction: null, processTermination: null });
     await page.setViewportSize({ width, height: 1024 });
     await page.goto(base + '/agents?run=demo-stop'); await pair();
     await page.getByRole('status').filter({ hasText: repositoryWait }).waitFor();

@@ -7,6 +7,7 @@ import { commonGitIdentity } from '../projects/checkoutIdentity';
 import type { ProcessIdentity } from '../lib/ownedProcess';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
 import { executionCapacityAvailable, executionCapacityReason } from './executionCapacity';
+import { assertWorkspaceIdentity } from './workspace';
 
 export const verificationOwner = (id: string) => `verify:${id}`;
 
@@ -32,6 +33,7 @@ export class VerificationOwnership {
   /** Called inside the same transaction that invalidates prior proof. */
   claim(run: typeof runs.$inferSelect) {
     if (!executionCapacityAvailable(this.db)) throw new Error(executionCapacityReason);
+    assertWorkspaceIdentity(run.workspacePath!, run.workspaceGitIdentity);
     const gitIdentity = commonGitIdentity(run.workspacePath!);
     const sourceIdentity = run.sourceGitIdentity ?? gitIdentity;
     const resource = this.resourceFor?.(run.repoId, run.workspacePath!);
