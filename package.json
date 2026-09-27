@@ -25,6 +25,7 @@
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "smoke": "node scripts/smoke.mjs",
     "smoke:native-profile": "node scripts/probe-native-profile.mjs",
+    "smoke:packaged-profile": "node --import tsx scripts/probe-packaged-profile.mts",
     "autostart": "bash scripts/install-autostart.sh",
     "restore": "node --import tsx scripts/restore.mts"
   },

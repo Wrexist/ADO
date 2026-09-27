@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1/R4: riktig paketerad desktop med syntetisk äldre profil
+
+En separat käll- och beroendekopia från `6457efb` plus de dokumenterade källändringarna har byggts till en riktig Windows x64 Electron-artefakt utan publicering. SQLite byggdes för Electron i den kopian; utvecklingsmiljöns Node-modul bevarades. Appen har startats tre gånger med egen userData/sessionData, isolerade Windows app-data-kataloger, dold vy och avstängd uppdateringskontroll. Nya explicita startval är `--profile-dir=<absolut sökväg>`, `--hidden` och `--no-update-check`; standardstarten är oförändrad.
+
+Provet använder en temporär profil med schema till migration 0008, historiskt accepterad körning, egen prompt, avstängd agentpolicy och syntetiska nycklar. Appens riktiga preload, API, paketerade migrationsfiler, SQLite-modul och DPAPI-hjälpare används. Klartext migreras, därefter skapas riktiga äldre Electron-ciphertexter i samma profil som migreras vid nästa start. Tredje starten återöppnar DPAPI-profilen. Historiska körfält och prompt-/policybytes bevaras, inga gamla approvals uppfinns och SQLite integrity_check passerar efter varje normal avstängning. Se [reproducerbart prov och artefakthashar](docs/controlos/packaged-profile.md).
+
+Första körningen hittade en verklig avstängningslåsning: servern väntade på HTTP-stängning medan desktopfönstret höll SSE öppen. Servern stänger nu sina strömmar och nekar nya innan den väntar på avstängning. Ett nätverksprov reproducerar och kontrollerar beteendet. Den låsta första testprocessen avslutades uttryckligen och räknas inte som godkänd. Ett första HTTP-test hade fel Host-header; fixturen rättades utan undantag i produktskyddet. Därefter passerade både det riktade provet och paketerad migrering/återöppning med tidsgräns för avstängning.
+
+`npm run verify` passerade: typkontroll, lint, 357 tester i 73 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Hela `npm run smoke` passerade. Den slutliga utökningen av migreringsprovet passerade riktad lint och alla tre riktiga appstarter. Paketerad runtime: Electron 44.4.5/Node 24.21.0. Windows signaturkontroll: NotSigned. Loggar: `controlos-packaged-profile-verify.log`, `controlos-packaged-profile-smoke.log`, `controlos-packaged-profile-legacy.log` och föregående `controlos-package-*.log` (ignorerade). Temporära testartefakter och profiler har behållits separat.
+
+13 av 46 fullständiga scenarier är fortsatt lokalt godkända. Detta är en unpacked paketerad app med syntetisk profil, inte NSIS-installation, uppdatering/rollback, verklig användarprofil eller full migrations-/kraschmatris. Fulla R1–R4-grindar är öppna. Ingen modell, pilotagent, merge eller publicering kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: gemensam runtimekontroll och versionsbunden installationsstatus
 
 Setup och serverstart delar nu versionsregeln i `packages/shared/src/runtime.ts`: Node 22.18+ i 22-serien eller 24.11+. Felaktiga och förhandsversioner nekas. Setup läser den körande serverns runtime, inklusive Electron, i stället för att prova en annan Node-binär på PATH. En äldre version visas som åtgärdskrävande och får inte Ready-status. Den tidigare guiden för Node 20 har ersatts med projektets provade lägstanivå. Kontrollen gäller inte automatiskt andra byggskal eller providerprocesser.

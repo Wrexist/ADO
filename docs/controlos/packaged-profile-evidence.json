@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-27",
+  "baseRevision": "6457efb",
+  "sourceNote": "Isolated git archive of baseRevision plus main.ts, launchOptions.ts and app.ts at the source hashes below. Test/docs changes do not change the artifact.",
+  "environment": "Windows x64; Node 22.18.0/npm 11.7.0 build launcher; Electron 44.4.5 / embedded Node 24.21.0",
+  "command": "electron-builder --dir --win --x64 --publish never; node --import tsx scripts/probe-packaged-profile.mts <executable>",
+  "result": "passed: three packaged app launches covering old-schema/plaintext migration, genuine legacy Electron ciphertext migration, DPAPI reopen, normal shutdown, retained historical run/prompt/policy and SQLite integrity",
+  "signatureStatus": "NotSigned",
+  "scope": "Synthetic disposable profile; unpacked packaged artifact. No NSIS install/update, real user-profile restore, all-data/crash matrix or full R1/R4 acceptance.",
+  "sourceSha256": {
+    "apps/desktop/src/main.ts": "d795d01331cadd64c05da606a216a6ce91a7f80d2339db61f9fe38d42c28bdc9",
+    "apps/desktop/src/launchOptions.ts": "12cd2eed1938eec6f593f330372c10b0ab64b2f37208e5f4c2d765dda728b885",
+    "apps/server/src/app.ts": "4ad977548e2c7e1d1f4196915ff5f5e62e5d3182a42e9b2f96b99ab85a7799a3",
+    "apps/server/src/sse-shutdown.test.ts": "a789dab734eb6f0eef4b2508e6950442e958a952d50682f900051b6a380aecd4",
+    "scripts/probe-packaged-profile.mts": "31b6563d6dbaeb155c3a465a972b85b7be7e3f40e25cfd025fd61f81a1ce02be",
+    "apps/desktop/electron-builder.yml": "e7cded9474062ce84ad3e68401baba68becb4e74fac70ef99f68dd119d75e9cb"
+  },
+  "artifactSha256": {
+    "ai-control-center.exe": "377f196067a0dc79c9cd7f978fe4a2e26675d92effea28e1c7361f5ce3a001c0",
+    "resources/app.asar": "ac24e465c67b4b8f5ef9afe79cef4b48abe93bf41dd714c75d7a196c9109c9bb",
+    "resources/app.asar.unpacked/node_modules/better-sqlite3/build/Release/better_sqlite3.node": "dd53215ed6ea8b70fa6b98e7dc875f6a1d2fd60702e4f163502406b313a30591",
+    "resources/process-host/ControlOS.CredentialHost.exe": "31b55b0c701dc5a1ff6bdd9e374f7717d0cf5b253b4773643f6773e0903056c1",
+    "resources/process-host/ControlOS.JobHost.exe": "cda71f09eab03fac1aca65aee865883dd034d477ba5f2ffb5ddd7cc9fb1866da"
+  }
+}

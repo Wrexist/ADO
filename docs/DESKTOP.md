@@ -3,6 +3,11 @@
 Original decision: 2026-07-17. Current status: wrapper and release definition exist;
 installer release, update and complete profile migration are not accepted by local tests.
 
+The [packaged profile probe](controlos/packaged-profile.md) now exercises an actual
+unpacked Windows artifact with an old-schema synthetic profile, plaintext/legacy
+Electron credential migration, normal shutdown and reopening. It is not NSIS
+installation, update or real-user profile acceptance.
+
 ## What Isac asked for
 
 "Click a download, get a .exe, it installs and works" — i.e. distribute the AI Control Center

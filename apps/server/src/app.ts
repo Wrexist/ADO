@@ -241,7 +241,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
    * Fresh connect → full snapshot frame. Reconnect with Last-Event-ID → replay
    * the persisted gap instead, so a laptop sleep never renders stale as live.
    */
+  const eventStreams = new Set<() => void>();
+  let shuttingDown = false;
   app.get('/events', (req, reply) => {
+    if (shuttingDown) return reply.code(503).send({ error: 'Server is shutting down' });
     if (!sseAuthorized(env, req)) {
       return reply.code(401).send({ error: 'missing or invalid token' });
     }
@@ -280,9 +283,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     const cleanup = () => {
       if (closed) return; // 'close' and 'error' can both fire — release once
       closed = true;
+      eventStreams.delete(endStream);
       clearInterval(ping);
       unsubscribe();
     };
+    const endStream = () => { cleanup(); reply.raw.end(); };
+    eventStreams.add(endStream);
     req.raw.on('close', cleanup);
     reply.raw.on('error', cleanup); // abrupt client reset emits 'error' on the hijacked socket
   });
@@ -1371,6 +1377,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     runner,
     incidents,
     close: async () => {
+      shuttingDown = true;
+      for (const endStream of eventStreams) endStream();
       unsubBus?.();
       scanner?.stop();
       github?.stop();

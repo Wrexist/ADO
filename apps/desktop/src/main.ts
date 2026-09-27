@@ -24,6 +24,14 @@ import { buildServer, type AccServer } from '../../server/src/app';
 import { loadEnv } from '../../server/src/env';
 import { loadOrCreateToken } from './tokenStore';
 import { windowsCredentials } from './windowsCredentials';
+import { desktopLaunchOptions } from './launchOptions';
+
+const launch = desktopLaunchOptions(process.argv);
+if (launch.profileDir) {
+  mkdirSync(launch.profileDir, { recursive: true });
+  app.setPath('userData', launch.profileDir);
+  app.setPath('sessionData', launch.profileDir);
+}
 
 /** Ask the OS for a free localhost port (close it immediately; the server rebinds it). */
 function freePort(): Promise<number> {
@@ -95,6 +103,7 @@ async function start(): Promise<void> {
   });
 
   const win = new BrowserWindow({
+    show: !launch.hidden,
     width: 1536,
     height: 1000,
     minWidth: 1100,
@@ -120,7 +129,7 @@ async function start(): Promise<void> {
   });
   await win.loadURL(appOrigin);
 
-  if (app.isPackaged) {
+  if (app.isPackaged && launch.checkUpdates) {
     try {
       const { autoUpdater } = await import('electron-updater');
       autoUpdater.on('error', (err) => console.warn('updater:', err.message));
@@ -146,6 +155,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else start().catch((err: Error) => {
   console.error('desktop boot failed:', err);
   // Surface the real reason instead of a silent zombie process.
-  dialog.showErrorBox('AI Control Center failed to start', err.message);
+  if (!launch.hidden) dialog.showErrorBox('AI Control Center failed to start', err.message);
+  process.exitCode = 1;
   app.quit();
 });

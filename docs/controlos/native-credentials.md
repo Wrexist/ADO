@@ -61,5 +61,10 @@ This is credential-file migration acceptance evidence. Full application-profile
 migration, real backup restoration, installer update and another OS user remain
 unverified. No full R1 or R4 gate is marked passed.
 
+The later [packaged-profile probe](packaged-profile.md) additionally exercises the
+real packaged app and SQLite migration with a synthetic historical profile,
+including genuine legacy Electron ciphertext and DPAPI reopen. Its artifact hashes
+and remaining limits are recorded separately.
+
 API references: [Microsoft ProtectedData](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.protecteddata)
 and [Electron 44.4.5 safeStorage](https://raw.githubusercontent.com/electron/electron/v44.4.5/docs/api/safe-storage.md).
