@@ -175,6 +175,16 @@ export const todayPreferences = sqliteTable('today_preferences', {
   id: text('id').primaryKey(), version: integer('version').notNull(), choicesJson: text('choices_json').notNull(), updatedTs: text('updated_ts').notNull(),
 });
 
+export const universeResources = sqliteTable('universe_resources', {
+  id: text('id').primaryKey(), projectId: text('project_id').references(() => portfolioProjects.id),
+  title: text('title').notNull(), reference: text('reference').notNull(), source: text('source').notNull(),
+  version: integer('version').notNull(), createdTs: text('created_ts').notNull(), deletedTs: text('deleted_ts'),
+});
+export const universeRelations = sqliteTable('universe_relations', {
+  id: text('id').primaryKey(), fromKey: text('from_key').notNull(), toKey: text('to_key').notNull(), kind: text('kind').notNull(),
+  source: text('source').notNull(), version: integer('version').notNull(), createdTs: text('created_ts').notNull(), deletedTs: text('deleted_ts'),
+}, (t) => [uniqueIndex('universe_relation_identity').on(t.fromKey, t.toKey, t.kind).where(sql`${t.deletedTs} IS NULL`)]);
+
 export const taskExecutions = sqliteTable('task_executions', {
   runId: text('run_id').primaryKey().references(() => runs.id), taskId: text('task_id').notNull().references(() => planningTasks.id),
   taskVersion: integer('task_version').notNull(), taskSnapshotJson: text('task_snapshot_json').notNull(), checkoutId: text('checkout_id').notNull().references(() => portfolioCheckouts.id),

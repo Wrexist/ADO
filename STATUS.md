@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Universe: projekt och samband nås genom en tangentbordsstyrd lista
+
+Universe visar projekt, Inbox-idéer, milstolpar och uttryckliga resursreferenser med filter, identiteter och källor. Manuella relationer kan följas även utanför valt projektfilter och tas bort med versionskontroll. Gamla återförsök kan inte återuppliva borttagna poster. Ett misslyckat refresh behåller senast kända data, visar stale och spärrar ändringar tills omladdning lyckas. Relationerna ändrar inga uppgiftsberoenden eller agentbehörigheter.
+
+`npm run verify` passerade med typkontroll, lint, 423 tester i 94 filer och byggning. Hela `npm run smoke` passerade. Slutligt Universe-prov genom produktions-API och byggd webb passerade vid 1536/768/390 px i ljust/mörkt läge, med Tab/Enter, skapande/borttagning, långa fel, återhämtning och oförändrad planering utan agentstarter. Separat 200 procent CSS-förstoring med minskad rörelse kontrollerades; det är inte native browser-zoomacceptans. Käll-, bygg- och bildhashar stämmer. Loggar: `controlos-universe-verify.log`, `controlos-universe-smoke.log`, `controlos-universe-probe-final.log`.
+
+T09 är lokalt godkänt för den listbaserade Universe-vyn, vilket ger 18/46 lokalt godkända scenarier. Ingen spatial graf eller skärmläsarstudie påstås. Full native migration/återställning av schema 0021 och samtliga R1–R4-grindar är fortsatt öppna. Webbens JavaScript är cirka 602 kB före gzip och Vites chunk-varning kvarstår. Omfattning: `docs/controlos/universe.md` och `universe-ui-evidence.json`.
+
 ## T21: orelaterad process skyddad vid injicerad PID-kollision
 
 T21 är lokalt godkänt på Windows x64 / Node 22.18.0. Produktionsserverns start, stopp-/återställnings-API, stängning och omstart provades mot gamla poster som pekade på en verklig, levande process med annat skapandeögonblick och annan jobbidentitet. Processen låg under en separat värd och besvarade nya slumpmässiga utmaningar efter varje steg. Saknade kvitton, fel HMAC och korrekt signerade kvitton med fel skapandetid behöll båda karantänlåsen. Ett äkta native-kvitto frigjorde rätt kontrollås. Kollisionen injicerades i historiken; faktisk återanvändning i Windows PID-allokator tvingades inte fram.

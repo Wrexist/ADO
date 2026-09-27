@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: Relationship navigation must retain visible record identities and reach destinations outside the current filter. Keep manual annotations separate from execution permissions, and retain deletion tombstones so delayed create retries cannot resurrect removed records.
+
 - 2026-09-28: A filtered editor must still expose retained values that can block saving. Provide explicit removal for obsolete hidden estimates without silently discarding them or resetting unrelated focus and estimates.
 
 - 2026-09-28: Refreshing task data must not adopt a newer preference version behind an edited form. Keep draft provenance and use an explicit load to resolve concurrent saves; otherwise optimistic concurrency can be bypassed in the UI.

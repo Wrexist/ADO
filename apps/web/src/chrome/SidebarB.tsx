@@ -17,6 +17,7 @@ const GROUPS: NavGroup[] = [
       { icon: 'repos', label: 'Projects', to: '/projects' },
       { icon: 'list', label: 'Tasks & Inbox', to: '/tasks' },
       { icon: 'list', label: 'Today', to: '/today' },
+      { icon: 'workflow', label: 'Universe', to: '/universe' },
       { icon: 'repos', label: 'Repositories', to: '/repositories' },
       { icon: 'games', label: 'Games', to: '/repositories?cat=game' },
       { icon: 'grid', label: 'Apps', to: '/repositories?cat=app' },

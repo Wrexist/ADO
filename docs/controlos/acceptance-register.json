@@ -466,8 +466,26 @@
     {
       "id": "T09",
       "title": "Karta utan mus",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R2. **Krav:** REQ07, REQ24. **Status:** not_run.\n\n**Givet:** Samma portfölj finns i lista och Universe.\n\n**När:** Användaren navigerar med tangentbord och på mobil.\n\n**Godkänt endast om:** Alla projekt, samband och kritiska åtgärder är åtkomliga via listan utan panorering eller dragkrav.\n\n**Gäller:** always."
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R2. **Krav:** REQ07, REQ24. **Status:** passed (local Windows list-first browser evidence).\n\n**Givet:** Samma portfölj finns i lista och Universe.\n\n**När:** Användaren navigerar med tangentbord och på mobil.\n\n**Godkänt endast om:** Alla projekt, samband och kritiska åtgärder är åtkomliga via listan utan panorering eller dragkrav.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/projects/universe.ts",
+        "apps/server/src/projects/universe.test.ts",
+        "apps/web/src/pages/UniversePage.tsx",
+        "packages/shared/src/universe.ts",
+        "scripts/probe-universe.mts",
+        "docs/controlos/universe.md",
+        "docs/controlos/universe-ui-evidence.json"
+      ],
+      "coverageNote": "Same project identities in Projects and Universe, all four node/relation kinds, keyboard navigation through records and filtered-out relation endpoints, narrow-layout creation/removal and refresh failure recovery. The v1 specification permits a simple relationship table; no spatial graph is claimed. Native migration 0021, screen-reader user studies and full REQ07/REQ24 remain open.",
+      "acceptanceEvidence": {
+        "date": "2026-09-27T23:52:47.164Z",
+        "environment": "Windows x64 / Node 22.18.0 / Chromium 153.0.8010.12",
+        "command": "node --import tsx scripts/probe-universe.mts",
+        "result": "Tab/Enter reaches records and relation endpoints; detail focus follows selection. Duplicate names have visible identities. Production API and built renderer passed at 1536/768/390 pixels in both themes with unchanged planning and zero runs. Creation/removal, linked-resource refusal, long save error and stale snapshot recovery passed. 200 percent CSS zoom with reduced motion also checked; this is not native browser zoom acceptance.",
+        "scope": "Isolated synthetic portfolio through production APIs and the built renderer. List-first Universe; no spatial graph, assistive-technology user study, native installer migration or real pilot acceptance.",
+        "artifactEvidence": "docs/controlos/universe-ui-evidence.json"
+      }
     },
     {
       "id": "T10",

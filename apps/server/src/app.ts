@@ -31,6 +31,7 @@ import { PlanningStore } from './projects/planning';
 import { proposeToday } from './projects/today';
 import { todayLockScope } from './projects/todayLocks';
 import { TodayPreferencesStore } from './projects/todayPreferences';
+import { UniverseStore } from './projects/universe';
 import { ZodError } from 'zod';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
@@ -214,6 +215,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const registry = new ProjectRegistry(db, () => Object.values(bus.snapshot().state.repos), (id) => scanner?.cwdFor(id) ?? null);
   const planning = new PlanningStore(db);
   const todayPreferencesStore = new TodayPreferencesStore(db);
+  const universe = new UniverseStore(db);
   if (!recovery) bus.compact((msg) => app.log.info(msg)); // preserve restored history during review
   bus.replayFromDb((msg) => app.log.warn(msg));
 
@@ -697,6 +699,14 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     try { return work(); } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
   };
   app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
+  app.get('/api/universe', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return planningMutation(reply, () => universe.snapshot());
+  });
+  app.post('/api/universe/resources', async (req, reply) => planningMutation(reply, () => ({ resource: universe.createResource(req.body) })));
+  app.post('/api/universe/relations', async (req, reply) => planningMutation(reply, () => ({ relation: universe.createRelation(req.body) })));
+  app.delete('/api/universe/resources/:id', async (req, reply) => planningMutation(reply, () => universe.removeResource((req.params as { id: string }).id, req.body)));
+  app.delete('/api/universe/relations/:id', async (req, reply) => planningMutation(reply, () => universe.removeRelation((req.params as { id: string }).id, req.body)));
   app.post('/api/planning/today', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return planningMutation(reply, () => db.transaction(() => {
