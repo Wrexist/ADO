@@ -56,6 +56,14 @@ An accepted queued job survives reopening its SQLite profile. It rechecks curren
 permissions, project/dependencies and checkout/base before spawn. A possibly
 started attempt is not restarted: recovery marks it failed/blocked and preserves
 quarantine until existing authenticated stop evidence permits lock release.
+Repeated recovery on the same controller skips its currently active jobs; they
+are not orphaned. Recovery still treats unknown previous owners conservatively.
+
+The ordinary dispatch HTTP endpoint accepts an `idempotency-key` header. Its
+stored request hash binds repository, task, model and provider. Identical retries
+return the original run ID, including after completion, failure, a policy change
+or restart. Changed content returns HTTP 409. Returning a prior ID never starts
+that run again; a new key is still subject to the current dispatch policy.
 
 Successful process exit yields `executionStatus: succeeded` on the run and
 `awaiting_review` on the task. It never creates criterion evidence or marks a task
@@ -91,6 +99,22 @@ independent OS processes racing for the last slot, including transaction rollbac
 that a third writer waits through reopening. `verificationOwnership.test.ts`
 checks mixed verifier/agent ownership and that capacity refusal preserves prior
 result decisions without creating a verification attempt.
+`dispatchAcceptance.test.ts` covers T15/T17/T19 through API handlers and real
+offline Node workers. T15 uses a separate listening HTTP server, injects a failure
+at claim-event persistence, receives a successful dispatch response, confirms the
+queue row, and abruptly terminates that server through its owned process handle.
+After removing the injected fault, a new server scans only the temporary profile,
+claims the same row under one new owner and starts one worker. Repeated recovery
+and a further profile reopening do not duplicate the worker. This proves process
+crash recovery, not physical power-loss durability or every crash window.
+
+The retry/policy scenario sends simultaneous identical requests, checks conflicts
+for changed task/model/provider, disables dispatch while a second job waits, and
+then allows the first process to exit. The waiting job fails without spawning.
+After reopening, retries return the two original IDs and a fresh request remains
+forbidden. No provider/model call is made. Test-only `startScanner` injection
+permits an explicit temporary-profile scan while system/external integrations
+remain disabled; the normal startup default is unchanged.
 
 This is trusted local execution, not an OS sandbox. Same-user filesystem races,
 shared Git metadata, scanner-ID-based permission migration, default-branch/fetch

@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: kvitterad köpost vid serverkrasch, återförsök och avstängd dispatch
+
+T15 har nu ett prov med en separat lyssnande HTTP-server. Ett injicerat fel hindrar claim-transaktionen efter accepterad köläggning. Testet tar emot serverns svar, kontrollerar att posten är köad utan processstart och avslutar sedan serverprocessen utan normal nedstängning. En ny server läser den temporära profilen, tar samma post under ett nytt beständigt ägarskap och startar exakt en riktig lokal Node-process. Ännu en återöppning skapar ingen dubblett. Detta gäller den provade punkten före claim/spawn; strömavbrott och övriga kraschpunkter omfattas inte.
+
+T17/T19 provas genom API-anrop: identiska samtidiga begäranden ger samma körnings-ID, ändrad uppgift/modell/provider ger 409, och ett väntande jobb startas inte när dispatch stängs av före ledig plats. Efter återöppning returnerar identiska återförsök de gamla ID:na utan ny körning, medan en ny begäran nekas av den sparade policyn. Originalets arbetsfiler lämnas oförändrade; detta är inte T13:s fulla Git-metadataacceptans.
+
+Återhämtningen hoppar nu över jobb som samma controller redan kör, så en upprepad kontroll inte felmarkerar dem som övergivna. En separat injicerbar scannerinställning låter integrationsprovet läsa endast sin temporära profil vid start utan att aktivera system- eller externa integrationer. Normalt startbeteende är oförändrat. Se [kontrakt och avgränsningar](docs/controlos/task-execution.md).
+
+Slutlig `npm run verify` passerade med typkontroll, lint, 348 tester i 68 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Riktade prov passerade också. De första testförsöken hade fel port, escaping, utebliven testscanning och ospecificerade JSON-svarstyper; rättningarna och slutresultatet finns i ignorerade `controlos-dispatch-acceptance-*.log`. Slutloggarna är `controlos-dispatch-acceptance-final-focused.log` och `controlos-dispatch-acceptance-final-verify.log`. Webbkod och browserprov är oförändrade; senaste fulla browserkontroll hör till `e94925d`. Chunkvarningen kvarstår, cirka 559 kB före gzip.
+
+T15/T17/T19 är lokalt godkända med versionsbundna källhashar. Totalt är 10 av 46 scenarier lokalt godkända och 36 ännu inte fullständigt provade. Fulla R1–R4-grindar är öppna. Nästa R1-granskning gäller krasch efter spawn och originalarbetskopians Git-metadata, därefter återstående native- och sandboxgränser. Ingen riktig modell, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: beständig gemensam kapacitet för skrivarjobb
 
 Agentjobb, verifieringar och kvarhållna karantänlås räknas nu mot samma gräns om två skrivarägarskap per profil. Migration 0016 nekar ett tredje lås i SQLite även vid konkurrerande anslutningar. Köval och claim kontrollerar också gränsen. Ett tappat processhandtag eller en omstart frigör därmed ingen kapacitet utan att det befintliga ägarskapet kan hävas. En äldre profil med fler lås bevaras och nekar nya skrivare tills färre än två återstår. Gränsen avser jobb i denna profil, inte antalet underprocesser eller externa program.

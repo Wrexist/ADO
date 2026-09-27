@@ -114,7 +114,7 @@ export class Runner {
    * `queued` rows is gone — neither can ever resolve itself → failed.
    */
   reconcileOrphans(): number {
-    const orphans = this.db.select().from(runs).where(inArray(runs.status, ['running', 'queued'])).all();
+    const orphans = this.db.select().from(runs).where(inArray(runs.status, ['running', 'queued'])).all().filter((run) => !this.activeRuns.has(run.id));
     for (const o of orphans) {
       if (o.engineVersion === 1 && o.status === 'queued') {
         if (!this.queue.some((q) => q.id === o.id)) this.queue.push({ id: o.id, input: { repoId: o.repoId, task: o.task, model: o.model === 'default' ? undefined : o.model, provider: o.provider } });

@@ -92,6 +92,8 @@ export interface AccDeps {
   githubClient?: GitHubClient;
   /** Tests set false to skip the real sysmon/health background loops. */
   startSystem?: boolean;
+  /** Allow an isolated profile's boot scan without starting external/system integrations. */
+  startScanner?: boolean;
   /** Inject a fake process spawner (tests + simulated dispatch demo). */
   spawner?: Spawner;
   /** Isolated workspace root for offline process integration fixtures. */
@@ -425,8 +427,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     }
     snapshotStats(); // accurate snapshot once the scan populated/pruned repos
   };
-  // Boot scan only in real runs; tests (startSystem:false) stay hermetic (no fs walk/watch).
-  if (deps.startSystem !== false) await rebuildScanner();
+  // Tests skip boot scanning unless explicitly opting into an isolated profile scan.
+  if (deps.startScanner ?? (deps.startSystem !== false)) await rebuildScanner();
 
   // GitHub enrichment: token comes from the connections store (or an injected client).
   // Restartable so the Settings page connects GitHub live — no server restart needed.
