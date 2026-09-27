@@ -17,6 +17,7 @@ import { expandHome, type Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
 import { ConnectionsStore, type SecretCodec } from './connections/store';
+import { readRecoveryState, recoveryMessage } from './backup/recovery';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
@@ -149,6 +150,8 @@ function reviewFixTask(review: AutoReview, findingIdx?: number): string {
 }
 
 export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
+  const recovery = env.dbPath === ':memory:' ? null : readRecoveryState(dirname(env.dbPath));
+  if (recovery) { env = { ...env, demo: false, projectDirs: [] }; deps = { ...deps, startSystem: false, startScanner: false }; }
   // Secrets store: stored keys override .env; secrets never leave the server.
   const ENV_FALLBACK: Record<string, string> = {
     github: 'GITHUB_TOKEN',
@@ -175,7 +178,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       : join(dirname(env.dbPath), 'connections.json');
   const connections = new ConnectionsStore(connectionsPath, (id) => {
     const key = ENV_FALLBACK[id];
-    return key ? process.env[key] : undefined;
+    return !recovery && key ? process.env[key] : undefined;
   }, deps.secretCodec);
 
 
@@ -201,7 +204,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const bus = new Bus(db);
   const registry = new ProjectRegistry(db, () => Object.values(bus.snapshot().state.repos), (id) => scanner?.cwdFor(id) ?? null);
   const planning = new PlanningStore(db);
-  bus.compact((msg) => app.log.info(msg)); // prune superseded latest-only rows before replay
+  if (!recovery) bus.compact((msg) => app.log.info(msg)); // preserve restored history during review
   bus.replayFromDb((msg) => app.log.warn(msg));
 
   await app.register(cors, {
@@ -210,6 +213,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id'],
   });
   registerSecurity(app, env);
+  app.addHook('preHandler', async (req, reply) => {
+    if (recovery && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.url.split('?')[0] !== '/api/session') {
+      if (req.url.split('?')[0] === '/api/app-open') return reply.send({ recorded: false, recovery: true });
+      return reply.code(423).send({ error: recoveryMessage });
+    }
+  });
   // Global mutation authentication validates pairing without revealing a credential.
   app.post('/api/session', async () => ({ authenticated: true }));
 
@@ -481,7 +490,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       secrets: () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))],
       workspaceRoot: deps.workspaceRoot ?? (!deps.spawner && !env.demo ? join(dirname(env.dbPath), 'workspaces') : undefined),
       receiptRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'process-receipts') : undefined,
-      blockedReason: (repoId) =>
+      blockedReason: (repoId) => recovery ? recoveryMessage :
         projectSettings.isEnabled(repoId, 'agents')
           ? null
           : `agent dispatch is turned off for '${repoId}' — enable it in the project's Settings`,
@@ -489,7 +498,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     },
     (msg) => app.log.info(msg),
   );
-  const orphans = runner.reconcileOrphans();
+  const orphans = recovery ? 0 : runner.reconcileOrphans();
   if (orphans > 0) app.log.warn(`runner: reconciled ${orphans} orphaned run(s) on boot`);
 
   // Deep review: opt-in `claude ultrareview` (cloud multi-agent) per project, streamed.
@@ -807,7 +816,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     resourceFor: (repoId, cwd) => runner.resourceKey(repoId, cwd),
     cwdFor: (repoId) => bus.snapshot().state.repos[repoId]?.localPath,
   });
-  verifier.reconcile();
+  if (!recovery) verifier.reconcile();
   app.post('/api/planning/tasks/:id/approval', async (req, reply) => {
     try { return { approval: await verifier.prepareTaskAcceptance((req.params as { id: string }).id, req.body) }; }
     catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
@@ -1021,6 +1030,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.get('/api/connections', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return { connections: connections.statusAll() };
+  });
+  app.get('/api/recovery', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { recovery, message: recovery ? recoveryMessage : null };
   });
   app.post('/api/runs/:id/verify/stop', async (req, reply) => {
     try { verifier.cancel((req.params as { id: string }).id); return { requested: true }; }

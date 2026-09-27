@@ -69,14 +69,35 @@ describe('WAL-safe backup (P6 / B5)', () => {
     sqlite.close();
   });
 
-  it('overwrites a same-stamp target instead of failing (VACUUM INTO needs a free path)', () => {
+  it('preserves an existing same-stamp backup instead of overwriting it', () => {
     const { db, sqlite } = newDb();
     seed(db, 5);
     const backupDir = join(dir, 'backups');
     backupDatabase(sqlite, backupDir, { stamp: 'dup' });
     seed(db, 2); // now 7 events
-    const r = backupDatabase(sqlite, backupDir, { stamp: 'dup' });
-    expect(r.rows).toBe(7);
+    expect(() => backupDatabase(sqlite, backupDir, { stamp: 'dup' })).toThrow('existing backup preserved');
+    const copy = new Database(join(backupDir, 'acc-dup.sqlite'), { readonly: true });
+    expect(copy.prepare('SELECT count(*) AS n FROM events').get()).toEqual({ n: 5 }); copy.close();
     sqlite.close();
   });
+});
+
+it('omits connection/pairing credentials, checks configuration hashes and marks restores for review', () => {
+  const { sqlite } = newDb();
+  try {
+    writeFileSync(join(dir, 'connections.json'), JSON.stringify({ github: { value: 'backup-canary-provider-secret', updatedTs: 'now' } }));
+    writeFileSync(join(dir, 'acc-token'), 'backup-canary-access-secret');
+    writeFileSync(join(dir, 'project-settings.json'), JSON.stringify({ fixture: { agents: false } }));
+    const backup = backupDatabase(sqlite, join(dir, 'backups'), { dataDir: dir });
+    const text = readFileSync(`${backup.file}.json`, 'utf8'); expect(text).not.toContain('backup-canary');
+    const restored = join(dir, 'restored'); restoreBackup(backup.file, restored);
+    expect(existsSync(join(restored, 'connections.json'))).toBe(false);
+    expect(existsSync(join(restored, 'acc-token'))).toBe(false);
+    expect(JSON.parse(readFileSync(join(restored, 'restore-state.json'), 'utf8')).mode).toBe('review');
+    const manifest = JSON.parse(text); manifest.files['project-settings.json'] = '{}';
+    writeFileSync(`${backup.file}.json`, JSON.stringify(manifest));
+    expect(() => restoreBackup(backup.file, join(dir, 'tampered'))).toThrow('configuration checksum');
+    expect(existsSync(join(dir, 'tampered'))).toBe(false);
+    expect(() => backupDatabase(sqlite, join(dir, 'backups'), { keep: -1 })).toThrow('positive integer');
+  } finally { sqlite.close(); }
 });

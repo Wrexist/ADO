@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R4: återställning till beständigt granskningsläge
+
+Backupmanifest version 2 utelämnar anslutningsfilen och desktops åtkomstnyckel och kontrollerar SHA-256 för databas och inkluderade konfigurationsfiler. Äldre manifest kan återställas men deras anslutningsfil kopieras inte. En befintlig backup med samma namn bevaras. Återställning kräver en ny katalog och kontrollerar SQLite-integritet och främmande nycklar.
+
+Återställda profiler öppnas nu i ett beständigt granskningsläge. Köjobb startas inte, gamla körningar och lås omklassificeras inte, bakgrundssystem och scanners startas inte och skrivande API-anrop spärras. Browser-parning och läsning fungerar. Desktop hoppar över uppdateringskontrollen och webbgränssnittet visar en varning. Ett avbrutet eller trasigt återställningsmärke stoppar uppstart. Se [återställningskontrakt och begränsningar](docs/controlos/profile-recovery.md).
+
+`npm run verify` passerade med typkontroll, lint, 359 tester i 74 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Det nya integrationstestet återställer en riktig temporär SQLite-profil och öppnar den två gånger med systemstart begärd: inga processer startas, gamla körningsrader och lås bevaras och mutationer nekas.
+
+13 av 46 fullständiga scenarier är fortsatt lokalt godkända. T36 är öppet: granskning av lokala arbetskopior/resultatreferenser, verklig användarprofil och en stödd övergång tillbaka till aktiv drift återstår. Databasen kan fortfarande innehålla känslig användarskriven historik; detta är ingen generell hemlighetsrensning. Ingen modell, pilotagent, merge, publicering eller installer kördes. Följande avsnitt är historiska kontrollpunkter.
+
+Hela `npm run smoke` passerade, inklusive uttryckliga återställningsfixturer vid 1536/390 px; bilderna har granskats. Loggar: `controlos-restore-review-focused.log`, `controlos-restore-review-verify.log` och `controlos-restore-review-smoke.log` (ignorerade). Desktopändringen är typkontrollerad och byggd men den paketerade appen har inte provats på nytt för denna ändring. Chunkvarningen kvarstår vid cirka 560 kB före gzip.
+
 ## R1/R4: riktig paketerad desktop med syntetisk äldre profil
 
 En separat käll- och beroendekopia från `6457efb` plus de dokumenterade källändringarna har byggts till en riktig Windows x64 Electron-artefakt utan publicering. SQLite byggdes för Electron i den kopian; utvecklingsmiljöns Node-modul bevarades. Appen har startats tre gånger med egen userData/sessionData, isolerade Windows app-data-kataloger, dold vy och avstängd uppdateringskontroll. Nya explicita startval är `--profile-dir=<absolut sökväg>`, `--hidden` och `--no-update-check`; standardstarten är oförändrad.

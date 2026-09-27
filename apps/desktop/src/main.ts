@@ -21,6 +21,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, shell, safeStorage } from 'electron';
 import fixPath from 'fix-path';
 import { buildServer, type AccServer } from '../../server/src/app';
+import { readRecoveryState } from '../../server/src/backup/recovery';
 import { loadEnv } from '../../server/src/env';
 import { loadOrCreateToken } from './tokenStore';
 import { windowsCredentials } from './windowsCredentials';
@@ -55,6 +56,7 @@ async function start(): Promise<void> {
   if (!safeStorage.isEncryptionAvailable() || (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')) throw new Error('Unlock the OS credential store and restart ControlOS.');
   const userData = app.getPath('userData');
   mkdirSync(userData, { recursive: true });
+  const recovery = readRecoveryState(userData);
   const nativeCodec = process.platform === 'win32' ? windowsCredentials(app.isPackaged
     ? join(process.resourcesPath, 'process-host', 'ControlOS.CredentialHost.exe')
     : join(__dirname, '../../server/native/dist/ControlOS.CredentialHost.exe')) : undefined;
@@ -129,7 +131,7 @@ async function start(): Promise<void> {
   });
   await win.loadURL(appOrigin);
 
-  if (app.isPackaged && launch.checkUpdates) {
+  if (app.isPackaged && launch.checkUpdates && !recovery) {
     try {
       const { autoUpdater } = await import('electron-updater');
       autoUpdater.on('error', (err) => console.warn('updater:', err.message));

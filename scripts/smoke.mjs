@@ -69,6 +69,16 @@ try {
     await page.screenshot({ path: join(out, `mobile-${route.slice(1)}.png`), fullPage: true });
   }
   const desktop = await browser.newPage();
+  // Explicit recovery display fixture; actual restore/restart blocking is tested by the server suite.
+  await page.route('**/api/recovery', (route) => route.fulfill({ json: { recovery: { mode: 'review' }, message: 'Recovery review mode: jobs and changes are paused. Connection credentials must be entered again.' } }));
+  for (const width of [1536, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base + '/agents'); await pair();
+    await page.getByRole('status').filter({ hasText: 'Recovery review mode' }).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Recovery banner overflow');
+    await page.screenshot({ path: join(out, `recovery-review-${width}.png`), fullPage: true });
+  }
+  await page.unroute('**/api/recovery');
   // Explicit planning fixture. Persistence and Git preservation have separate real API tests.
   const portfolioProjectId = '11111111-1111-4111-8111-111111111111';
   const portfolioRepositoryId = '22222222-2222-4222-8222-222222222222';
