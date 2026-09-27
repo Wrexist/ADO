@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
-import { mkdtempSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
+import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, readlinkSync, renameSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,6 +13,8 @@ import { ProjectRegistry } from '../projects/registry';
 import { Runner } from './index';
 import { TaskReopeningStore } from './taskReopening';
 import type { Spawner } from './spawner';
+import { spawnOwned } from '../lib/ownedProcess';
+import { commonGitIdentity } from '../projects/checkoutIdentity';
 
 async function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'controlos-task-lifecycle-')), repo = join(root, 'repo'), other = join(root, 'other'); mkdirSync(repo);
@@ -38,6 +40,47 @@ async function fixture() {
   };
 }
 const until = async (condition: () => boolean) => { const end = Date.now() + 30000; while (!condition() && Date.now() < end) await new Promise((r) => setTimeout(r, 20)); expect(condition()).toBe(true); };
+
+it('T13: prepares and cancels a real job from a reviewed commit without changing dirty source files or any Git metadata', async () => {
+  const h = await fixture(), marker = join(h.root, 'agent-ready');
+  const snapshot = (path: string): unknown => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) return { link: readlinkSync(path) };
+    if (stat.isDirectory()) return Object.fromEntries(readdirSync(path).sort().map((name) => [name, snapshot(join(path, name))]));
+    return { mode: stat.mode, hash: createHash('sha256').update(readFileSync(path)).digest('hex') };
+  };
+  let workspace = '';
+  const runner = h.runner({ spawn(opts) {
+    workspace = opts.cwd;
+    expect(commonGitIdentity(workspace)).not.toBe(commonGitIdentity(h.repo));
+    expect(readFileSync(join(workspace, 'base.txt'), 'utf8')).toBe('base');
+    expect(existsSync(join(workspace, 'untracked.bin'))).toBe(false);
+    const code = `const fs=require('node:fs');fs.writeFileSync('base.txt','agent edit');fs.writeFileSync(${JSON.stringify(marker)},'ready');setInterval(()=>{},1000);`;
+    const proc = spawnOwned(process.execPath, ['-e', code], opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
+    proc.child.stdin.end(); proc.child.stdout.resume(); proc.child.stderr.resume();
+    return { lines: (async function* () {})(), done: proc.done, kill: proc.kill, terminationConfirmed: proc.terminationConfirmed };
+  } });
+  try {
+    h.git(['checkout', '-qb', 'operator-choice']);
+    writeFileSync(join(h.repo, 'base.txt'), 'staged owner edit'); h.git(['add', 'base.txt']);
+    writeFileSync(join(h.repo, 'base.txt'), 'unstaged owner edit'); writeFileSync(join(h.repo, 'untracked.bin'), Buffer.from([0, 255, 19]));
+    const hook = join(h.repo, '.git', 'hooks', 'post-checkout');
+    writeFileSync(hook, '#!/bin/sh\nprintf forbidden > hook-ran\n'); h.git(['config', 'controlos.fixture', 'must remain']);
+    const before = snapshot(h.repo), task = h.plan().saveTask(h.input('Preserve original'));
+    const { runId } = runner.dispatchTask(task.id, h.request(task.version));
+    await until(() => existsSync(marker));
+    expect(snapshot(h.repo)).toEqual(before);
+    expect(h.db.select().from(runs).all()[0].sourceGitIdentity).toBe(commonGitIdentity(h.repo));
+    expect(() => h.sqlite.prepare('UPDATE runs SET source_git_identity=? WHERE id=?').run('changed', runId)).toThrow('immutable');
+    expect(runner.kill(runId)).toBe(true); await until(() => !runner.isLive(runId));
+    expect(snapshot(h.repo)).toEqual(before);
+    expect(h.db.select().from(runs).all()[0].status).toBe('failed');
+    expect(readFileSync(join(workspace, 'base.txt'), 'utf8')).toBe('agent edit');
+    expect(existsSync(join(workspace, '.git', 'objects', 'info', 'alternates'))).toBe(false);
+    expect(existsSync(join(workspace, '.git', 'hooks', 'post-checkout'))).toBe(false);
+    expect(readFileSync(join(workspace, '.git', 'config'), 'utf8')).not.toContain(h.repo);
+  } finally { await runner.stop(); await h.close(); }
+}, 120000);
 
 it('serializes registered sibling worktrees and commits each task outcome with its run', async () => {
   const h = await fixture(); const exits: Array<(code: number) => void> = [];

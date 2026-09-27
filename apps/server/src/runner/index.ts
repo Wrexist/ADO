@@ -319,7 +319,9 @@ export class Runner {
         if (!executionCapacityAvailable(this.db)) return false;
         if (tx.select().from(executionLocks).where(eq(executionLocks.resource, this.resourceKey(next.input.repoId, cwd))).get()) return false;
         if (this.repositoryBusy(next.input.repoId, cwd)) return false;
-        const updated = tx.update(runs).set({ status: 'running' }).where(and(eq(runs.id, next.id), eq(runs.status, 'queued'))).run();
+        let sourceGitIdentity: string | undefined;
+        try { sourceGitIdentity = commonGitIdentity(cwd); } catch { /* synthetic adapters may have no Git checkout */ }
+        const updated = tx.update(runs).set({ status: 'running', sourceGitIdentity }).where(and(eq(runs.id, next.id), eq(runs.status, 'queued'))).run();
         if (!updated.changes) return false;
         this.taskExecutions.validate(next.id);
         tx.insert(executionLocks).values({ resource: this.resourceKey(next.input.repoId, cwd), runId: next.id, owner: this.owner, acquiredTs: new Date().toISOString() }).run();
@@ -366,6 +368,9 @@ export class Runner {
       const owner = this.db.select().from(runs).where(eq(runs.id, lock.runId)).get();
       if (!owner || owner.repoId === repoId) return true;
       if (siblings.some((c) => c.sourceId === owner.repoId || c.canonicalPath === lock.resource)) return true;
+      if (owner.sourceGitIdentity) {
+        if (!actualIdentity || actualIdentity === owner.sourceGitIdentity || siblings.some((c) => c.gitIdentity === owner.sourceGitIdentity)) return true;
+      }
       const ownerPath = owner.workspacePath ?? this.opts.cwdFor(owner.repoId) ?? this.bus.snapshot().state.repos[owner.repoId]?.localPath ?? (isAbsolute(lock.resource) ? lock.resource : undefined);
       if (!ownerPath) return true;
       try {
@@ -378,6 +383,8 @@ export class Runner {
   }
 
   private assertTaskCanRun(runId: string, sourceId: string, cwd: string) {
+    const sourceIdentity = this.db.select().from(runs).where(eq(runs.id, runId)).get()?.sourceGitIdentity;
+    if (sourceIdentity && commonGitIdentity(cwd) !== sourceIdentity) throw new Error('Source repository identity changed after claim');
     const binding = this.taskExecutions.validate(runId);
     if (!binding) return;
     if (!this.opts.assertCheckout || !this.opts.workspaceRoot) throw new Error('Task execution boundary is unavailable');

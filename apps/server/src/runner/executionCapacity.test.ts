@@ -23,7 +23,7 @@ it('preserves an over-capacity old profile and enforces shared capacity through 
     process.env.ACC_MIGRATIONS_DIR = old;
     const path = join(root, 'profile.sqlite'); connection = openDb(path);
     const ts = new Date().toISOString();
-    for (const id of ['a', 'b', 'c', 'd']) connection.db.insert(runs).values({ id, repoId: id, task: id, model: 'default', status: 'failed', startedTs: ts, processTermination: 'unconfirmed' }).run();
+    for (const id of ['a', 'b', 'c', 'd']) connection.sqlite.prepare('INSERT INTO runs(id,repo_id,task,model,status,started_ts,process_termination) VALUES(?,?,?,?,?,?,?)').run(id, id, id, 'default', 'failed', ts, 'unconfirmed');
     const lock = (id: string) => ({ resource: id, runId: id, owner: id === 'b' ? 'verify:old' : 'old-owner', acquiredTs: ts });
     for (const id of ['a', 'b', 'c']) connection.db.insert(executionLocks).values(lock(id)).run();
     const before = connection.db.select().from(executionLocks).all();

@@ -70,7 +70,7 @@ export function PlanningPage() {
         <h2 ref={runReviewTitle} tabIndex={-1} className="text-title font-semibold">Review task run</h2>
         <p className="mt-2 text-body">{runReview.task.title} · task version {runReview.task.version}</p>
         <p className="mt-2 whitespace-pre-wrap text-body">{runReview.task.outcome}</p>
-        <p className="mt-2 text-body text-text2">Trusted local execution in a separate Git worktree. This is not an OS sandbox. A successful process leaves the task awaiting review.</p>
+        <p className="mt-2 text-body text-text2">Trusted local execution in a separate Git repository from the reviewed commit. Uncommitted source changes are excluded and preserved. This is not an OS sandbox. A successful process leaves the task awaiting review.</p>
         <form className="mt-3 space-y-3" onSubmit={(event) => {
           event.preventDefault();
           const checkout = portfolio?.checkouts.find((c) => c.id === runReview.checkoutId);

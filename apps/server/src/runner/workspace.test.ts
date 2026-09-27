@@ -28,6 +28,6 @@ it('isolates agent edits from the original checkout and records revision evidenc
     writeFileSync(join(workspace.path, ' leading-space.txt'), 'second');
     expect((await workspaceEvidence(workspace.path, workspace.baseSha)).diffDigest).not.toBe(untrackedFirst.diffDigest);
     writeFileSync(join(repo, 'file.txt'), 'owner edit');
-    await expect(prepareWorkspace(join(root, 'workspaces'), repo)).rejects.toThrow(/Commit or stash/);
+    await expect(prepareWorkspace(join(root, 'workspaces'), repo)).rejects.toThrow(/reviewed base/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 }, 120000);

@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { expect, it } from 'vitest';
 import { openDb } from '../db';
 import { executionLocks, runs, verificationAttempts, verificationEvidence } from '../db/schema';
-import { workspaceEvidence } from './workspace';
+import { prepareWorkspace, workspaceEvidence } from './workspace';
 import { Verifier } from './verification';
 import { VerificationOwnership, verificationBlocks } from './verificationOwnership';
 import { Bus } from '../bus';
@@ -16,6 +16,7 @@ import { Runner } from './index';
 import type { ProcessIdentity } from '../lib/ownedProcess';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
 import { ProcessNotStartedError } from '../lib/processLaunch';
+import { commonGitIdentity } from '../projects/checkoutIdentity';
 
 async function fixture(script = 'console.log("verification completed")') {
   const root = mkdtempSync(join(tmpdir(), 'controlos-verify-owner-')), repo = join(root, 'repo'); mkdirSync(repo);
@@ -35,6 +36,10 @@ async function fixture(script = 'console.log("verification completed")') {
 it('keeps verification quarantine across reopening and blocks an unregistered sibling checkout', async () => {
   const h = await fixture();
   try {
+    const workspace = await prepareWorkspace(join(h.root, 'results'), h.repo);
+    const sourceGitIdentity = commonGitIdentity(h.repo);
+    expect(commonGitIdentity(workspace.path)).not.toBe(sourceGitIdentity);
+    h.db.update(runs).set({ workspacePath: workspace.path, sourceGitIdentity }).where(eq(runs.id, h.run.id)).run();
     const sibling = join(h.root, 'sibling'); h.git(['worktree', 'add', '--detach', sibling, 'HEAD']);
     const attempt = h.claim(); expect(verificationBlocks(h.db, 'different-scanner-id', sibling)).toBe(true);
     const reopened = openDb(h.database);

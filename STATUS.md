@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: fristående Git-resultat och bevarat original
+
+Nya körningar skapas nu i egna Git-repon från den granskade committen. Git-objekt överförs utan worktree-registrering, delade refs, objektalternates eller installation av originalets hooks/remotes/config. Endast effektivt författarnamn och e-post kopieras. Förberedelsen stänger av globala/systeminställningar och hookmallar i målet, ignorerar ärvda Git-miljööverstyrningar och undviker frivillig indexuppdatering i källan. Ändrad HEAD under förberedelsen stoppar jobbet.
+
+Granskade uppgiftskörningar kan använda sin valda commit när originalet har lokala ändringar. Vyn anger uttryckligen att dessa ändringar inte följer med och lämnas kvar. Vanlig promptdispatch utan granskad bas nekar fortfarande smutsig källa. Ingen stash, reset eller clean införs. Migration 0017 sparar originalets fysiska Git-identitet vid claim och gör den oföränderlig. Agent- och verifieringslås kontrollerar både källa och resultat, så nya separata metadata inte öppnar för parallella syskonskrivare. Historiska resultat och lås flyttas inte. Se [kontraktet](docs/controlos/task-execution.md).
+
+T13-provet kör och avbryter en verklig lokal process medan originalet har staged och unstaged ändringar, en untracked binärfil, eget branchval och egna hooks/config. Rekursiva innehålls-/modekontroller av hela originalet inklusive `.git` är identiska före, under och efter körningen. Agentens ändring finns kvar i resultatet, vars Git-identitet är separat. Även den beständiga källidentitetens skrivskydd och verifieringskarantän mot originalets syskon provas.
+
+Slutlig `npm run verify` passerade: typkontroll, lint, 349 tester i 68 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Tre äldre migreringsfixtures behövde uttrycklig SQL för sitt gamla schema; slutproven visar bevarade historiska rader med null källidentitet. Hela `npm run smoke` passerade vid 1536/390 px och de uppdaterade granskningsbilderna har granskats. Browserkörningarna är DEMO-fixtures. Slutloggar: `controlos-isolated-repo-final-verify.log` och `controlos-isolated-repo-smoke.log` (ignorerade); tidigare fel och riktade prov finns i övriga `controlos-isolated-repo-*.log`. Chunkvarningen kvarstår, cirka 559 kB före gzip.
+
+T13 är lokalt godkänt: 12 av 46 scenarier är nu godkända och 34 ännu inte fullständigt provade. Samma OS-användare kan fortfarande nå andra filer; detta är ingen OS-sandbox. Historiska worktrees kan fortfarande dela metadata. Explicit arbetskopietyp/proveniens i körningsregistret, återstående native-hjälpprocesser, profilmigrering och sandboxgränser behöver fortsatt arbete. Fulla R1–R4-grindar är öppna. Ingen modell, pilotagent, merge eller deploy kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: avstämning efter verklig native-processstart och serverkrasch
 
 T16:s native-prov omfattar nu både saknat och tillgängligt stoppbevis efter en faktisk ägarkrasch. En separat process startar ett riktigt Windows Job Object med en Node-process och dess barn, sparar identiteten och avslutas abrupt innan körningens slutstatus skrivits. Vid återöppning hålls det faktiska native-kvittot först undan. Körningen blir uttryckligen avbruten/osäker, samma identitet och låsägare bevaras och nästa köade jobb startar inte. Att de gamla PID:erna har försvunnit räcker inte för upplåsning.

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { expect, it } from 'vitest';
 import { openDb } from '../db';
-import { runs, operationApprovals } from '../db/schema';
+import { operationApprovals } from '../db/schema';
 import { ApprovalStore } from './approvals';
 
 it('upgrades the previous profile schema without inventing approvals for historical accepted runs', () => {
@@ -22,17 +22,17 @@ it('upgrades the previous profile schema without inventing approvals for histori
     process.env.ACC_MIGRATIONS_DIR = old;
     const file = join(root, 'profile.sqlite');
     opened = openDb(file);
-    opened.db.insert(runs).values({ id: 'legacy', repoId: 'legacy-repo', task: 'Historical judgment', model: 'default', status: 'done', humanAction: 'accepted', startedTs: '2026-07-01T00:00:00Z' }).run();
-    const before = opened.db.select().from(runs).all();
+    opened.sqlite.prepare('INSERT INTO runs(id,repo_id,task,model,status,human_action,started_ts) VALUES(?,?,?,?,?,?,?)').run('legacy', 'legacy-repo', 'Historical judgment', 'default', 'done', 'accepted', '2026-07-01T00:00:00Z');
+    const before = (opened.sqlite.prepare('SELECT * FROM runs').all() as Array<Record<string, unknown>>).map((row) => ({ ...row, source_git_identity: null }));
     opened.sqlite.close(); opened = undefined;
     process.env.ACC_MIGRATIONS_DIR = source;
     opened = openDb(file);
-    expect(opened.db.select().from(runs).all()).toEqual(before);
+    expect(opened.sqlite.prepare('SELECT * FROM runs').all()).toEqual(before);
     expect(opened.db.select().from(operationApprovals).all()).toEqual([]);
     const version = new ApprovalStore(opened.db).policyVersion('legacy-repo');
     opened.sqlite.close(); opened = undefined;
     opened = openDb(file);
     expect(new ApprovalStore(opened.db).policyVersion('legacy-repo')).toBe(version);
-    expect(opened.db.select().from(runs).all()).toEqual(before);
+    expect(opened.sqlite.prepare('SELECT * FROM runs').all()).toEqual(before);
   } finally { opened?.sqlite.close(); restoreEnvironment(); rmSync(root, { recursive: true, force: true }); }
 });

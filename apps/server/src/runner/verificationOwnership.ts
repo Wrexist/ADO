@@ -19,7 +19,8 @@ export function verificationBlocks(db: Db, repoId: string, cwd: string, resource
   try { identity = commonGitIdentity(cwd); } catch { return true; }
   return locks.some((lock) => {
     const attempt = db.select().from(verificationAttempts).where(eq(verificationAttempts.id, lock.owner.slice(7))).get();
-    return !attempt || lock.resource === resource || attempt.repoId === repoId || attempt.gitIdentity === identity || Boolean(checkout && attempt.repositoryId === checkout.repositoryId);
+    const source = db.select().from(runs).where(eq(runs.id, lock.runId)).get()?.sourceGitIdentity;
+    return !attempt || lock.resource === resource || attempt.repoId === repoId || attempt.gitIdentity === identity || source === identity || Boolean(checkout && attempt.repositoryId === checkout.repositoryId);
   });
 }
 
@@ -32,18 +33,22 @@ export class VerificationOwnership {
   claim(run: typeof runs.$inferSelect) {
     if (!executionCapacityAvailable(this.db)) throw new Error(executionCapacityReason);
     const gitIdentity = commonGitIdentity(run.workspacePath!);
+    const sourceIdentity = run.sourceGitIdentity ?? gitIdentity;
     const resource = this.resourceFor?.(run.repoId, run.workspacePath!);
     const checkouts = this.db.select().from(portfolioCheckouts).all();
-    const checkout = checkouts.find((c) => c.sourceId === run.repoId || c.gitIdentity === gitIdentity);
+    const checkout = checkouts.find((c) => c.sourceId === run.repoId || c.gitIdentity === sourceIdentity);
     for (const lock of this.db.select().from(executionLocks).all()) {
       const owner = this.db.select().from(runs).where(eq(runs.id, lock.runId)).get();
       if (!owner || owner.repoId === run.repoId || lock.resource === resource) throw new Error('Repository has an active or quarantined writer');
       const registered = checkouts.find((c) => c.sourceId === owner.repoId);
       if (checkout && registered?.repositoryId === checkout.repositoryId) throw new Error('Repository has an active or quarantined writer');
+      if (owner.sourceGitIdentity) {
+        if (owner.sourceGitIdentity === sourceIdentity) throw new Error('Repository has an active or quarantined writer');
+      }
       const path = owner.workspacePath ?? registered?.canonicalPath ?? this.cwdFor?.(owner.repoId) ?? (isAbsolute(lock.resource) ? lock.resource : undefined);
       let otherIdentity: string | undefined;
       try { if (path) otherIdentity = commonGitIdentity(path); } catch { /* unknown is not permission */ }
-      if (!otherIdentity || otherIdentity === gitIdentity) throw new Error('Repository has an active or quarantined writer');
+      if (!otherIdentity || otherIdentity === sourceIdentity || otherIdentity === gitIdentity) throw new Error('Repository has an active or quarantined writer');
     }
     const id = randomUUID(), startedTs = new Date().toISOString();
     this.db.insert(verificationAttempts).values({ id, runId: run.id, repoId: run.repoId, repositoryId: checkout?.repositoryId, gitIdentity, workspacePath: run.workspacePath!, baseSha: run.baseSha!, headSha: run.headSha!, diffDigest: run.diffDigest!, command: 'npm run verify', status: 'running', startedTs }).run();

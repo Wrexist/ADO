@@ -26,10 +26,26 @@ The failure path also commits the failed build and agent events in that same
 transaction. Rejecting either outbox event leaves the run, task and replayed
 agent state unchanged until recovery can persist the complete transition.
 
-Before claim, worktree preparation and native process resume, the registered
+Before claim, workspace preparation and native process resume, the registered
 checkout is checked against the scanner path, directory identity and Git common
-directory identity. Preparation refuses a dirty source and a HEAD different from
-the reviewed SHA, then creates a separate worktree from that exact commit.
+directory identity. Preparation refuses a HEAD different from the reviewed SHA.
+New results use an independent Git repository populated from that exact commit
+through Git object transport. No worktree registration, shared refs, object
+hardlinks, alternates, source hooks or source remote configuration are installed.
+Only the effective commit author name/email are copied into local configuration.
+Initialization and checkout disable global/system configuration and template hooks.
+Source commands disable optional index refreshes and ignore inherited `GIT_*`
+overrides. A changed source HEAD during preparation is refused.
+
+Task review explicitly states that uncommitted source changes are excluded and
+preserved. A task-bound reviewed commit can therefore be used while the original
+has staged, unstaged or untracked changes. Ordinary prompt dispatch without a
+reviewed base still refuses dirty sources. No stash, reset or clean is performed.
+Migration 0017 captures the original physical Git identity at claim and makes it
+immutable once stored. Both source and result identities participate in writer
+exclusion, so independent result metadata does not permit sibling source writers.
+Legacy runs retain their existing worktrees and null source identity; they are
+not silently moved or reconstructed, and existing conservative lock checks remain.
 Registered sibling checkouts serialize against the same repository. Existing
 lock keys are retained across migration; an old unbound lock also blocks siblings.
 If the scope of a legacy lock cannot be established, registered dispatch waits
@@ -79,7 +95,7 @@ starts a process by itself.
 ## Evidence and limits
 
 `taskExecutionApi.test.ts` exercises authenticated HTTP handlers, a real child
-process in a disposable Git worktree, an exact revised task, disabled permissions,
+process in a disposable Git repository, an exact revised task, disabled permissions,
 immutable active tasks, exit zero, retry, unchanged original files and profile
 reopening. It makes no provider/model call. `taskExecution.test.ts` covers sibling
 serialization, queued recovery, outbox rollback, changed base/project/directory,
@@ -116,8 +132,16 @@ forbidden. No provider/model call is made. Test-only `startScanner` injection
 permits an explicit temporary-profile scan while system/external integrations
 remain disabled; the normal startup default is unchanged.
 
+`taskExecution.test.ts` also exercises T13: a reviewed task with dirty staged and
+unstaged source files, an untracked binary, a chosen branch and custom hooks/config
+starts a real process in independent Git metadata and is cancelled. Recursive
+content/mode snapshots of the entire source including `.git` match before,
+during and after the job. The result keeps the agent edit and has no source
+hook, remote path or object alternates. This is a preservation test for managed
+preparation/cancellation; a trusted same-user agent can still address other files.
+
 This is trusted local execution, not an OS sandbox. Same-user filesystem races,
-shared Git metadata, scanner-ID-based permission migration, default-branch/fetch
+legacy shared worktrees, scanner-ID-based permission migration, default-branch/fetch
 selection and versioned context packets remain
 separate work. The reviewed base is the imported checkout observation and is
 rechecked against actual HEAD; a stale observation requires refresh/reimport.

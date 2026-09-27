@@ -32,7 +32,7 @@ The web form shows the exact task/version, explains the consequences and require
 a reason. Opening it has no effect. Submission returns a draft to the editor;
 the user then reviews and saves the definition as ready and separately reviews a
 new run. Lost-response retry retains the exact request/key. The next attempt gets
-a new run ID, immutable definition snapshot and separate worktree. It starts from
+a new run ID, immutable definition snapshot and separate Git repository. It starts from
 the explicitly reviewed checkout/base; prior uncommitted work is not copied into
 it automatically. Continuing from an earlier artifact needs an explicitly chosen
 versioned base, not an implicit merge or cherry-pick.

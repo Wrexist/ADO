@@ -33,6 +33,7 @@ export async function smokeTaskExecution(browser, base, token, out) {
       await page.getByRole('button', { name: `Review run for ${task.title}`, exact: true }).click();
       const review = page.getByRole('region', { name: 'Review task run' });
       await review.waitFor();
+      await review.getByText(/Uncommitted source changes are excluded and preserved/).waitFor();
       if (requests.length) throw new Error('Opening review started a run');
       if (!await review.getByRole('heading').evaluate((el) => document.activeElement === el)) throw new Error('Run review did not receive focus');
       await review.getByLabel('Run checkout', { exact: true }).selectOption(checkoutId);

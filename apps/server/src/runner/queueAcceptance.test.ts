@@ -23,7 +23,9 @@ it('T12: serializes unregistered sibling writers, enforces two agent slots and e
   const active = new Map<string, number>(), launched: Array<{ prompt: string; cwd: string }> = [];
   let maxGlobal = 0, maxRepository = 0, server: AccServer | undefined;
   const spawner: Spawner = { spawn(opts) {
-    const identity = commonGitIdentity(opts.cwd);
+    const source = opts.prompt.startsWith('A ') ? repos[0] : opts.prompt === 'B' ? repos[1] : repos[2];
+    const identity = commonGitIdentity(source);
+    expect(commonGitIdentity(opts.cwd)).not.toBe(identity);
     active.set(identity, (active.get(identity) ?? 0) + 1);
     maxRepository = Math.max(maxRepository, active.get(identity)!);
     maxGlobal = Math.max(maxGlobal, [...active.values()].reduce((sum, n) => sum + n, 0));

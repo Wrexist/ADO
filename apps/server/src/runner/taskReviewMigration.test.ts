@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { expect, it } from 'vitest';
 import { openDb } from '../db';
-import { portfolioProjects, portfolioRepositories, portfolioCheckouts, planningTasks, runs, taskExecutions } from '../db/schema';
+import { portfolioProjects, portfolioRepositories, portfolioCheckouts, planningTasks, taskExecutions } from '../db/schema';
 import { PlanningStore } from '../projects/planning';
 
 it('preserves prior task bindings and verification without inventing criterion acceptance during migration', () => {
@@ -25,7 +25,7 @@ it('preserves prior task bindings and verification without inventing criterion a
     opened.db.insert(portfolioRepositories).values({ id: repositoryId, projectId, host: 'local', externalId: 'fixture', name: 'Old repository', observedTs: ts }).run();
     opened.db.insert(portfolioCheckouts).values({ id: checkoutId, repositoryId, hostId: 'fixture', canonicalPath: 'fixture', pathIdentity: 'fixture', gitIdentity: 'fixture', sourceId: 'fixture', managed: false, headSha: sha, observedTs: ts }).run();
     opened.db.insert(planningTasks).values({ id: taskId, projectId, repositoryId, title: 'Old task', outcome: 'Outcome', scope: 'Fixture', outOfScope: '', acceptanceJson: JSON.stringify([{ id: randomUUID(), text: 'Criterion', required: true }]), sourceRefsJson: '[]', priority: 0, status: 'awaiting_review', version: 4, createdTs: ts, updatedTs: ts }).run();
-    opened.db.insert(runs).values({ id: 'old-run', repoId: 'fixture', task: 'Historical run', model: 'default', status: 'done', humanAction: 'accepted', verifyVerdict: 'pass', startedTs: ts }).run();
+    opened.sqlite.prepare('INSERT INTO runs(id,repo_id,task,model,status,human_action,verify_verdict,started_ts) VALUES(?,?,?,?,?,?,?,?)').run('old-run', 'fixture', 'Historical run', 'default', 'done', 'accepted', 'pass', ts);
     opened.db.insert(taskExecutions).values({ runId: 'old-run', taskId, taskVersion: 1, taskSnapshotJson: '{"original":"snapshot"}', checkoutId, baseSha: sha, currentTaskVersion: 4, state: 'done', createdTs: ts }).run();
     opened.sqlite.prepare('INSERT INTO verification_evidence(id, run_id, head_sha, diff_digest, command, exit_code, verdict, output, recorded_ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(randomUUID(), 'old-run', sha, 'b'.repeat(64), 'npm run verify', 0, 'pass', 'Old evidence', ts);
     const before = { task: opened.db.select().from(planningTasks).all(), binding: opened.db.select().from(taskExecutions).all(), evidence: opened.sqlite.prepare('SELECT * FROM verification_evidence').all() };
