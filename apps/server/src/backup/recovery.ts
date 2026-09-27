@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const recoveryMessage = 'Recovery review mode: jobs and changes are paused. Review restored references and recover local work before enabling execution. Connection credentials must be entered again.';
+export const recoveryMessage = 'Recovery review mode: jobs and changes are paused. Displayed activity is restored history, not proof of live processes. Review restored references and recover local work before enabling execution. Connection credentials must be entered again.';
 export function readRecoveryState(directory: string) {
   let raw: string;
   try { raw = readFileSync(join(directory, 'restore-state.json'), 'utf8'); }

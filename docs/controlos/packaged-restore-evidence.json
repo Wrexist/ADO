@@ -1,0 +1,29 @@
+{
+  "date": "2026-09-27",
+  "baseRevision": "6457efb",
+  "sourceNote": "Existing isolated archive/dependency workspace updated with all changed apps/packages sources listed below. Each staged file was compared with the working copy. Probe source is separate from the packaged runtime.",
+  "environment": "Windows x64; Node 22.18.0/npm 11.7.0 launcher; Electron 44.4.5 / Node 24.21.0 packaged runtime",
+  "command": "node --import tsx scripts/probe-packaged-restore.mts <unpacked executable>",
+  "result": "passed: real synthetic backup/restore, two packaged desktop starts, retained project/repository/checkout/task/run/lock rows, authenticated reference review, omitted provider credentials, denied mutation, integrity/foreign-key checks, unchanged dirty work and Git index",
+  "signatureStatus": "NotSigned",
+  "scope": "No real user-profile, installer/update/rollback, verified file-content recovery or promotion to active operation claim.",
+  "sourceSha256": {
+    "apps/desktop/src/launchOptions.ts": "12cd2eed1938eec6f593f330372c10b0ab64b2f37208e5f4c2d765dda728b885",
+    "apps/desktop/src/main.ts": "036213ee53d8d387bf3d5f47e6d264f698f5c20de4d7ce763a7cf9ab70495591",
+    "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
+    "apps/server/src/backup/index.ts": "19853008c07a58abc8835b02a202cbd08996aee576859d45e9e122303296a8c4",
+    "apps/server/src/backup/recovery.ts": "95b26c443e2e784abed8cd8734390cb3eb15195db579292c3c43ea44a413f35a",
+    "apps/web/src/chrome/StaleBanner.tsx": "ed55b8427e1b19eee1f45ceeab792e73f0f12ca8d99cf415c01106ca127aeadf",
+    "packages/shared/src/index.ts": "28c926d36f20b5b9307ff5be8e04609723141a933ca0384ef8fc9a3af354f82b",
+    "apps/server/src/backup/references.ts": "1e515521d453df65a9a4acb086629f77fdb32867452bcca120d8d0fa5a5c282c",
+    "packages/shared/src/recovery.ts": "f87a64c2bf30ebe6ab4092056bfcdfe601392e50330f9a5825c9400ebb8fb08a"
+  },
+  "probeSha256": "d46b0ab1c00816d34281a8421ec04ba71a8042574cafa3ee89fe26afed14301b",
+  "artifactSha256": {
+    "ai-control-center.exe": "bd1720a821faee6feeace89b2f800cbe31d7196832f45faa8969b876d8560252",
+    "resources/app.asar": "ff8c15e55360983a126c00ad054cbb1bb0e966a879c8e28e17fb685f975151ec",
+    "resources/app.asar.unpacked/node_modules/better-sqlite3/build/Release/better_sqlite3.node": "dd53215ed6ea8b70fa6b98e7dc875f6a1d2fd60702e4f163502406b313a30591",
+    "resources/process-host/ControlOS.CredentialHost.exe": "31b55b0c701dc5a1ff6bdd9e374f7717d0cf5b253b4773643f6773e0903056c1",
+    "resources/process-host/ControlOS.JobHost.exe": "cda71f09eab03fac1aca65aee865883dd034d477ba5f2ffb5ddd7cc9fb1866da"
+  }
+}

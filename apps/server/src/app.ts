@@ -18,6 +18,7 @@ import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
 import { ConnectionsStore, type SecretCodec } from './connections/store';
 import { readRecoveryState, recoveryMessage } from './backup/recovery';
+import { inspectRecoveryReferences } from './backup/references';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
@@ -1034,6 +1035,11 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.get('/api/recovery', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return { recovery, message: recovery ? recoveryMessage : null };
+  });
+  app.get('/api/recovery/references', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!recovery) return reply.code(409).send({ error: 'Reference review requires a restored profile in recovery review mode' });
+    return inspectRecoveryReferences(db, registry.hostId);
   });
   app.post('/api/runs/:id/verify/stop', async (req, reply) => {
     try { verifier.cancel((req.params as { id: string }).id); return { requested: true }; }

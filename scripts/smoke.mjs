@@ -71,14 +71,24 @@ try {
   const desktop = await browser.newPage();
   // Explicit recovery display fixture; actual restore/restart blocking is tested by the server suite.
   await page.route('**/api/recovery', (route) => route.fulfill({ json: { recovery: { mode: 'review' }, message: 'Recovery review mode: jobs and changes are paused. Connection credentials must be entered again.' } }));
+  await page.route('**/api/recovery/references', (route) => route.fulfill({ json: {
+    checkedAt: '2026-09-27T12:00:00Z', pendingRuns: 2, pendingVerifications: 1, retainedLocks: 3, contentVerified: false, executionEnabled: false,
+    references: ['identity_matches', 'missing', 'replaced', 'other_host', 'unrecorded', 'unavailable'].map((status, index) => ({ kind: 'run_workspace', id: `DEMO-reference-${index}`, path: `C:/DEMO/restored-workspaces/${status}/a-long-local-project-path-for-responsive-review`, status })),
+  } }));
   for (const width of [1536, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(base + '/agents'); await pair();
     await page.getByRole('status').filter({ hasText: 'Recovery review mode' }).waitFor();
+    await page.getByRole('button', { name: 'Inspect restored references', exact: true }).click();
+    await page.getByText('Local references (6)', { exact: true }).click();
+    await page.getByText('Identity matches; content not checked', { exact: true }).waitFor();
+    await page.getByText('Directory or Git identity changed', { exact: true }).waitFor();
+    await page.getByText('Registered on another host; not inspected', { exact: true }).waitFor();
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Recovery banner overflow');
     await page.screenshot({ path: join(out, `recovery-review-${width}.png`), fullPage: true });
   }
   await page.unroute('**/api/recovery');
+  await page.unroute('**/api/recovery/references');
   // Explicit planning fixture. Persistence and Git preservation have separate real API tests.
   const portfolioProjectId = '11111111-1111-4111-8111-111111111111';
   const portfolioRepositoryId = '22222222-2222-4222-8222-222222222222';

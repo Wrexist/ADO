@@ -1,6 +1,41 @@
 import { useBus } from '../store/bus';
 import { useEffect, useState } from 'react';
 import { ACC_TOKEN, SERVER_URL } from '../lib/config';
+import type { RecoveryReferenceReport, RecoveryReferenceStatus } from '@ado/shared';
+
+const referenceLabels: Record<RecoveryReferenceStatus, string> = {
+  identity_matches: 'Identity matches; content not checked', missing: 'Missing directory or Git metadata',
+  replaced: 'Directory or Git identity changed', other_host: 'Registered on another host; not inspected',
+  unrecorded: 'Insufficient recorded identity', unavailable: 'Cannot inspect safely',
+};
+
+function RecoveryReferences() {
+  const [report, setReport] = useState<RecoveryReferenceReport | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function inspect() {
+    setBusy(true); setError(null); setReport(null);
+    try {
+      const response = await fetch(`${SERVER_URL}/api/recovery/references`, { headers: { 'x-acc-token': ACC_TOKEN } });
+      if (!response.ok) throw new Error('Reference review unavailable. The profile remains paused.');
+      setReport(await response.json() as RecoveryReferenceReport);
+    } catch { setError('Reference review unavailable. The profile remains paused.'); }
+    finally { setBusy(false); }
+  }
+  return <div className="mt-2">
+    <button type="button" disabled={busy} className="rounded border border-current px-3 py-1 disabled:opacity-50" onClick={() => void inspect()}>{busy ? 'Inspecting references…' : 'Inspect restored references'}</button>
+    {error && <p role="alert" className="mt-2">{error}</p>}
+    {report && <div className="mt-2">
+      <p>{report.pendingRuns} queued/running records · {report.pendingVerifications} running verification records · {report.retainedLocks} retained locks. These are restored records, not proof of live processes.</p>
+      <p>Observed {report.checkedAt}. File content, remote repositories and process termination are not verified. Execution remains paused.</p>
+      <details className="mt-2"><summary className="cursor-pointer">Local references ({report.references.length})</summary>
+        {report.references.length === 0 ? <p>No local references were recorded. This does not prove local work was backed up.</p> : <ul className="mt-2 max-h-80 space-y-2 overflow-y-auto">
+          {report.references.map((reference) => <li key={`${reference.kind}:${reference.id}`} className="break-all"><strong>{referenceLabels[reference.status]}</strong><br />{reference.kind} · {reference.id}<br />{reference.path ?? 'No path recorded'}</li>)}
+        </ul>}
+      </details>
+    </div>}
+  </div>;
+}
 
 function RecoveryBanner() {
   const connection = useBus((s) => s.connection);
@@ -16,7 +51,7 @@ function RecoveryBanner() {
       }).catch(() => { /* Keep an already known recovery warning during disconnection. */ });
     return () => controller.abort();
   }, [connection]);
-  return message ? <div role="status" className="bg-warning/15 px-4 py-3 text-sm text-warning">{message}</div> : null;
+  return message ? <div className="bg-warning/15 px-4 py-3 text-sm text-warning"><p role="status">{message}</p><RecoveryReferences /></div> : null;
 }
 
 /**

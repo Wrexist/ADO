@@ -312,12 +312,12 @@
           "apps/server/src/projects/checkoutIdentity.ts": "d84e47e4b798f80e916d9367e7ff626437ed66a266c03e1f368c56795bbaccd2",
           "apps/server/src/projects/registry.ts": "5b1d98bd7d00c65f9a74b6025ea961a67c2c6e1d02fcd6c2f8b66fed2e00f132",
           "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
           "packages/shared/src/runs.ts": "6028b7fb718f19f6092d2de8ff3d27ca04a0666f27e039d689f3556f0b606857",
           "apps/web/src/pages/PlanningPage.tsx": "ee462d04ec44f3a8071b4af77acace5293bc769441e3bad27a4b1aa52515a3a0",
           "scripts/smoke-task-execution.mjs": "169f8a5e78036dc0822177e5276688846c3784a7f41ddb8cca035a83938639d8",
-          "scripts/smoke.mjs": "69f95c88531782cf61dfdb7a2ce8657f85ad7a7e63f981d055586b8dcf906da0",
+          "scripts/smoke.mjs": "6229524b08ac52bf116c49927a95db4f1d63d3d40ae067000ab8b3ab8a0ebe48",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "066b4583271d9f2979ea66ce4bb7a398581a06ff3e4aeceed60c625c0e342f15",
           "apps/server/src/runner/verificationOwnership.test.ts": "95d0b57b809032aaf814c934055e22d29784c5bdc849c863a68e26d38df5c54e",
@@ -327,9 +327,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -371,13 +371,13 @@
           "apps/server/src/runner/taskReviewMigration.test.ts": "0d89f2a2e61ee1e5c33fc8a34e1d94a02ee5c81b1477094986ef76fec09d4437",
           "apps/server/src/runner/index.ts": "00bf62fa330668a513edd7c5d31e1d916bb89c6ee80ec8f4fa7746094bb150e9",
           "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
           "packages/shared/src/runs.ts": "6028b7fb718f19f6092d2de8ff3d27ca04a0666f27e039d689f3556f0b606857",
           "apps/web/src/pages/PlanningPage.tsx": "ee462d04ec44f3a8071b4af77acace5293bc769441e3bad27a4b1aa52515a3a0",
           "apps/web/src/pages/TaskCriterionReview.tsx": "2c350e7773a56d456f8429c67cf893e72a7f820e1a50bd2d08d729b38e74a738",
           "scripts/smoke-task-review.mjs": "64e3e3b46ba9bf844beba6fbaa257e89f1d7410637b87e561233017e99acbb1c",
-          "scripts/smoke.mjs": "69f95c88531782cf61dfdb7a2ce8657f85ad7a7e63f981d055586b8dcf906da0",
+          "scripts/smoke.mjs": "6229524b08ac52bf116c49927a95db4f1d63d3d40ae067000ab8b3ab8a0ebe48",
           "apps/server/drizzle/0014_task_reopenings.sql": "3b52b18bcdddeb6213bcc620e87da2c18bfac60eeecf545cfc7b0dcdf42bc740",
           "apps/server/src/runner/taskReopening.ts": "eb3877238efe240639e360a2397a5a5a613326ade01d6cc36b60d0e0bdbeb882",
           "apps/web/src/pages/TaskReopeningPanel.tsx": "8df0db1c514ac42e3fa19ce32b8a00f64614402af0a3388c26508492d185479c",
@@ -391,9 +391,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -420,15 +420,15 @@
           "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
           "apps/server/src/projects/planning.test.ts": "e3e333860109c94f26cf93c91fff83d6e04dba04809277bc7beffdbd908a547e",
           "apps/server/src/projects/planningApi.test.ts": "190fc8ecd3070b038b85f9cc6f91ec21113e3db1044dfd168580edf75d27c71e",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "apps/web/src/pages/PlanningPage.tsx": "ee462d04ec44f3a8071b4af77acace5293bc769441e3bad27a4b1aa52515a3a0",
           "scripts/smoke-planning.mjs": "9eab7b15f2a4aae7ff3478db32b4688a03d36366cf8d12025d7aa66a24d8a3ae"
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -499,18 +499,18 @@
           "apps/server/src/runner/verificationOwnership.ts": "066b4583271d9f2979ea66ce4bb7a398581a06ff3e4aeceed60c625c0e342f15",
           "apps/server/src/runner/verificationOwnership.test.ts": "95d0b57b809032aaf814c934055e22d29784c5bdc849c863a68e26d38df5c54e",
           "apps/server/src/projects/checkoutIdentity.ts": "d84e47e4b798f80e916d9367e7ff626437ed66a266c03e1f368c56795bbaccd2",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "apps/web/src/views/RunHistory.tsx": "e665343bb6e5ab28a4bf24db1298fc7d8ba285176e69d2e8f4f6b0f29e858479",
           "packages/shared/src/runs.ts": "6028b7fb718f19f6092d2de8ff3d27ca04a0666f27e039d689f3556f0b606857",
-          "scripts/smoke.mjs": "69f95c88531782cf61dfdb7a2ce8657f85ad7a7e63f981d055586b8dcf906da0",
+          "scripts/smoke.mjs": "6229524b08ac52bf116c49927a95db4f1d63d3d40ae067000ab8b3ab8a0ebe48",
           "docs/controlos/task-execution.md": "91f51416602d09c193e00a4ffebd358201831d5fb92f2c2cde8a9c6c1962a346",
           "docs/controlos/verification-processes.md": "c3b82b81fe2c79b4cc669a2b5c3069c3484739bde151106c151d74eb4a5bd8e4"
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -567,9 +567,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -612,7 +612,7 @@
           "apps/server/src/runner/lifecycle.test.ts": "e32286666a6b83236adb623fb791ecf37d5607fbc750ce1f69e9d9ea93d1bcff",
           "apps/server/src/runner/workspace.ts": "a00ea03cb8212dbd53fb6a27bcd4cca37c5fd6bda2cb8d98c4255dd99a89a942",
           "apps/server/src/runner/executionCapacity.ts": "7e72c98b3e935481a55fb70bdba4ba285b8d4f4dc2eaed128bcff7966f289885",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/projects/store.ts": "34967ebaec808dfef34b94ea531565507860e5d13fdf8a57d597eed04b468ac2",
           "apps/server/src/projects/settings.ts": "f150ec929d09b8bc7245958be47ecf6b98af2c06ab44d37620ebac347cdd8372",
@@ -622,9 +622,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -671,9 +671,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -710,7 +710,7 @@
           "apps/server/src/runner/lifecycle.test.ts": "e32286666a6b83236adb623fb791ecf37d5607fbc750ce1f69e9d9ea93d1bcff",
           "apps/server/src/runner/workspace.ts": "a00ea03cb8212dbd53fb6a27bcd4cca37c5fd6bda2cb8d98c4255dd99a89a942",
           "apps/server/src/runner/executionCapacity.ts": "7e72c98b3e935481a55fb70bdba4ba285b8d4f4dc2eaed128bcff7966f289885",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/projects/store.ts": "34967ebaec808dfef34b94ea531565507860e5d13fdf8a57d597eed04b468ac2",
           "apps/server/src/projects/settings.ts": "f150ec929d09b8bc7245958be47ecf6b98af2c06ab44d37620ebac347cdd8372",
@@ -720,9 +720,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -765,7 +765,7 @@
           "apps/server/src/runner/lifecycle.test.ts": "e32286666a6b83236adb623fb791ecf37d5607fbc750ce1f69e9d9ea93d1bcff",
           "apps/server/src/runner/workspace.ts": "a00ea03cb8212dbd53fb6a27bcd4cca37c5fd6bda2cb8d98c4255dd99a89a942",
           "apps/server/src/runner/executionCapacity.ts": "7e72c98b3e935481a55fb70bdba4ba285b8d4f4dc2eaed128bcff7966f289885",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/projects/store.ts": "34967ebaec808dfef34b94ea531565507860e5d13fdf8a57d597eed04b468ac2",
           "apps/server/src/projects/settings.ts": "f150ec929d09b8bc7245958be47ecf6b98af2c06ab44d37620ebac347cdd8372",
@@ -775,9 +775,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -811,9 +811,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -857,7 +857,7 @@
           "apps/server/src/runner/index.ts": "00bf62fa330668a513edd7c5d31e1d916bb89c6ee80ec8f4fa7746094bb150e9",
           "apps/server/src/lib/ownedProcess.ts": "986d1a4b8bcb6f67625e2c6c90625080bba36ccf2ea0129d0dfc840d8f5aa29e",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "69f95c88531782cf61dfdb7a2ce8657f85ad7a7e63f981d055586b8dcf906da0",
+          "scripts/smoke.mjs": "6229524b08ac52bf116c49927a95db4f1d63d3d40ae067000ab8b3ab8a0ebe48",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "066b4583271d9f2979ea66ce4bb7a398581a06ff3e4aeceed60c625c0e342f15",
           "apps/server/src/runner/verificationOwnership.test.ts": "95d0b57b809032aaf814c934055e22d29784c5bdc849c863a68e26d38df5c54e",
@@ -865,9 +865,9 @@
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -916,15 +916,15 @@
           "apps/server/src/connections/file.ts": "3fa172c649b3d3df8aa8eff69b26afa57e6f9dbd97d934c315d968d7105c6911",
           "apps/server/src/connections/preservation.test.ts": "f525240b1addf0c78f6a4f97345c00a865c809a1bb05aef9feabfc0acccadc35",
           "apps/server/src/connections/store.ts": "be55ba26ac87886056f0d5d203eea0b5b914417b0097305c051140ba463800ab",
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "apps/web/src/lib/connections.ts": "72373baeb410f3d6e978452692842db48faf9485b6f22db195f08485eb7d1011",
-          "scripts/smoke.mjs": "69f95c88531782cf61dfdb7a2ce8657f85ad7a7e63f981d055586b8dcf906da0"
+          "scripts/smoke.mjs": "6229524b08ac52bf116c49927a95db4f1d63d3d40ae067000ab8b3ab8a0ebe48"
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },
@@ -1054,9 +1054,12 @@
         "apps/server/src/backup/backup.test.ts",
         "apps/server/src/backup/recovery.test.ts",
         "docs/controlos/profile-recovery.md",
-        "scripts/smoke.mjs"
+        "scripts/smoke.mjs",
+        "apps/server/src/backup/references.test.ts",
+        "scripts/probe-packaged-restore.mts",
+        "docs/controlos/packaged-restore-evidence.json"
       ],
-      "coverageNote": "Version 2 credential-file omission, configuration hashes and persistent restore review mode are tested. Two server restarts preserve old run rows/locks without launching jobs; mutations are denied. Browser warning has explicit 1536/390px fixtures. Complete local workspace/reference validation, real user profile and supported promotion back to active operation remain unverified."
+      "coverageNote": "Synthetic profile backup/restore and two real packaged Windows app starts preserve plans, run rows, locks and dirty work. Authenticated local identity review distinguishes changed/missing/foreign/legacy references; mutation stays blocked and credentials are omitted. Full reference/content recovery, real user-profile drill and promotion to active operation remain unverified."
     },
     {
       "id": "T37",
@@ -1124,16 +1127,16 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "1c06398224ea279e50acca4498573fa16bf81f1b7efca73374cd85560f50a7dd",
+          "apps/server/src/app.ts": "b3a8adf9388e3b1841a211d9731be2ee2cab0260910ad246f816a232d75bb381",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413",
           "apps/server/src/sse-shutdown.test.ts": "a789dab734eb6f0eef4b2508e6950442e958a952d50682f900051b6a380aecd4"
         },
         "revalidation": {
           "date": "2026-09-27",
-          "command": "npm run verify; npm run smoke",
-          "result": "Typecheck, lint, 359 tests in 74 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
-          "browser": "Full browser smoke passed, including explicit recovery-review display fixtures at 1536/390 pixels. No new packaged-desktop, installer or real user-profile restore claim."
+          "command": "npm run verify; npm run smoke; node --import tsx scripts/probe-packaged-restore.mts <executable>",
+          "result": "Typecheck, lint, 360 tests in 75 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0. Final packaged restore probe passed targeted lint and two real desktop starts.",
+          "browser": "Full smoke passed at 1536/390 pixels, including reference review fixtures. Real packaged renderer/API assertions passed under Electron 44.4.5 / Node 24.21.0; no hidden-window screenshot claim."
         }
       }
     },

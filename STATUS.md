@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R4: referensgranskning och återställd paketerad app
+
+Granskningsläget kan nu kontrollera registrerade arbetskopior, körningsresultatens sökvägar och verifieringsarbetskopior. Rapporten skiljer matchande filidentitet från saknade, utbytta, främmande eller otillräckligt dokumenterade referenser. Den kör inga Git-kommandon eller agenter och ändrar inga referenser eller lås. Filinnehåll och processavslut är uttryckligen overifierade; rapporten aktiverar inte profilen. Återställd aktivitet märks som historik, inte som bevis på levande processer.
+
+En separat syntetisk profil har säkerhetskopierats, återställts och öppnats två gånger i den riktiga unpacked Windows-appen. Projekt/repo/checkout, plan, köade och körande poster samt lås bevarades exakt. Riktig renderer/preload, API-behörigheter, referenspanel, nekad mutation, utelämnade providercredentials, SQLite-integritet och främmande nycklar kontrollerades. Arbetskopians osparade fil och Git-index bevarades. Alla ägda appstarter stängdes normalt; efteråt fanns inga processer med den provade exe-sökvägen. [Prov och begränsningar](docs/controlos/profile-recovery.md), [käll- och artefakthashar](docs/controlos/packaged-restore-evidence.json).
+
+`npm run verify` passerade: typkontroll, lint, 360 tester i 75 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Hela browser-smoke passerade, inklusive uttryckliga referensfixturer vid 1536/390 px; bilderna har granskats. Det slutliga paketerade provet passerade separat lint och två appstarter på Electron 44.4.5 / Node 24.21.0. Loggar: `controlos-recovery-references-focused.log`, `controlos-recovery-references-verify.log`, `controlos-recovery-references-smoke.log`, `controlos-packaged-restore.log` och `controlos-packaged-restore-lint.log` (ignorerade). Misslyckade tidiga prov och deras korrigeringar redovisas i provbeskrivningen.
+
+13 av 46 fullständiga scenarier är fortsatt lokalt godkända. T36 och fulla R1–R4-grindar är öppna. Verklig användarprofil, full innehållsåterställning, installer/uppdatering och stödd återaktivering återstår. Paketeringen är osignerad. Ingen modell, pilotagent, merge eller publicering kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## R4: återställning till beständigt granskningsläge
 
 Backupmanifest version 2 utelämnar anslutningsfilen och desktops åtkomstnyckel och kontrollerar SHA-256 för databas och inkluderade konfigurationsfiler. Äldre manifest kan återställas men deras anslutningsfil kopieras inte. En befintlig backup med samma namn bevaras. Återställning kräver en ny katalog och kontrollerar SQLite-integritet och främmande nycklar.

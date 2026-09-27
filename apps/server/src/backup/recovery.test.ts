@@ -27,6 +27,8 @@ it('opens restored history without claiming queued jobs, reconciling locks or en
       server = await buildServer(env, { startSystem: true, startScanner: true, spawner: { spawn() { starts++; throw new Error('Restored job started'); } } });
       expect(server.scanner).toBeNull(); expect(server.sysmon).toBeNull();
       expect((await server.app.inject({ url: '/api/recovery', headers })).json()).toMatchObject({ recovery: { mode: 'review', credentialsOmitted: true }, message: recoveryMessage });
+      expect((await server.app.inject({ url: '/api/recovery/references', headers })).json()).toMatchObject({ pendingRuns: 2, retainedLocks: 1, contentVerified: false, executionEnabled: false });
+      expect((await server.app.inject({ url: '/api/recovery/references', headers: { host: headers.host } })).statusCode).toBe(401);
       expect((await server.app.inject({ method: 'POST', url: '/api/session', headers })).statusCode).toBe(200);
       for (const [method, url] of [['POST', '/api/dispatch'], ['POST', '/api/setup/probe'], ['POST', '/api/connections/figma'], ['DELETE', '/api/connections/figma'], ['POST', '/api/runs/running/reconcile'], ['POST', '/api/automations/missing/run']] as const) {
         expect((await server.app.inject({ method, url, headers, payload: method === 'POST' ? {} : undefined })).statusCode).toBe(423);
