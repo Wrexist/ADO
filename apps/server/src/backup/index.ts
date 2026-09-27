@@ -5,10 +5,12 @@
  * assert its row count matches the source (a silent short-write must fail loudly), and
  * rotate to the newest N copies so backups don't grow without bound.
  */
-import { constants, existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { constants, existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync, copyFileSync, renameSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
+import { restoreStagingFile, writeRestoreGuard } from './restoreGuard';
+import { ConnectionFile } from '../connections/file';
 
 const KEEP_DEFAULT = 7;
 const CONFIG_FILES = ['connections.json', 'prompts.json', 'project-dirs.json', 'project-settings.json', 'automations.json', 'autoreview.json', 'testflight.json'];
@@ -101,7 +103,14 @@ export function restoreBackup(file: string, destination: string): void {
   mkdirSync(destination, { mode: 0o700 });
   const marker = join(destination, 'restore-state.json');
   writeFileSync(marker, JSON.stringify({ version: 1, mode: 'restoring' }), { flag: 'wx', mode: 0o600 });
-  copyFileSync(file, join(destination, 'acc.sqlite'), constants.COPYFILE_EXCL);
+  const staged = join(destination, restoreStagingFile);
+  copyFileSync(file, staged, constants.COPYFILE_EXCL);
+  if (createHash('sha256').update(readFileSync(staged)).digest('hex') !== manifest.databaseSha256) throw new Error('Restored database checksum mismatch; incomplete profile preserved');
+  const guard = { restoreId: randomUUID(), databaseSha256: manifest.databaseSha256!, restoredAt: new Date().toISOString() };
+  writeRestoreGuard(staged, guard, true);
   for (const [name, raw] of Object.entries(manifest.files)) if (name !== 'connections.json') writeFileSync(join(destination, name), raw as string, { flag: 'wx', mode: 0o600 });
-  writeFileSync(marker, JSON.stringify({ version: 1, mode: 'review', restoredAt: new Date().toISOString(), databaseSha256: manifest.databaseSha256 }), { mode: 0o600 });
+  // Both paths are fixed children of the newly created destination. Never expose an unguarded acc.sqlite.
+  renameSync(staged, join(destination, 'acc.sqlite'));
+  const state = new ConnectionFile(marker); state.read();
+  state.write({ version: 2, mode: 'review', ...guard });
 }

@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## Återställningsbindning och paketerad omprovning
+
+Återställda databaser har nu en egen identitet som måste matcha återställningsfilen före normal uppstart. Saknad, utbytt eller nedgraderad fil stoppar uppstart. Kopierade databasbytes kontrollsummeras innan databasen får sitt slutliga namn; avbruten kopiering lämnar en blockerad stagingfil. Befintliga äldre återställningsfiler registreras vid första uppstart. Skyddet kan inte identifiera äldre återställningar vars enda märke redan har raderats, och är ingen säkerhetsgräns mot samma OS-användare.
+
+Den riktiga osignerade Windows-appen har provats med syntetiska profiler: två återställningsstarter, nekad start med saknat märke och oförändrade databasbytes samt tre starter för äldre profilmigrering/återöppning. Provet upptäckte att Electron tidigare rapporterade exitkod 0 vid nekad uppstart; slutartefakten rapporterar nu exitkod 1. [Käll- och artefaktbundna bevis](docs/controlos/restore-binding-evidence.json).
+
+Slutlig typkontroll, lint och separat full byggning passerade. Full regression passerade 368 av 369 tester; automationstestets atomiska filbyte nekades med Windows `EPERM`. Separat omprov av samtliga 13 automationstester passerade utan kodändring. Detta räknas inte som en helt grön `npm run verify`. Orsaken till Windows nekade filbyte är inte fastställd. Återställningens 11 riktade tester passerade. Loggar: `controlos-binding-final-verify.log`, `controlos-binding-automation-recheck.log`, `controlos-binding-final-build.log`, `controlos-binding-packaged-final.log` och `controlos-binding-packaged-migration.log`.
+
+13/46 fullständiga scenarier är fortsatt lokalt godkända. R1–R4 är öppna; verklig användarprofil, installer/uppdatering, full sandbox och provider-/nyttopilot återstår. Ingen modell, pilotagent, merge eller publicering kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## OpenShip-inspirerad design och beständig kö
 
 OpenShip har granskats på revision `fc60144ddb0312ff88502e6e660141238a616951`: faktisk dashboardbild, temaregler, navigation och beskriven arkitektur. ControlOS har nu en neutral ljus standardvy, sparat mörkt läge, tydligare typografi, fristående sidomenyer och kvarvarande navigation på undersidor. Smala datorfönster får kompakt sökning och färre Ops-kolumner så att projektidentiteter förblir läsbara. Inga externa komponenter, logotyper, beroenden eller deploymentfunktioner har kopierats. [Granskning och avgränsning](docs/controlos/openship-design-review.md).

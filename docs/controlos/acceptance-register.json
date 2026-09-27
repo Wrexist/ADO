@@ -1075,9 +1075,12 @@
         "apps/server/src/backup/queue.ts",
         "apps/server/src/backup/queue.test.ts",
         "apps/web/src/chrome/RecoveryQueueReview.tsx",
-        "apps/server/src/runner/recovery.test.ts"
+        "apps/server/src/runner/recovery.test.ts",
+        "apps/server/src/backup/restoreGuard.test.ts",
+        "apps/server/src/backup/copyIntegrity.test.ts",
+        "docs/controlos/restore-binding-evidence.json"
       ],
-      "coverageNote": "Synthetic restore, local reference/content review and prior packaged Windows restore are evidenced. Current idle-profile manual activation requires fresh bound review and typed confirmation, rejects stale state and unresolved jobs/locks/process outcomes, remains paused until restart and keeps automatic services off. Targeted tests cover deferred later queued jobs and no automatic model diagnosis even with a configured test key. Supported resolution/rebind for blocked profiles, real user-profile drill and full code recovery remain unverified; current activation has not been rerun in packaged desktop. Explicit recovery cancellation now rejects ambiguous/started/locked records, binds current reviewed content and commits run/task/history/build/audit together without releasing locks. Versioned queued intent survives graceful close/reopen and recovered manual profiles remain paused until explicit scan. Full T36 status remains unchanged."
+      "coverageNote": "Synthetic restore, local reference/content review and prior packaged Windows restore are evidenced. Current idle-profile manual activation requires fresh bound review and typed confirmation, rejects stale state and unresolved jobs/locks/process outcomes, remains paused until restart and keeps automatic services off. Targeted tests cover deferred later queued jobs and no automatic model diagnosis even with a configured test key. Supported resolution/rebind for blocked profiles, real user-profile drill and full code recovery remain unverified; current activation has not been rerun in packaged desktop. Explicit recovery cancellation now rejects ambiguous/started/locked records, binds current reviewed content and commits run/task/history/build/audit together without releasing locks. Versioned queued intent survives graceful close/reopen and recovered manual profiles remain paused until explicit scan. Full T36 status remains unchanged. Restored database/marker binding now rejects lost, exchanged or downgraded markers before startup; staged copied bytes are checksum-checked. Current unpacked Windows artifact passed synthetic restore/reopen, missing-marker refusal with exit code 1 and unchanged database bytes, and legacy credential/profile migration. Full activation, real user-profile and installer/update acceptance remain unverified."
     },
     {
       "id": "T37",

@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-27",
+  "baseRevision": "89f229ed614490565403405c6527ea2f24d664d9",
+  "sourceNote": "422 tracked/new staging inputs were initially copied and byte-compared in an isolated dependency workspace; final runtime deltas below were byte-compared after rebuilding. Development Node native dependencies were preserved.",
+  "environment": "Windows x64; Node 22.18.0/npm 11.7.0 launcher; Electron 44.4.5 / Node 24.21.0 packaged runtime",
+  "commands": [
+    "node --import tsx scripts/probe-packaged-restore.mts <unpacked executable>",
+    "node --import tsx scripts/probe-packaged-profile.mts <unpacked executable>"
+  ],
+  "result": "passed: two normal restored-profile starts; missing-marker startup refused with exit code 1 and byte-identical database; three legacy migration/reopen starts preserving historical rows, prompt and policy while migrating plaintext/legacy Electron credentials to DPAPI",
+  "earlierObservation": "The first binding probe refused startup but Electron exited 0 despite process.exitCode=1. The final artifact reports failure through will-quit after normal before-quit server cleanup; final probe requires exit code 1.",
+  "signatureStatus": "NotSigned",
+  "scope": "Synthetic isolated profiles and unpacked app only. No real user-profile, installer/update/rollback, active recovered-profile promotion or sandbox certification.",
+  "sourceSha256": {
+    "apps/desktop/src/main.ts": "49b9464ccd5d32fba69de919b81651c4cd62ee4e813e329c60456137b263c229",
+    "apps/server/src/app.ts": "f5812db68867c3d0e5ad07ce627fd101a4bb4a47248d7b823a29f3d23c7ef7c3",
+    "apps/server/src/backup/index.ts": "48969ce36b0b9956b877268edfbb70bd8de7eeb7af637d6ff060aefd14c46d52",
+    "apps/server/src/backup/recovery.ts": "d632449f37f709c4da22240e61a62472ebdcf93de2c560a2118fcd563e99e140",
+    "apps/server/src/backup/restoreGuard.ts": "cf7f8a5f52ac74bc707c543fa9afa66560eb7f521dc142aa7932106a8a80782b",
+    "apps/server/src/backup/restoreGuard.test.ts": "e9334251707d65c5e2bda8004a55035e598346c6afd5fb9a27f6e3de5ea618aa",
+    "apps/server/src/backup/copyIntegrity.test.ts": "f77f1e7fceefe49c21e648bd2664779b46606c541bc4a6ac03ff779830ecb89a"
+  },
+  "probeSha256": {
+    "scripts/probe-packaged-restore.mts": "c645a406db0f74cf7b8a09d23522a24e5fbb6b6ae6a65c0bb2552df577677dd8",
+    "scripts/probe-packaged-profile.mts": "31b6563d6dbaeb155c3a465a972b85b7be7e3f40e25cfd025fd61f81a1ce02be"
+  },
+  "artifactSha256": {
+    "ai-control-center.exe": "d48f6b6c7c3f8e09248934bf80fe1e4c57c9cdac5efde85159f61e5bab64d840",
+    "resources/app.asar": "b7486c84d9a1aa3f19027eb83197f7c4dd6c97d03617d302991a0cd60565e57d",
+    "resources/app.asar.unpacked/node_modules/better-sqlite3/build/Release/better_sqlite3.node": "dd53215ed6ea8b70fa6b98e7dc875f6a1d2fd60702e4f163502406b313a30591",
+    "resources/process-host/ControlOS.CredentialHost.exe": "a43d252c13278b54b2111ae80b1858d30662ec501e51da3c516c27f9c3559039",
+    "resources/process-host/ControlOS.JobHost.exe": "415cb0ea076580be3c77bd56dfcd9f5b1fc63e6de9f379f57e44a18a30ec8b1a",
+    "resources/web/index.html": "70942581fbd4df2ab74f1b89eaf622bcd7bfaabf287179e3821bf10bec6978a3"
+  },
+  "artifactDirectory": {
+    "files": 252,
+    "sha256": "1323f9c9559345a3f0d8b08ec45be5616e7a6e5aff99f05836159bd9ce1b13ce",
+    "algorithm": "SHA-256 over sorted relative slash paths, NUL, each raw-file SHA-256 hex, and LF."
+  }
+}

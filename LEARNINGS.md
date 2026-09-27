@@ -111,3 +111,5 @@ One line per learning. The nightly analyzer (parked, p5) consumes this file; kee
 - 2026-09-27: Windows Node 22.12/libuv 1.49 reports lstat dev=0 while fstat returns the volume ID; require a corrected runtime instead of weakening file identity checks.
 - 2026-09-27: Graceful shutdown is not cancellation of durable queued intent; preserve accepted jobs and require explicit, auditable recovery actions.
 - 2026-09-27: Theme changes need semantic action foregrounds as well as surface colors; verify contrast across elevated surfaces and preserve status/provenance cues.
+- 2026-09-27: A missing sidecar must not turn a restored database into normal operation; bind restore identity in the database and inspect it before queue recovery.
+- 2026-09-27: Electron app.quit can exit 0 despite process.exitCode=1; set the failure exit status at will-quit after asynchronous before-quit cleanup, and verify the real packaged executable.

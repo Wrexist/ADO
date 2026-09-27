@@ -1,8 +1,8 @@
 import { _electron as electron } from 'playwright';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { hostname, tmpdir } from 'node:os';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { openDb } from '../apps/server/src/db/index.ts';
@@ -76,4 +76,15 @@ for (const phase of ['restore', 'reopen']) {
   assert.equal(readFileSync(join(repo, 'work.txt'), 'utf8'), 'uncommitted work must survive');
   assert.deepEqual(readFileSync(join(repo, '.git/index')), index);
 }
-console.log(JSON.stringify({ result: 'passed', executableSha256: createHash('sha256').update(readFileSync(executablePath)).digest('hex'), profileEvidence: root, scope: 'Synthetic profile backup/restore and two unpacked desktop starts. Preserved plans, run rows, locks and local dirty work; identity report only. No installer, active-profile promotion or real user-profile claim.' }));
+const marker = join(profile, 'restore-state.json'), held = join(profile, 'restore-state.held');
+const databaseBeforeRefusal = readFileSync(join(profile, 'acc.sqlite'));
+// Both paths are fixed files in this probe's own temporary profile.
+renameSync(marker, held);
+try {
+  const refused = spawnSync(executablePath, [`--profile-dir=${profile}`, '--hidden', '--no-update-check'], { env, windowsHide: true, encoding: 'utf8', timeout: 30000 });
+  assert.equal(refused.error, undefined); assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /Cannot read recovery state/);
+  assert.deepEqual(readFileSync(join(profile, 'acc.sqlite')), databaseBeforeRefusal);
+  console.log(JSON.stringify({ phase: 'missing-marker', startupRefused: true, exitCode: refused.status, databasePreserved: true }));
+} finally { renameSync(held, marker); }
+console.log(JSON.stringify({ result: 'passed', executableSha256: createHash('sha256').update(readFileSync(executablePath)).digest('hex'), profileEvidence: root, scope: 'Synthetic profile backup/restore, two unpacked desktop starts and refused startup after marker loss. Preserved plans, run rows, locks and local dirty work; identity report only. No installer, active-profile promotion or real user-profile claim.' }));

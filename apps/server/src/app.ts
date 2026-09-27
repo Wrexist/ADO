@@ -154,7 +154,7 @@ function reviewFixTask(review: AutoReview, findingIdx?: number): string {
 }
 
 export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
-  const recovery = env.dbPath === ':memory:' ? null : readRecoveryState(dirname(env.dbPath));
+  const recovery = env.dbPath === ':memory:' ? null : readRecoveryState(dirname(env.dbPath), env.dbPath);
   const recoveryReview = recovery?.mode === 'review';
   if (recovery) { env = { ...env, demo: false, projectDirs: [] }; deps = { ...deps, startSystem: false, startScanner: false }; }
   // Secrets store: stored keys override .env; secrets never leave the server.

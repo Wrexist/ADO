@@ -147,17 +147,21 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 let closing = false;
+let bootFailed = false;
 app.on('before-quit', (event) => {
   if (!server || closing) return;
   event.preventDefault(); closing = true;
   void server.close().finally(() => app.quit());
 });
+// Electron's app.quit() does not propagate Node's process.exitCode. Wait until
+// before-quit has completed server cleanup, then report the failed startup.
+app.on('will-quit', () => { if (bootFailed) app.exit(1); });
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else start().catch((err: Error) => {
   console.error('desktop boot failed:', err);
   // Surface the real reason instead of a silent zombie process.
   if (!launch.hidden) dialog.showErrorBox('AI Control Center failed to start', err.message);
-  process.exitCode = 1;
+  bootFailed = true;
   app.quit();
 });
