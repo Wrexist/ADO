@@ -668,7 +668,9 @@ export class Runner {
     this.stopped = true;
     for (const id of this.activeRuns) this.killed.add(id);
     for (const q of this.queue.splice(0)) {
-      this.failRun(q.id, q.input, null, 'cancelled before start: server stopping');
+      // Versioned queue acceptance is durable intent; shutdown is not cancellation.
+      const pending = this.db.select().from(runs).where(eq(runs.id, q.id)).get();
+      if (pending?.engineVersion !== 1) this.failRun(q.id, q.input, null, 'cancelled before start: server stopping');
     }
     for (const [id, handle] of this.handles) {
       this.killed.add(id);

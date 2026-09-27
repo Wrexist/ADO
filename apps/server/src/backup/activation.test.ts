@@ -49,6 +49,7 @@ it('requires fresh explicit activation, preserves unresolved work and keeps reco
     await server.close(); server = await boot();
     expect(server.scanner).toBeNull(); expect(server.sysmon).toBeNull();
     expect((await server.app.inject({ url: '/api/recovery', headers })).json().recovery.mode).toBe('manual');
+    expect((await post('/api/recovery/runs/old/cancel-queued', { digest: 'old', confirmation: 'CANCEL QUEUED JOB' })).statusCode).toBe(409);
     expect((await post('/api/portfolio/projects', { name: 'Manual planning', kind: 'app', goal: 'Continue safely', lifecycle: 'active', focus: true, manualPriority: 3 })).statusCode).toBe(200);
     expect((await post('/api/connections/anthropic', { value: 'synthetic-activation-key' })).statusCode).toBe(200);
     server.incidents.report({ source: 'server', kind: 'activation-fixture', message: 'Cannot read properties of undefined' });
@@ -61,6 +62,8 @@ it('requires fresh explicit activation, preserves unresolved work and keeps reco
     server = await boot();
     const queued = (await server.app.inject({ url: '/api/runs', headers })).json().runs.find((run: { id: string }) => run.id === 'new-queued');
     expect(queued.status).toBe('queued'); expect(starts).toBe(0);
+    await server.close(); server = await boot();
+    expect((await server.app.inject({ url: '/api/runs', headers })).json().runs.find((run: { id: string }) => run.id === 'new-queued').status).toBe('queued');
     const marker = JSON.parse(readFileSync(join(profile, 'restore-state.json'), 'utf8')); delete marker.activation;
     writeFileSync(join(profile, 'restore-state.json'), JSON.stringify(marker));
     expect(() => readRecoveryState(profile)).toThrow('Incomplete or invalid restoration');

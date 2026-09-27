@@ -2,6 +2,7 @@ import { useBus } from '../store/bus';
 import { useEffect, useState } from 'react';
 import { ACC_TOKEN, SERVER_URL } from '../lib/config';
 import type { RecoveryReferenceReport, RecoveryReferenceStatus, RecoveryContentReport } from '@ado/shared';
+import { RecoveryQueueReview } from './RecoveryQueueReview';
 
 const referenceLabels: Record<RecoveryReferenceStatus, string> = {
   identity_matches: 'Identity matches; content not checked', missing: 'Missing directory or Git metadata',
@@ -104,7 +105,7 @@ function RecoveryBanner() {
       }).catch(() => { /* Keep an already known recovery warning during disconnection. */ });
     return () => controller.abort();
   }, [connection]);
-  return message ? <div className="bg-warning/15 px-4 py-3 text-sm text-warning"><p role="status">{message}</p>{review && <><RecoveryReferences /><RecoveryActivationPanel /></>}</div> : null;
+  return message ? <div className="bg-warning/15 px-4 py-3 text-sm text-warning"><p role="status">{message}</p>{review && <><RecoveryReferences /><RecoveryQueueReview /><RecoveryActivationPanel /></>}</div> : null;
 }
 
 /**

@@ -47,4 +47,5 @@ it('compares binary and untracked content through isolated metadata without invo
     expect(existsSync(marker)).toBe(false);
     expect(db.select().from(runs).get()).toEqual(run);
   } finally { sqlite.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
-}, 60000);
+// Multiple isolated Git comparisons; allow bounded Windows filesystem latency.
+}, 120000);

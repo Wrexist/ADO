@@ -21,6 +21,7 @@ import { readRecoveryState, recoveryMessage } from './backup/recovery';
 import { inspectRecoveryReferences } from './backup/references';
 import { compareRecoveredContent } from './backup/content';
 import { RecoveryActivation } from './backup/activation';
+import { RecoveryQueue } from './backup/queue';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
@@ -218,7 +219,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   registerSecurity(app, env);
   app.addHook('preHandler', async (req, reply) => {
-    if (recoveryReview && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !['/api/session', '/api/recovery/prepare', '/api/recovery/activate'].includes(req.url.split('?')[0])) {
+    if (recoveryReview && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !['/api/session', '/api/recovery/prepare', '/api/recovery/activate'].includes(req.url.split('?')[0]) && !/^\/api\/recovery\/runs\/[^/]+\/cancel-queued$/.test(req.url.split('?')[0])) {
       if (req.url.split('?')[0] === '/api/app-open') return reply.send({ recorded: false, recovery: true });
       return reply.code(423).send({ error: recoveryMessage });
     }
@@ -1048,6 +1049,19 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return { recovery: recovery ? { ...recovery, restartRequired } : null, message: restartRequired ? 'Manual operation approved. Close and restart ControlOS with this same profile. This session remains paused until restart.' : recoveryReview ? recoveryMessage : recovery ? 'Recovered profile: manual operation is enabled. Startup scanning and scheduled/event automation remain off. Reconfigure credentials and project folders explicitly.' : null };
   });
   const recoveryActivation = recoveryReview ? new RecoveryActivation(db, dirname(env.dbPath), registry.hostId) : null;
+  const recoveryQueue = new RecoveryQueue(db, bus);
+  app.get('/api/recovery/queue', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!recoveryReview) return reply.code(409).send({ error: 'Queue review requires recovery review mode' });
+    return { jobs: recoveryQueue.list() };
+  });
+  app.post('/api/recovery/runs/:id/cancel-queued', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!recoveryReview || recoveryActivation?.restartRequired || activationBusy || recoveryContentBusy) return reply.code(409).send({ error: 'Recovery queue changes are unavailable during another review or pending restart' });
+    const body = (req.body ?? {}) as { digest?: unknown; confirmation?: unknown };
+    try { return recoveryQueue.cancel((req.params as { id: string }).id, body.digest, body.confirmation); }
+    catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
+  });
   let activationBusy = false;
   for (const action of ['prepare', 'activate'] as const) app.post(`/api/recovery/${action}`, async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;

@@ -56,10 +56,10 @@ describe('runner lifecycle regressions', () => {
     expect(h.db.select().from(runs).all().map((r) => r.status)).toEqual(['done', 'failed']);
     await h.runner.stop(); h.sqlite.close();
   });
-  it('shutdown cancels queued work, waits for active work and rejects new dispatch', async () => {
+  it('shutdown preserves queued work, waits for active work and rejects new dispatch', async () => {
     const h = harness(); h.runner.dispatch({ repoId: 'a', task: 'first' }); h.runner.dispatch({ repoId: 'a', task: 'queued' });
     await h.runner.stop(); expect(h.processes).toHaveLength(1);
-    expect(h.db.select().from(runs).all().every((r) => r.status === 'failed')).toBe(true);
+    expect(h.db.select().from(runs).all().map((r) => ({ task: r.task, status: r.status }))).toEqual([{ task: 'first', status: 'failed' }, { task: 'queued', status: 'queued' }]);
     expect(() => h.runner.dispatch({ repoId: 'a', task: 'late' })).toThrow(/stopping/); h.sqlite.close();
   });
   it('retains a kill handle after stdout EOF; exit zero after cancellation is failure', async () => {

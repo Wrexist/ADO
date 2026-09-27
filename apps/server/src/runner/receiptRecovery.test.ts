@@ -80,7 +80,8 @@ describe.skipIf(process.platform !== 'win32')('durable native stop recovery', ()
         expect(started).toEqual([]);
         renameSync(held, receiptPath);
         expect(runner.reconcileRun(interrupted.id)).toBe(true);
-        await expect.poll(() => db.select().from(runs).all().find((row) => row.task !== 'interrupted')?.status).toBe('done');
+        // This is a real Windows host launch and authenticated stop receipt, not an in-memory callback.
+        await expect.poll(() => db.select().from(runs).all().find((row) => row.task !== 'interrupted')?.status, { timeout: 10000 }).toBe('done');
         expect(started).toEqual(['previously accepted next job']);
         expect(owners).toHaveLength(1); expect(owners[0]).not.toBe(originalLock.owner);
         expect(readFileSync(nextMarker, 'utf8')).toBe('started');

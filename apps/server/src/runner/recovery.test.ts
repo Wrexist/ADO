@@ -11,6 +11,24 @@ import { join } from 'node:path';
 const tick = () => new Promise((r) => setTimeout(r, 20));
 const spawner: Spawner = { spawn: () => ({ lines: (async function* () {})(), done: Promise.resolve(0), kill() {} }) };
 describe('durable execution', () => {
+  it('preserves accepted queued intent through a clean shutdown and runs it once after reopening', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'controlos-clean-queue-'));
+    const file = join(root, 'profile.sqlite'); let opened = openDb(file);
+    let starts = 0;
+    const counted: Spawner = { spawn: (opts) => { starts++; return spawner.spawn(opts); } };
+    let runner = new Runner(new Bus(opened.db), opened.db, counted, { cwdFor: () => root, queuePaused: () => 'Awaiting explicit scan' });
+    try {
+      const accepted = runner.dispatch({ repoId: 'fixture', task: 'Durable intent', idempotencyKey: 'clean-restart' });
+      const before = opened.db.select().from(runs).all()[0];
+      await runner.stop(); opened.sqlite.close(); opened = openDb(file);
+      expect(opened.db.select().from(runs).all()).toEqual([before]); expect(starts).toBe(0);
+      runner = new Runner(new Bus(opened.db), opened.db, counted, { cwdFor: () => root });
+      runner.reconcileOrphans(); await tick();
+      expect(starts).toBe(1); expect(opened.db.select().from(runs).all()[0]).toMatchObject({ id: accepted.runId, status: 'done' });
+      expect(runner.dispatch({ repoId: 'fixture', task: 'Durable intent', idempotencyKey: 'clean-restart' })).toEqual(accepted);
+      expect(starts).toBe(1);
+    } finally { await runner.stop(); opened.sqlite.close(); rmSync(root, { recursive: true, force: true }); }
+  });
   it('keeps an accepted job queued when its atomic claim event cannot be stored', async () => {
     const { db, sqlite } = openDb(':memory:');
     const bus = new Bus(db);

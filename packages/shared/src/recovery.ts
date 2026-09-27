@@ -20,3 +20,11 @@ export interface RecoveryContentReport {
   status: 'matches_recorded' | 'differs_from_recorded' | 'unavailable' | 'not_recorded';
   executionEnabled: false;
 }
+export interface RecoveryQueuedJob {
+  id: string;
+  task: string;
+  repoId: string;
+  eligible: boolean;
+  digest: string;
+  reason: string;
+}
