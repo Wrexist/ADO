@@ -31,6 +31,8 @@ import { HealthChecker } from './system/health';
 import { Runner } from './runner';
 import { PROVIDERS, ProviderSpawner } from './runner/providers';
 import { Verifier } from './runner/verification';
+import { ApprovalStore } from './runner/approvals';
+import { ResultReviewRequest, ResultAcceptanceRequest } from '@ado/shared';
 import { type Spawner } from './runner/spawner';
 import { HeuristicParser } from './command/parser';
 import { ClaudeParser } from './command/claudeParser';
@@ -622,6 +624,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // Run log + live run control. History is the REAL persisted `runs` table (survives
   // restarts); the tool-by-tool timeline lives only for runs started this boot — older
   // runs report timelineState 'unavailable' instead of a reconstructed fake (conv. 1).
+  const featureMap = (repoId: string) => ({
+    ...projectSettings.map(repoId),
+    autoReview: autoReviewStore.settings(repoId).enabled,
+  });
+  const approvals = new ApprovalStore(db, (repoId) => JSON.stringify({
+    contract: 'trusted-local-result-accept-v1', features: Object.entries(featureMap(repoId)).sort(([a], [b]) => a.localeCompare(b)),
+  }));
   const runRow = (r: typeof runs.$inferSelect) => ({
     id: r.id,
     repoId: r.repoId,
@@ -704,6 +713,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return {
       run: {
         ...runRow(row),
+        approvalPolicyVersion: row.engineVersion === 1 ? approvals.policyVersion(row.repoId) : null,
+        approvalHistory: approvals.history(id),
         timelineState: runner.isLive(id) ? 'live' : timeline ? 'ended' : 'unavailable',
         timeline: timeline ?? [],
         resultText: row.resultText,
@@ -726,7 +737,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   // Human verdict on a finished run's work — the seed data the (parked) self-learning
   // analyzer will consume at ≥100 runs. Only a human sets this, only on finished runs.
-  const verifier = new Verifier(db, () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]);
+  const verifier = new Verifier(db, () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))], approvals);
+  app.post('/api/runs/:id/approval', async (req, reply) => {
+    const parsed = ResultReviewRequest.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'A specific result.accept review with revision, digest and policy version is required' });
+    try { return { approval: await verifier.prepareAcceptance((req.params as { id: string }).id, parsed.data) }; }
+    catch (error) { return reply.code(409).send({ error: redact((error as Error).message, [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]) }); }
+  });
   app.post('/api/runs/:id/verify', async (req, reply) => {
     try { return { evidence: await verifier.verify((req.params as { id: string }).id) }; }
     catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
@@ -742,9 +759,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       return reply.code(400).send({ error: 'judge the run after it finishes — it is still in flight' });
     }
     if (parsed.data === 'accepted' && row.engineVersion === 1) {
-      try { return { run: runRow(await verifier.accept(id, req.body as { headSha?: string; diffDigest?: string })) }; }
+      const reviewed = ResultAcceptanceRequest.safeParse(req.body);
+      if (!reviewed.success) return reply.code(409).send({ error: 'Prepare and explicitly confirm the current result review' });
+      try { return { run: runRow(await verifier.accept(id, reviewed.data)) }; }
       catch (error) { return reply.code(409).send({ error: redact((error as Error).message, [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]) }); }
     }
+    if ((req.body as { approvalId?: unknown; operation?: unknown }).approvalId !== undefined || (req.body as { operation?: unknown }).operation !== undefined) return reply.code(400).send({ error: 'This review cannot authorize another operation' });
+    approvals.invalidateRun(id, 'Human outcome changed');
     db.update(runs).set({ humanAction: parsed.data }).where(eq(runs.id, id)).run();
     return { run: runRow({ ...row, humanAction: parsed.data }) };
   });
@@ -803,7 +824,10 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     const enabled = ((req.body ?? {}) as { enabled?: unknown }).enabled;
     if (typeof enabled !== 'boolean') return reply.code(400).send({ error: 'enabled (boolean) is required' });
     try {
-      return { settings: await autoReview.setEnabled(repoId, enabled) };
+      approvals.invalidatePolicy(repoId);
+      const settings = await autoReview.setEnabled(repoId, enabled);
+      approvals.policyVersion(repoId);
+      return { settings };
     } catch (err) {
       return reply.code(403).send({ error: (err as Error).message });
     }
@@ -1024,10 +1048,6 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // Per-project settings — the feature switches behind each project's Settings button.
   // Auto-Review delegates to its own store via the engine (single source of truth + baseline
   // seeding); everything else lives in the project-settings store.
-  const featureMap = (repoId: string) => ({
-    ...projectSettings.map(repoId),
-    autoReview: autoReviewStore.settings(repoId).enabled,
-  });
   app.get('/api/projects/:id/settings', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     const id = (req.params as { id: string }).id;
@@ -1041,6 +1061,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     const parsed = ProjectSettingsPatch.safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ error: 'feature (id) and enabled (boolean) are required' });
     const { feature, enabled } = parsed.data;
+    approvals.invalidatePolicy(id);
     if (feature === 'autoReview') {
       try {
         await autoReview.setEnabled(id, enabled);
@@ -1050,6 +1071,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     } else {
       projectSettings.set(id, feature, enabled);
     }
+    approvals.policyVersion(id);
     return { features: featureMap(id) };
   });
 

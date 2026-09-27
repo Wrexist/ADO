@@ -94,11 +94,37 @@ try {
     timelineState: 'ended', timeline: [], resultText: null,
     diagnostics: '[diagnostics truncated: output was discarded]\nDEMO diagnostic with [redacted] credential',
   };
+  let allowAcceptance = false;
+  let acceptanceRequests = 0;
+  const policyVersion = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const approvalFixture = {
+    id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', actorId: 'local-owner', operation: 'result.accept',
+    runId: runFixture.id, repoId: runFixture.repoId, headSha: 'a'.repeat(40), diffDigest: 'b'.repeat(64), payloadHash: 'c'.repeat(64),
+    policyVersion, policySnapshot: JSON.stringify({ contract: 'DEMO result acceptance policy' }), issuedTs: new Date().toISOString(), expiresTs: new Date(Date.now() + 300000).toISOString(),
+    consumedTs: null, revokedTs: null, revokeReason: null,
+  };
   await page.route('**/api/runs**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/runs') await route.fulfill({ json: { runs: [runFixture] } });
     else if (path === '/api/runs/demo-stop') await route.fulfill({ json: { run: runFixture } });
+    else if (path === '/api/runs/demo-stop/approval') {
+      const body = route.request().postDataJSON();
+      if (body.operation !== 'result.accept' || body.policyVersion !== policyVersion || body.headSha !== approvalFixture.headSha || body.diffDigest !== approvalFixture.diffDigest) throw new Error('Review does not bind the displayed target');
+      await route.fulfill({ json: { approval: approvalFixture } });
+    }
     else if (path === '/api/runs/demo-stop/outcome' || path === '/api/runs/demo-stop/verify') {
+      if (path.endsWith('/outcome')) {
+        acceptanceRequests++;
+        const body = route.request().postDataJSON();
+        if (body.approvalId !== approvalFixture.id || body.operation !== 'result.accept' || body.policyVersion !== policyVersion) throw new Error('Acceptance does not bind the confirmed review');
+        if (allowAcceptance) {
+          runFixture.humanAction = 'accepted';
+          approvalFixture.consumedTs = new Date().toISOString();
+          runFixture.approvalHistory = [{ ...approvalFixture }];
+          await route.fulfill({ json: { run: runFixture } });
+          return;
+        }
+      }
       runFixture.verifyVerdict = null; runFixture.humanAction = null;
       await route.fulfill({ status: 409, json: { error: 'DEMO: result changed; previous verification and acceptance cleared.' } });
     }
@@ -130,12 +156,34 @@ try {
     }
   }
   for (const action of ['Accepted', 'Run npm verify']) {
-    Object.assign(runFixture, { status: 'done', workspacePath: 'DEMO working copy', verifyVerdict: 'pass', humanAction: null, processTermination: 'confirmed' });
+    Object.assign(runFixture, { status: 'done', workspacePath: 'DEMO working copy', verifyVerdict: 'pass', humanAction: null, processTermination: 'confirmed', headSha: approvalFixture.headSha, diffDigest: approvalFixture.diffDigest, approvalPolicyVersion: policyVersion });
     await page.goto(base + '/agents?run=demo-stop'); await pair();
     await page.getByText('Verification: pass', { exact: true }).waitFor();
     await page.getByRole('button', { name: action, exact: true }).click();
+    if (action === 'Accepted') await page.getByRole('button', { name: 'Confirm acceptance', exact: true }).click();
     await page.getByText('Verification: not independently verified', { exact: true }).waitFor();
     await page.getByText('DEMO: result changed; previous verification and acceptance cleared.', { exact: true }).waitFor();
+  }
+  allowAcceptance = true;
+  for (const width of [1536, 390]) {
+    approvalFixture.consumedTs = null;
+    Object.assign(runFixture, { verifyVerdict: 'pass', humanAction: null, approvalHistory: [] });
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto(base + '/agents?run=demo-stop'); await pair();
+    const before = acceptanceRequests;
+    await page.getByRole('button', { name: 'Accepted', exact: true }).click();
+    await page.getByRole('region', { name: 'Confirm result acceptance' }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'Review the exact result below before confirming.' }).waitFor();
+    if (acceptanceRequests !== before || runFixture.humanAction !== null) throw new Error('Preparing a review must not record acceptance');
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Result approval mobile overflow');
+    await page.screenshot({ path: join(out, `result-approval-${width}.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Confirm acceptance', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('status').filter({ hasText: 'Human decision recorded.' }).waitFor();
+    if (acceptanceRequests !== before + 1) throw new Error('Confirmation must submit exactly one decision');
+    await page.getByText('Recent result reviews', { exact: true }).click();
+    await page.getByText(/Acceptance recorded · result.accept/).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Review history mobile overflow');
   }
   await desktop.addInitScript((accToken) => { window.__ACC_DESKTOP__ = { serverUrl: '', accToken }; }, token);
   await desktop.setViewportSize({ width: 1536, height: 1024 });

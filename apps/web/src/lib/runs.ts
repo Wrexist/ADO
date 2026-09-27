@@ -1,5 +1,5 @@
 /** Client for the run log + live run control — zod-parsed at the boundary (convention 2). */
-import { AgentRun, RunDetail, RunStats, type RunHumanAction } from '@ado/shared';
+import { AgentRun, RunDetail, RunStats, OperationApproval, type RunHumanAction } from '@ado/shared';
 import { ACC_TOKEN, SERVER_URL } from './config';
 
 const headers = () => ({ 'content-type': 'application/json', 'x-acc-token': ACC_TOKEN });
@@ -33,7 +33,7 @@ export async function fetchRunStats(days = 7): Promise<RunStats> {
 }
 
 /** Record what happened to a finished run's work — feeds the (parked) self-learning loop. */
-export async function setRunOutcome(id: string, action: RunHumanAction, target?: { headSha?: string | null; diffDigest?: string | null }): Promise<AgentRun> {
+export async function setRunOutcome(id: string, action: RunHumanAction, target?: { headSha?: string | null; diffDigest?: string | null; policyVersion?: string; operation?: string; approvalId?: string }): Promise<AgentRun> {
   const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/outcome`, {
     method: 'POST',
     headers: headers(),
@@ -56,6 +56,14 @@ export async function killRun(id: string): Promise<void> {
 export async function verifyRun(id: string): Promise<void> {
   const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/verify`, { method: 'POST', headers: headers(), body: '{}' });
   if (!res.ok) throw new Error(await bodyError(res, 'Verification failed'));
+}
+
+export async function prepareRunAcceptance(id: string, target: { headSha?: string | null; diffDigest?: string | null; policyVersion: string }): Promise<OperationApproval> {
+  const res = await fetch(`${SERVER_URL}/api/runs/${encodeURIComponent(id)}/approval`, {
+    method: 'POST', headers: headers(), body: JSON.stringify({ operation: 'result.accept', ...target }),
+  });
+  if (!res.ok) throw new Error(await bodyError(res, 'Could not prepare result review'));
+  return OperationApproval.parse(((await res.json()) as { approval: unknown }).approval);
 }
 
 export async function reconcileRun(id: string): Promise<void> {

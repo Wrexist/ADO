@@ -14,7 +14,7 @@ A rejected process-completion promise also retains the durable writer lock, incl
 
 Queue acceptance, claims and terminal run state now commit their build events in the same SQLite transaction. The event log serves as the local outbox; delivery starts after commit and boot replay recovers committed events. SSE reconnects fall back to a snapshot when retained history cannot provide a contiguous replay. The [crash and failure matrix](execution-recovery.md) records the tested boundaries and remaining limitations.
 
-Explicit repository verification runs `npm run verify` against an isolated result, recording revision, content digest, exit status, bounded redacted output and timestamp. Changed output invalidates evidence. It verifies that script, not every task-specific criterion. Human acceptance of new runs requires matching evidence and current content, with [conditional writes during review](acceptance-consistency.md). Acceptance does not merge or deploy.
+Explicit repository verification runs `npm run verify` against an isolated result, recording revision, content digest, exit status, bounded redacted output and timestamp. Changed output invalidates evidence. It verifies that script, not every task-specific criterion. Human acceptance of new runs requires matching evidence, current content and a separately confirmed, policy-bound review. Its one-time consumption and the result decision commit together; [immutable history preserves the binding](acceptance-consistency.md). Acceptance does not merge or deploy.
 
 ## Recovery
 

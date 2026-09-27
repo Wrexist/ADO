@@ -19,6 +19,17 @@ export type AgentRunStatus = z.infer<typeof AgentRunStatus>;
 export const RunHumanAction = z.enum(['accepted', 'corrected', 'redone']);
 export type RunHumanAction = z.infer<typeof RunHumanAction>;
 
+export const ResultReviewRequest = z.object({
+  operation: z.literal('result.accept'), headSha: z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/), diffDigest: z.string().regex(/^[a-f0-9]{64}$/), policyVersion: z.string().uuid(),
+}).strict();
+export const ResultAcceptanceRequest = ResultReviewRequest.extend({ action: z.literal('accepted'), approvalId: z.string().uuid() }).strict();
+export const OperationApproval = z.object({
+  id: z.string().uuid(), actorId: z.string(), operation: z.literal('result.accept'), runId: z.string(), repoId: z.string(),
+  headSha: z.string(), diffDigest: z.string(), payloadHash: z.string(), policyVersion: z.string().uuid(), policySnapshot: z.string(),
+  issuedTs: z.string(), expiresTs: z.string(), consumedTs: z.string().nullable(), revokedTs: z.string().nullable(), revokeReason: z.string().nullable(),
+});
+export type OperationApproval = z.infer<typeof OperationApproval>;
+
 /** One row of the persisted run log. */
 export const AgentRun = z.object({
   id: z.string(),
@@ -57,6 +68,8 @@ export const RunTimelineEntry = z.object({
 export type RunTimelineEntry = z.infer<typeof RunTimelineEntry>;
 
 export const RunDetail = AgentRun.extend({
+  approvalPolicyVersion: z.string().uuid().nullable().optional(),
+  approvalHistory: z.array(OperationApproval).optional(),
   diagnostics: z.string().nullable().optional(),
   /**
    * live  = the run is in flight, timeline grows (poll again);

@@ -97,3 +97,21 @@ export const verificationEvidence = sqliteTable('verification_evidence', {
   exitCode: integer('exit_code').notNull(), verdict: text('verdict').notNull(),
   output: text('output').notNull(), recordedTs: text('recorded_ts').notNull(),
 });
+
+export const approvalPolicyVersions = sqliteTable('approval_policy_versions', {
+  version: text('version').primaryKey(), repoId: text('repo_id').notNull(), digest: text('digest').notNull(),
+  snapshotJson: text('snapshot_json').notNull(), createdTs: text('created_ts').notNull(),
+});
+
+export const approvalPolicies = sqliteTable('approval_policies', {
+  repoId: text('repo_id').primaryKey(), version: text('version').notNull().references(() => approvalPolicyVersions.version), digest: text('digest').notNull(),
+});
+
+/** Prepared review bindings become decisions only when explicitly consumed. */
+export const operationApprovals = sqliteTable('operation_approvals', {
+  id: text('id').primaryKey(), actorId: text('actor_id').notNull(), operation: text('operation').notNull(),
+  runId: text('run_id').notNull(), repoId: text('repo_id').notNull(), headSha: text('head_sha').notNull(),
+  diffDigest: text('diff_digest').notNull(), payloadHash: text('payload_hash').notNull(), payloadJson: text('payload_json').notNull(),
+  policyVersion: text('policy_version').notNull().references(() => approvalPolicyVersions.version), issuedTs: text('issued_ts').notNull(), expiresTs: text('expires_ts').notNull(),
+  consumedTs: text('consumed_ts'), revokedTs: text('revoked_ts'), revokeReason: text('revoke_reason'),
+}, (t) => [index('operation_approvals_run_idx').on(t.runId, t.issuedTs)]);

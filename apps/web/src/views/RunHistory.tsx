@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { AgentRun, RunDetail, RunHumanAction } from '@ado/shared';
+import type { AgentRun, RunDetail, RunHumanAction, OperationApproval } from '@ado/shared';
 import { Button, Card, Chip, Icon, cx, type Tone } from '../kit';
 import { useBus } from '../store/bus';
 import { durationLabel, timeAgo } from '../lib/time';
-import { fetchRunDetail, fetchRuns, killRun, setRunOutcome, verifyRun, reconcileRun } from '../lib/runs';
+import { fetchRunDetail, fetchRuns, killRun, setRunOutcome, verifyRun, reconcileRun, prepareRunAcceptance } from '../lib/runs';
 import { dispatchPrompt } from '../lib/prompts';
 
 const STATUS_TONE: Record<AgentRun['status'], Tone> = {
@@ -29,7 +29,13 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   const [err, setErr] = useState('');
   const [confirmKill, setConfirmKill] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState('');
+  const [note, setNoteValue] = useState('');
+  const [noteIsError, setNoteIsError] = useState(false);
+  const setNote = (value: string) => { setNoteValue(value); setNoteIsError(false); };
+  const setErrorNote = (value: string) => { setNoteValue(value); setNoteIsError(true); };
+  const [review, setReview] = useState<OperationApproval | null>(null);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (review) reviewHeading.current?.focus(); }, [review]);
 
   // Load, then poll every 2s while the run is live so the timeline grows in place.
   const wasLive = useRef(false);
@@ -61,7 +67,8 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
 
   const inFlight = detail.status === 'running' || detail.status === 'queued';
   const refreshFailedReview = async (error: Error) => {
-    setNote(error.message);
+    setReview(null);
+    setErrorNote(error.message);
     try { setDetail(await fetchRunDetail(detail.id)); onChanged(); }
     catch { setErr('Could not refresh the result after review failed. Reload before reviewing again.'); }
   };
@@ -77,7 +84,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       setNote('Kill requested — the run will finish as failed.');
       onChanged();
     } catch (e) {
-      setNote((e as Error).message);
+      setErrorNote((e as Error).message);
     } finally {
       setBusy(false);
       setConfirmKill(false);
@@ -92,17 +99,24 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       setNote(`Dispatched again — run ${newId.slice(0, 12)}.`);
       onChanged();
     } catch (e) {
-      setNote((e as Error).message);
+      setErrorNote((e as Error).message);
     } finally {
       setBusy(false);
     }
   };
 
-  const judge = async (action: RunHumanAction) => {
+  const judge = async (action: RunHumanAction, confirmed?: OperationApproval) => {
     setBusy(true);
     try {
-      const updated = await setRunOutcome(detail.id, action, { headSha: detail.headSha, diffDigest: detail.diffDigest });
-      setDetail({ ...detail, humanAction: updated.humanAction });
+      if (action === 'accepted' && detail.approvalPolicyVersion && !confirmed) {
+        setReview(await prepareRunAcceptance(detail.id, { headSha: detail.headSha, diffDigest: detail.diffDigest, policyVersion: detail.approvalPolicyVersion }));
+        setNote('Review the exact result below before confirming.');
+        return;
+      }
+      await setRunOutcome(detail.id, action, confirmed ? { headSha: confirmed.headSha, diffDigest: confirmed.diffDigest, policyVersion: confirmed.policyVersion, operation: confirmed.operation, approvalId: confirmed.id } : { headSha: detail.headSha, diffDigest: detail.diffDigest });
+      setReview(null);
+      setDetail(await fetchRunDetail(detail.id));
+      setNote('Human decision recorded.');
       onChanged(); // the row chip reflects the verdict
     } catch (e) {
       await refreshFailedReview(e as Error);
@@ -126,7 +140,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       {/* timeline — live (growing), ended (complete for this boot), or honestly unavailable */}
       <div className="mt-3 break-words rounded-tile border p-3 text-label text-text2">
         {detail.status === 'done' && detail.workspacePath && <Button size="sm" disabled={busy} onClick={() => {
-          setBusy(true); setNote('Running repository verification...');
+          setBusy(true); setReview(null); setNote('Running repository verification...');
           void verifyRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Verification recorded. Review the result before accepting.'); })
             .catch(refreshFailedReview).finally(() => setBusy(false));
         }}>Run npm verify</Button>}
@@ -134,7 +148,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         {detail.status === 'failed' && detail.processTermination === 'unconfirmed' && <Button size="sm" disabled={busy} onClick={() => {
           setBusy(true);
           void reconcileRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Process stop confirmed. The previous attempt remains failed.'); onChanged(); })
-            .catch((error: Error) => setNote(error.message)).finally(() => setBusy(false));
+            .catch((error: Error) => setErrorNote(error.message)).finally(() => setBusy(false));
         }}>Recheck process stop</Button>}
         {(detail.status === 'done' || detail.status === 'failed') && <p className={detail.processTermination === 'unconfirmed' ? 'text-warning' : undefined}>
           {detail.processTermination === 'confirmed' ? 'Agent processes: stopped.' : detail.processTermination === 'unconfirmed'
@@ -200,10 +214,10 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         {confirmKill ? (
           <Button size="sm" variant="ghost" onClick={() => setConfirmKill(false)}>Keep running</Button>
         ) : null}
-        {note ? <span className={cx('text-label', note.startsWith('Dispatched') || note.startsWith('Kill requested') ? 'text-text2' : 'text-danger')}>{note}</span> : null}
+        {note ? <span role={noteIsError ? 'alert' : 'status'} className={cx('text-label', noteIsError ? 'text-danger' : 'text-text2')}>{note}</span> : null}
       </div>
 
-      {/* work outcome — one click, feeds the self-learning loop once it un-parks (≥100 runs) */}
+      {/* Work outcomes are human decisions; versioned acceptance requires a prepared review. */}
       {!inFlight ? (
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <span className="text-label text-text3">Work outcome:</span>
@@ -213,7 +227,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
               <button
                 key={o.action}
                 type="button"
-                disabled={busy || active}
+                disabled={busy || active || Boolean(review)}
                 onClick={() => void judge(o.action)}
                 className={cx(
                   'rounded-full border px-2.5 py-1 text-label transition-colors duration-150 ease-soft',
@@ -229,6 +243,33 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
           </span>
         </div>
       ) : null}
+      {review && <section aria-label="Confirm result acceptance" className="mt-3 space-y-2 break-words rounded-tile border p-3 text-label">
+        <h3 ref={reviewHeading} tabIndex={-1} className="font-medium">Accept this verified result?</h3>
+        <p>This records your acceptance of this result. It does not merge or deploy.</p>
+        <p>Repository: {review.repoId}</p>
+        <p>Revision: {review.headSha}</p>
+        <p>Content digest: {review.diffDigest}</p>
+        <p>Operation: {review.operation}</p>
+        <p>Policy version: {review.policyVersion}</p>
+        <p>Review expires: {new Date(review.expiresTs).toLocaleString()}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" disabled={busy} onClick={() => void judge('accepted', review)}>Confirm acceptance</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => { setReview(null); setNote(''); }}>Back</Button>
+        </div>
+      </section>}
+      {Boolean(detail.approvalHistory?.length) && <details className="mt-3 break-words text-label">
+        <summary>Recent result reviews</summary>
+        {detail.approvalHistory!.map((entry) => <div key={entry.id} className="mt-2">
+          <p>
+          {entry.consumedTs ? 'Acceptance recorded' : entry.revokedTs ? 'Review revoked' : Date.parse(entry.expiresTs) <= Date.now() ? 'Review expired' : 'Review pending'}
+          {' · '}{entry.operation}{' · '}{entry.actorId}{' · '}{entry.consumedTs ?? entry.revokedTs ?? entry.issuedTs}
+          {entry.revokeReason && ` · ${entry.revokeReason}`}
+          </p>
+          <p>Revision: {entry.headSha}</p>
+          <p>Content digest: {entry.diffDigest}</p>
+          <p>Policy version: {entry.policyVersion}</p>
+        </div>)}
+      </details>}
     </div>
   );
 }

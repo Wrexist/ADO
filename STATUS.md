@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: engångsbeslut med policyversion för resultatacceptans
+
+Versionerade resultat granskas nu i två steg: ett fem minuter giltigt underlag förbereds, därefter bekräftas exakt samma operation, revision, innehåll och policyversion. Beslutet binds även till repo, arbetskopia, verifieringsbevis och tidigare mänskligt utfall. Förbrukning och resultatacceptans sparas atomiskt; återanvändning, utgången tid, ändrad policy eller ändrat innehåll nekas. Projektinställningar återkallar väntande underlag före ändringen, även om inställningen senare ändras tillbaka.
+
+SQLite bevarar oföränderliga bindningar, terminala beslut och historiska policysnapshots. Migrering 0009 bevarar äldre körningar utan att skapa påhittade godkännanden. Vyn visar en separat bekräftelse och de senaste 20 granskningsposterna. Informations- och felmeddelanden har skilda färger och tillgänglighetsroller. Se [kontrakt, evidens och gränser](docs/controlos/acceptance-consistency.md).
+
+Slutlig `npm run verify` passerade: typkontroll, lint, 302 tester i 54 filer och byggning på Windows x64, Node 22.18.0 och npm 11.7.0. API-testet använder ett riktigt temporärt Git-repo och en SQLite-profil; tester omfattar policybyte, ändrat innehåll, omverifiering, replay, atomisk rollback, återöppning och föregående databasschema. `npm run smoke` passerade separat för 1536/390 px, tangentbordsbekräftelse, separata förberedelse-/beslutsanrop, historik och meddelanderoller. Mobilbilden har granskats. Bilderna använder uttryckliga demofixtures. Loggar: `controlos-operation-final-verify.log` och `controlos-operation-confirmation-smoke.log` (ignorerade). Webbens storleksvarning kvarstår.
+
+Ingen modell, pilotagent, merge eller deploy kördes. Registret gäller nu endast `result.accept`; andra operationsvägar behöver egna bindningar innan de kan använda det. Ägaridentiteten är fortfarande den lokala ägarnyckeln, inte en separat enhets-/personidentitet. T20/T22/T43 har omprovats och källhasharna uppdaterats. Full T26 och R1–R4 förblir öppna; inga nya fullständiga scenarier har godkänts. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: aktuell verifiering vid mänsklig acceptans
 
 Acceptans av versionerade körningar går nu genom verifieraren med aktuell innehållskontroll och villkorad databasuppdatering. Ett samtidigt korrigerat mänskligt beslut skrivs inte över. Ändrat eller oläsbart innehåll tar bort tidigare verifieringsgodkännande; även misslyckad förkontroll inför omverifiering ogiltigförklarar gammal acceptans. Körningsvyn hämtar om status efter nekad acceptans/verifiering så att en gammal grön etikett inte ligger kvar. Se [kontrakt och gränser](docs/controlos/acceptance-consistency.md).
