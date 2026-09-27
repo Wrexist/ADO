@@ -1,0 +1,30 @@
+{
+  "date": "2026-09-27T23:31:55.365Z",
+  "baseRevision": "b6c9d925179f474cb484442d495d4f06d8e9f428",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0"
+  },
+  "checks": [
+    "native unrelated process responds before recovery",
+    "startup recovery leaves unrelated PID responsive",
+    "missing receipts cannot signal the unrelated process or release locks",
+    "invalid MAC is rejected",
+    "valid MAC with same PID and different creation time is rejected",
+    "server shutdown does not signal recovered PID",
+    "reopened profile retains quarantine and unrelated process"
+  ],
+  "positiveControl": "Actual native empty-job receipt confirmed and released only its own writer lock",
+  "scope": "Windows production startup/API/reopen with an actual native unrelated process. Stale PID collision is fault-injected into historical records; OS allocator reuse is not forced. Fresh nonce responses prove the same child remains responsive. No provider or pilot job runs.",
+  "sourceSha256": {
+    "scripts/probe-process-identity.mts": "5d8d34871080a7906ee685a8363708f9af56b304e749ce59ae7061cc81daf6fe",
+    "apps/server/src/app.ts": "233d30705b633f3e6c1efffbe5105f84832e13c6f7f8844c14e93e86ea6748c2",
+    "apps/server/src/runner/index.ts": "6595c6fa1147179b940492694febc1a60c70802800d5e5197a0168af9589b917",
+    "apps/server/src/runner/verificationOwnership.ts": "6e9d6b2cb5f66e4f38753879d1ba26cab44152ee616ee9b7a3d8b7a31cda4e83",
+    "apps/server/src/lib/ownedProcess.ts": "986d1a4b8bcb6f67625e2c6c90625080bba36ccf2ea0129d0dfc840d8f5aa29e",
+    "apps/server/src/lib/terminationReceipt.ts": "2e53d979694545a216a75e213aef3be9d10aa20c85749ed603924b6523329253",
+    "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d"
+  },
+  "nativeSha256": "467dae76f64bee0e3f1771f1427dc8376ea409f87ed812dc113e7d0c48475b1e"
+}

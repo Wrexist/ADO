@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## T21: orelaterad process skyddad vid injicerad PID-kollision
+
+T21 är lokalt godkänt på Windows x64 / Node 22.18.0. Produktionsserverns start, stopp-/återställnings-API, stängning och omstart provades mot gamla poster som pekade på en verklig, levande process med annat skapandeögonblick och annan jobbidentitet. Processen låg under en separat värd och besvarade nya slumpmässiga utmaningar efter varje steg. Saknade kvitton, fel HMAC och korrekt signerade kvitton med fel skapandetid behöll båda karantänlåsen. Ett äkta native-kvitto frigjorde rätt kontrollås. Kollisionen injicerades i historiken; faktisk återanvändning i Windows PID-allokator tvingades inte fram.
+
+Två ytterligare fel reproducerades: ett äkta verifieringskvitto kunde frigöra lås kopplade till fel körning eller flera lås med samma ägare. Verifieringen kräver nu exakt ett lås med rätt körning före identitetsanvändning och frigörande. Felkopplad metadata behålls för granskning; ingen automatisk reparation införs.
+
+`npm run verify` passerade med typkontroll, lint, 422 tester i 93 filer och byggning. Slutligt native/API-prov passerade och käll-/binärhasharna stämmer. Loggar: `controlos-process-identity-verify.log` och `controlos-process-identity-probe-final.log`. Omfattning och reproduktion finns i `docs/controlos/process-identity-acceptance.md`.
+
+17/46 scenarier är nu lokalt godkända. Fulla R1–R4-grindar är fortsatt öppna; detta bevisar inte en OS-sandbox eller installer-/uppdateringsacceptans.
+
 ## Maskerad diagnostikexport och uttrycklig origin-kontroll
 
 Diagnostics kan nu ladda ned en begränsad JSON-rapport för vald incident. Servern projicerar endast tillåtna fält, maskerar kända credentials före trunkering och skickar `no-store`. Ett misslyckat nätverksanrop ger ett synligt fel utan lokal/rå reservrapport. Byggt browserprov vid 1536/390 px verifierade maskerad SSE/DOM, faktisk nedladdning, nätverksfel, noll agentstarter och layout; bilderna är granskade och använder DEMO-data.

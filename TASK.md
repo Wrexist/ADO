@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Exercise recovered PID collisions against a real unrelated native process through startup, stop/reconcile APIs and reopen; require exact verifier/run/lock binding before release, with signed-receipt positive controls.
+
 - [x] Add bounded, masked incident-report downloads without a raw fallback; reject hostile browser origins independently of Host/key and mask stored connector values in request logs. Full T23/T27 remain open.
 
 - [x] Distinguish unknown, partial and reported-zero token usage in window/repository/model statistics; show coverage and unknown cost, with API restart and built desktop/mobile evidence. Full T33 remains open.

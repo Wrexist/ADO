@@ -853,14 +853,28 @@
     {
       "id": "T21",
       "title": "Förväxlad processidentitet",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ13, REQ11. **Status:** not_run.\n\n**Givet:** Ett gammalt PID har återanvänts av en annan process.\n\n**När:** Återställningsrutinen försöker stoppa den gamla körningen.\n\n**Godkänt endast om:** Den orelaterade processen lämnas orörd. PID räcker aldrig som ensam identitet.\n\n**Gäller:** always.",
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ13, REQ11. **Status:** passed (local Windows fault-injection evidence).\n\n**Givet:** Ett gammalt PID har återanvänts av en annan process.\n\n**När:** Återställningsrutinen försöker stoppa den gamla körningen.\n\n**Godkänt endast om:** Den orelaterade processen lämnas orörd. PID räcker aldrig som ensam identitet.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/runner/receiptRecovery.test.ts",
         "apps/server/src/lib/terminationReceipt.test.ts",
-        "docs/controlos/native-process-host.md"
+        "docs/controlos/native-process-host.md",
+        "scripts/probe-process-identity.mts",
+        "docs/controlos/process-identity-acceptance.md",
+        "docs/controlos/process-identity-evidence.json",
+        "apps/server/src/lib/terminationReceipt.ts",
+        "apps/server/src/runner/verificationOwnership.test.ts"
       ],
-      "evidenceLimit": "Local Windows protocol-v2 receipt recovery and transaction rollback tested. Stale identity with a live unrelated PID is injected metadata, not forced OS PID recycling. Full scenario status remains unchanged."
+      "evidenceLimit": "Local Windows protocol-v2 receipt recovery and transaction rollback tested. Stale identity with a live unrelated PID is injected metadata, not forced OS PID recycling. Full scenario status remains unchanged.",
+      "coverageNote": "A real unrelated native child with exact Windows creation FILETIME remains responsive to fresh random challenges across production startup, stop/reconcile APIs, shutdown and reopen. Historical PID collision is fault-injected; OS allocator reuse is not forced. Missing, invalid-MAC and wrong-creation-time receipts preserve quarantine. A real native empty-job receipt is the positive control. Verifier ownership now requires one exact run/lock binding; full R1 remains open.",
+      "acceptanceEvidence": {
+        "date": "2026-09-27T23:31:55.365Z",
+        "environment": "Windows x64 / Node 22.18.0 / native Job Object host",
+        "command": "node --import tsx scripts/probe-process-identity.mts",
+        "result": "All seven unrelated-process checks and the authentic native receipt positive control passed after the verifier binding correction.",
+        "scope": "Windows production startup/API/reopen with an actual native unrelated process. Stale PID collision is fault-injected into historical records; OS allocator reuse is not forced. Fresh nonce responses prove the same child remains responsive. No provider or pilot job runs.",
+        "artifactEvidence": "docs/controlos/process-identity-evidence.json"
+      }
     },
     {
       "id": "T22",

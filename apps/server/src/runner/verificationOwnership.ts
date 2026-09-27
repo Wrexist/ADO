@@ -21,7 +21,7 @@ export function verificationBlocks(db: Db, repoId: string, cwd: string, resource
   return locks.some((lock) => {
     const attempt = db.select().from(verificationAttempts).where(eq(verificationAttempts.id, lock.owner.slice(7))).get();
     const source = db.select().from(runs).where(eq(runs.id, lock.runId)).get()?.sourceGitIdentity;
-    return !attempt || lock.resource === resource || attempt.repoId === repoId || attempt.gitIdentity === identity || source === identity || Boolean(checkout && attempt.repositoryId === checkout.repositoryId);
+    return !attempt || attempt.runId !== lock.runId || lock.resource === resource || attempt.repoId === repoId || attempt.gitIdentity === identity || source === identity || Boolean(checkout && attempt.repositoryId === checkout.repositoryId);
   });
 }
 
@@ -68,15 +68,24 @@ export class VerificationOwnership {
 
   assertRunning(id: string) {
     const attempt = this.db.select().from(verificationAttempts).where(eq(verificationAttempts.id, id)).get();
-    const lock = this.db.select().from(executionLocks).where(eq(executionLocks.owner, verificationOwner(id))).get();
-    if (!attempt || attempt.status !== 'running' || lock?.runId !== attempt.runId) throw new Error('Verification writer ownership was lost');
+    if (!attempt || attempt.status !== 'running' || !this.boundLock(id, attempt.runId)) throw new Error('Verification writer ownership was lost');
     if (commonGitIdentity(attempt.workspacePath) !== attempt.gitIdentity) throw new Error('Verification repository identity changed');
+  }
+
+  private boundLock(id: string, runId: string) {
+    const locks = this.db.select().from(executionLocks).where(eq(executionLocks.owner, verificationOwner(id))).all();
+    return locks.length === 1 && locks[0].runId === runId ? locks[0] : undefined;
   }
 
   /** Caller must have observed termination, or know that spawning never began. */
   finish(id: string, status: string, termination: string, release: boolean, note?: string) {
-    this.db.update(verificationAttempts).set({ status, processTermination: termination, endedTs: new Date().toISOString(), note }).where(eq(verificationAttempts.id, id)).run();
-    if (release) this.db.delete(executionLocks).where(eq(executionLocks.owner, verificationOwner(id))).run();
+    this.db.transaction(() => {
+      const attempt = this.db.select().from(verificationAttempts).where(eq(verificationAttempts.id, id)).get();
+      const lock = attempt && this.boundLock(id, attempt.runId);
+      if (release && !lock) throw new Error('Verification writer ownership is inconsistent; quarantine retained');
+      this.db.update(verificationAttempts).set({ status, processTermination: termination, endedTs: new Date().toISOString(), note }).where(eq(verificationAttempts.id, id)).run();
+      if (release && lock) this.db.delete(executionLocks).where(and(eq(executionLocks.resource, lock.resource), eq(executionLocks.owner, lock.owner), eq(executionLocks.runId, lock.runId))).run();
+    });
   }
 
   reconcile(runId?: string) {
@@ -84,7 +93,7 @@ export class VerificationOwnership {
       let recovered = 0;
       for (const lock of this.db.select().from(executionLocks).all().filter((row) => row.owner.startsWith('verify:') && (!runId || row.runId === runId))) {
         const attempt = this.db.select().from(verificationAttempts).where(eq(verificationAttempts.id, lock.owner.slice(7))).get();
-        if (!attempt) continue;
+        if (!attempt || attempt.runId !== lock.runId || !this.boundLock(attempt.id, attempt.runId)) continue;
         const receipt = this.receiptRoot && readTerminationReceipt(this.receiptRoot, attempt.processIdentity);
         this.finish(attempt.id, 'interrupted', receipt ? 'confirmed' : 'unconfirmed', Boolean(receipt), receipt ? 'Owned processes stopped; interrupted verification was not retried and is not passing evidence' : 'Verification owner interrupted; writer remains quarantined');
         if (receipt) recovered++;

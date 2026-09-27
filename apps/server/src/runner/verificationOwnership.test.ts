@@ -144,6 +144,30 @@ it('shares profile capacity with agent quarantine and rejects verification befor
   } finally { await runner?.stop(); h.close(); }
 });
 
+it.each(['wrong-run', 'duplicate-owner'])('retains %s locks even when the referenced verification receipt is authentic', async (problem) => {
+  const h = await fixture();
+  try {
+    const attempt = h.claim(), id = randomUUID();
+    const identity: ProcessIdentity = { version: 2, platform: 'win32', id, jobName: `Local\\ControlOS.${id}`, pid: 123, creationTime: '132456789012345678', receiptKey: randomBytes(32).toString('hex') };
+    h.ownership.identify(attempt, identity);
+    const payload = JSON.stringify({ version: 1, id, jobName: identity.jobName, pid: identity.pid, creationTime: identity.creationTime, activeProcesses: 0, exitCode: 0, recordedUtc: new Date().toISOString() });
+    writeFileSync(join(h.receipts, `${id}.json`), JSON.stringify({ payload, mac: createHmac('sha256', Buffer.from(identity.receiptKey!, 'hex')).update(payload).digest('hex') }));
+    h.db.insert(runs).values({ ...h.run, id: 'other-result' }).run();
+    if (problem === 'wrong-run') h.db.update(executionLocks).set({ runId: 'other-result' }).run();
+    else h.db.insert(executionLocks).values({ resource: 'other-resource', runId: 'other-result', owner: `verify:${attempt}`, acquiredTs: new Date().toISOString() }).run();
+    const before = h.db.select().from(executionLocks).all();
+    expect(() => h.ownership.assertRunning(attempt)).toThrow('ownership');
+    expect(() => h.ownership.finish(attempt, 'succeeded', 'confirmed', true)).toThrow('quarantine retained');
+    expect(h.ownership.reconcile()).toBe(0);
+    expect(h.db.select().from(executionLocks).all()).toEqual(before);
+    expect(h.db.select().from(verificationAttempts).get()?.processTermination).not.toBe('confirmed');
+    if (problem === 'wrong-run') h.db.update(executionLocks).set({ runId: h.run.id }).run();
+    else h.db.delete(executionLocks).where(eq(executionLocks.resource, 'other-resource')).run();
+    expect(h.ownership.reconcile()).toBe(1);
+    expect(h.db.select().from(executionLocks).all()).toEqual([]);
+  } finally { h.close(); }
+});
+
 it('requires the verification identity receipt and never substitutes the parent agent receipt', async () => {
   const h = await fixture();
   try {
