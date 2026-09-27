@@ -20,6 +20,7 @@ import { ConnectionsStore, type SecretCodec } from './connections/store';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
+import { ProjectRegistry } from './projects/registry';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
 import { Scanner } from './scanner';
@@ -160,12 +161,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
 
   const bus = new Bus(db);
+  const registry = new ProjectRegistry(db, () => Object.values(bus.snapshot().state.repos), (id) => scanner?.cwdFor(id) ?? null);
   bus.compact((msg) => app.log.info(msg)); // prune superseded latest-only rows before replay
   bus.replayFromDb((msg) => app.log.warn(msg));
 
   await app.register(cors, {
     origin: env.webOrigin, // exactly one origin — no wildcards
-    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id'],
   });
   registerSecurity(app, env);
@@ -429,7 +431,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     const token = connections.resolve('github');
     const client = deps.githubClient ?? (token ? new OctokitClient(token) : null);
     if (!client) return;
-    github = new GitHubSync(bus, client, (msg) => app.log.info(msg));
+    github = new GitHubSync(bus, client, (msg) => app.log.info(msg), (repos, ts) => registry.observeGitHub(repos, ts));
     github.start();
   };
   // Boot-time sync only in real runs — tests (startSystem:false) stay hermetic (no network),
@@ -619,6 +621,24 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     } catch (err) {
       return reply.code((err as Error).message.startsWith('idempotency conflict') ? 409 : 403).send({ error: (err as Error).message });
     }
+  });
+
+  app.get('/api/portfolio', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return registry.snapshot();
+  });
+  const registryError = (error: unknown) => redact((error as Error).message, [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]);
+  app.post('/api/portfolio/projects', async (req, reply) => {
+    try { return { project: registry.create(req.body) }; }
+    catch (error) { return reply.code(400).send({ error: registryError(error) }); }
+  });
+  app.put('/api/portfolio/projects/:id', async (req, reply) => {
+    try { return { project: registry.update((req.params as { id: string }).id, req.body) }; }
+    catch (error) { return reply.code(409).send({ error: registryError(error) }); }
+  });
+  app.post('/api/portfolio/import', async (req, reply) => {
+    try { return await registry.importSource(req.body); }
+    catch (error) { return reply.code(409).send({ error: registryError(error) }); }
   });
 
   // Run log + live run control. History is the REAL persisted `runs` table (survives

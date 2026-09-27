@@ -10,7 +10,7 @@
  */
 import type { Bus } from '../../bus';
 import { categoryFromLanguage, ciFromRun, toLanguage } from './map';
-import type { GitHubClient } from './types';
+import type { GitHubClient, GhRepo } from './types';
 
 const BASE_INTERVAL_MS = 60_000;
 const MAX_INTERVAL_MS = 10 * 60_000;
@@ -24,12 +24,14 @@ export class GitHubSync {
     private bus: Bus,
     private client: GitHubClient,
     private log: (msg: string) => void = () => {},
+    private observe?: (repos: GhRepo[], observedTs: string) => void,
   ) {}
 
   /** One full sync pass. Returns the number of repos enriched. */
   async sync(): Promise<number> {
     const now = () => new Date().toISOString();
     const repos = await this.client.listRepos();
+    this.observe?.(repos, now());
     let enriched = 0;
     let degraded = false;
 
@@ -53,7 +55,7 @@ export class GitHubSync {
               category: categoryFromLanguage(gh.language),
               status: 'active',
               description: gh.description ?? '',
-              branch: gh.defaultBranch,
+              branch: gh.defaultBranch || 'unknown',
               updatedTs: gh.pushedAt ?? now(),
               githubFullName: fullName,
             },
@@ -64,7 +66,7 @@ export class GitHubSync {
       // Enrich: stars, language, PR count, latest CI. Each sub-call is best-effort.
       const [prs, run] = await Promise.all([
         this.client.openPrCount(gh.owner, gh.name).catch(() => { degraded = true; return undefined; }),
-        this.client.latestRun(gh.owner, gh.name, gh.defaultBranch).catch(() => { degraded = true; return null; }),
+        this.client.latestRun(gh.owner, gh.name, gh.defaultBranch || undefined).catch(() => { degraded = true; return null; }),
       ]);
 
       const patch: Record<string, unknown> = {

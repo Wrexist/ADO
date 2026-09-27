@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R2-grund: separata projekt, repon och arbetskopior
+
+Vyn `/projects` har nu ett beständigt register för projektmål, livscykel, fokus och manuell prioritet. Projekt, repon och arbetskopior får separata UUID:n. GitHub-identitet kommer från API:ts repo-ID; lokala arbetskopior binds till katalog- och Git-identitet. Importen är uttrycklig och visar observationernas tid. Arbetskopior i samma Git-repo återanvänder repoidentiteten; omdöpning på samma filsystem behåller arbetskopians ID. Utbytta kataloger och tyst omflyttning mellan projekt nekas. Migration 0010 bevarar äldre data. Se [kontrakt och begränsningar](docs/controlos/project-registry.md).
+
+`npm run verify` passerade med typkontroll, lint, 307 tester i 56 filer och byggning på Windows x64, Node 22.18.0 och npm 11.7.0. Riktade tester använder riktiga temporära Git-repon, arbetskopior, junctions och återöppnad SQLite-profil. De kontrollerar också oförändrade lokala filer/index/config, nekad gammal redigeringsversion och bevarad spärr för agentstarter. `npm run smoke` passerade för skapa–redigera–importera–ladda om vid 1536/390 px med tydliga demodata. Bildgranskningen upptäckte att frånkopplingsknappen täckte mobilinnehåll; efter en layoutjustering passerade webbtypkontroll, riktad lint och hela smoke igen. De slutliga bilderna har granskats. Loggar: `controlos-registry-verify.log`, `controlos-registry-final-smoke.log` och `controlos-registry-ui-check.log` (ignorerade). Webbens chunkvarning kvarstår, cirka 526 kB före gzip.
+
+Ingen pilot importerades eller startades och inga projektfiler ändrades. Import ger ingen körbehörighet. T20/T22/T43 har omprovats och källhasharna uppdaterats. T01/T02/T03/T34 och B10 är fortsatt öppna: uppgifter/kontextisolering, verifierat branch-head-val, SHA-bunden CI och full offline-roadmap återstår. Detta är grunden för en separat uppgiftsdomän, inte godkänd R2; R1–R4 förblir öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: engångsbeslut med policyversion för resultatacceptans
 
 Versionerade resultat granskas nu i två steg: ett fem minuter giltigt underlag förbereds, därefter bekräftas exakt samma operation, revision, innehåll och policyversion. Beslutet binds även till repo, arbetskopia, verifieringsbevis och tidigare mänskligt utfall. Förbrukning och resultatacceptans sparas atomiskt; återanvändning, utgången tid, ändrad policy eller ändrat innehåll nekas. Projektinställningar återkallar väntande underlag före ändringen, även om inställningen senare ändras tillbaka.

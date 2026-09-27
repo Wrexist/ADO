@@ -64,6 +64,63 @@ try {
     await page.screenshot({ path: join(out, `mobile-${route.slice(1)}.png`), fullPage: true });
   }
   const desktop = await browser.newPage();
+  // Explicit planning fixture. Persistence and Git preservation have separate real API tests.
+  const portfolioProjectId = '11111111-1111-4111-8111-111111111111';
+  const portfolioRepositoryId = '22222222-2222-4222-8222-222222222222';
+  const portfolioCheckoutId = '33333333-3333-4333-8333-333333333333';
+  const observedTs = new Date().toISOString();
+  const portfolio = { projects: [], repositories: [], checkouts: [], sources: [{ id: 'local:demo', kind: 'local', name: 'DEMO observed repository', location: 'C:/DEMO/projects/example-working-copy', observedTs }] };
+  let importRequests = 0;
+  await page.route('**/api/portfolio**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'GET') await route.fulfill({ json: portfolio });
+    else if (path === '/api/portfolio/projects') {
+      const project = { ...request.postDataJSON(), id: portfolioProjectId, nextTaskId: null, version: 1, createdTs: observedTs, updatedTs: observedTs };
+      portfolio.projects.push(project); await route.fulfill({ json: { project } });
+    } else if (path === `/api/portfolio/projects/${portfolioProjectId}` && request.method() === 'PUT') {
+      const data = request.postDataJSON();
+      if (data.version !== portfolio.projects[0].version) throw new Error('Project edit lost its version');
+      Object.assign(portfolio.projects[0], data, { version: data.version + 1 });
+      await route.fulfill({ json: { project: portfolio.projects[0] } });
+    } else if (path === '/api/portfolio/import') {
+      importRequests++;
+      const data = request.postDataJSON();
+      if (data.projectId !== portfolioProjectId || data.sourceId !== 'local:demo' || data.repositoryId) throw new Error('Wrong explicit project import target');
+      portfolio.repositories = [{ id: portfolioRepositoryId, projectId: portfolioProjectId, host: 'local', externalId: 'DEMO-physical-git-identity', name: 'DEMO repository', canonicalRemote: null, defaultBranch: null, observedTs }];
+      portfolio.checkouts = [{ id: portfolioCheckoutId, repositoryId: portfolioRepositoryId, hostId: 'DEMO-host', canonicalPath: portfolio.sources[0].location, pathIdentity: 'DEMO-folder', gitIdentity: 'DEMO-git', sourceId: 'demo', managed: false, headSha: null, observedTs }];
+      await route.fulfill({ json: { repositoryId: portfolioRepositoryId, checkoutId: portfolioCheckoutId } });
+    } else throw new Error(`Unexpected portfolio fixture request ${request.method()} ${path}`);
+  });
+  for (const width of [1536, 390]) {
+    portfolio.projects = []; portfolio.repositories = []; portfolio.checkouts = [];
+    const importsBefore = importRequests;
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto(base + '/projects'); await pair();
+    await page.getByText('No projects registered yet. Create one to start collecting its goal and repositories.').waitFor();
+    if (!await page.getByRole('button', { name: 'Import DEMO observed repository', exact: true }).isDisabled()) throw new Error('Import requires an owning project');
+    await page.getByLabel('Project name', { exact: true }).fill('DEMO product');
+    await page.getByLabel('Project goal', { exact: true }).fill('DEMO: preserve the manually chosen project goal.');
+    await page.getByLabel('Focus project', { exact: true }).check();
+    await page.getByRole('button', { name: 'Create project', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Project saved.' }).waitFor();
+    if (importRequests !== importsBefore) throw new Error('Creating a project must not auto-import sources');
+    await page.getByRole('button', { name: 'Edit DEMO product', exact: true }).click();
+    if (!await page.getByLabel('Project name', { exact: true }).evaluate((element) => element === document.activeElement)) throw new Error('Edit form needs keyboard focus');
+    await page.getByLabel('Project name', { exact: true }).fill('DEMO product renamed');
+    await page.getByRole('button', { name: 'Save project', exact: true }).click();
+    await page.getByRole('heading', { name: 'DEMO product renamed', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Import DEMO observed repository', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Repository metadata imported.' }).waitFor();
+    if (importRequests !== importsBefore + 1) throw new Error('Expected exactly one explicit import');
+    await page.reload(); await pair();
+    await page.getByText(`Checkout ID: ${portfolioCheckoutId}`, { exact: true }).waitFor();
+    await page.getByText('DEMO: preserve the manually chosen project goal.', { exact: true }).waitFor();
+    await page.getByText('Default branch: not verified', { exact: true }).waitFor();
+    if (portfolio.projects.length !== 1 || portfolio.projects[0].version !== 2) throw new Error('Edit created a duplicate project');
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Project registry overflow at ${width}px`);
+    await page.screenshot({ path: join(out, `project-registry-${width}.png`), fullPage: true });
+  }
   // Credential state fixture: no real provider request or saved credential.
   const connectionFixture = { id: 'github', configured: true, authentication: 'unverified', checkedTs: null,
     verificationMessage: 'DEMO credential fixture', hint: '••••demo', updatedTs: null };

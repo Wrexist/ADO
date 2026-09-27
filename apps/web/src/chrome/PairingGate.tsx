@@ -16,9 +16,9 @@ export function PairingGate({ children }: { children: ReactNode }) {
   }, [paired]);
 
   if (paired) return <>
-    {!IS_DESKTOP && <button className="fixed bottom-3 right-3 z-50 rounded border bg-card px-3 py-2 text-body text-text2" onClick={() => {
+    {!IS_DESKTOP && <div className="flex justify-end border-b bg-app px-3 py-2 lg:fixed lg:bottom-3 lg:right-3 lg:z-50 lg:border-0 lg:bg-transparent lg:p-0"><button className="rounded border bg-card px-3 py-2 text-body text-text2" onClick={() => {
       stopBus(); setBrowserToken(''); setPaired(false);
-    }}>Disconnect browser</button>}
+    }}>Disconnect browser</button></div>}
     {children}
   </>;
 

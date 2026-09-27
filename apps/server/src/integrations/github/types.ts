@@ -5,6 +5,7 @@
  */
 
 export interface GhRepo {
+  externalId?: string;
   owner: string;
   name: string;
   description: string | null;

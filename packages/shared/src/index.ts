@@ -14,3 +14,4 @@ export * from './automations';
 export * from './review';
 export * from './intents';
 export * from './prompts';
+export * from './portfolio';

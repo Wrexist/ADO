@@ -67,6 +67,7 @@ export const Repo = z.object({
   branch: z.string(),
   updatedTs: isoTs,
   localPath: z.string().optional(),
+  scannedTs: isoTs.optional(),
   githubFullName: z.string().optional(),
   language: Language.optional(),
   stars: z.number().int().nonnegative().optional(),

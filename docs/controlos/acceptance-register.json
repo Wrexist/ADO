@@ -252,15 +252,24 @@
       "specification": "**Grind:** R2. **Krav:** REQ01. **Status:** not_run.\n\n**Givet:** Två olika GitHub-repo-ID har liknande namn.\n\n**När:** Båda importeras.\n\n**Godkänt endast om:** Två separata identiteter behålls. Ingen task eller kontext flyttas mellan dem.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/scanner/scanner.test.ts",
-        "apps/server/src/integrations/github/github.test.ts"
+        "apps/server/src/integrations/github/github.test.ts",
+        "apps/server/src/projects/registry.test.ts",
+        "apps/server/src/projects/registryApi.test.ts",
+        "docs/controlos/project-registry.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "Separate project/repository/checkout metadata registry has local regression evidence for stable IDs, observation freshness, explicit import and preservation of manual fields. Task/context isolation, verified branch-head baseline and the complete offline-roadmap scenario remain unaccepted."
     },
     {
       "id": "T02",
       "title": "Ändrad standardbranch",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R2. **Krav:** REQ01, REQ20. **Status:** not_run.\n\n**Givet:** Ett repos default branch heter Main eller en annan branch än main.\n\n**När:** Bas för ett nytt arbete väljs.\n\n**Godkänt endast om:** API:ts verifierade default branch används med exakt skiftläge och commit, aldrig en hårdkodad main.\n\n**Gäller:** always."
+      "specification": "**Grind:** R2. **Krav:** REQ01, REQ20. **Status:** not_run.\n\n**Givet:** Ett repos default branch heter Main eller en annan branch än main.\n\n**När:** Bas för ett nytt arbete väljs.\n\n**Godkänt endast om:** API:ts verifierade default branch används med exakt skiftläge och commit, aldrig en hårdkodad main.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/projects/registry.test.ts",
+        "apps/server/src/projects/registryApi.test.ts",
+        "docs/controlos/project-registry.md"
+      ],
+      "coverageNote": "Separate project/repository/checkout metadata registry has local regression evidence for stable IDs, observation freshness, explicit import and preservation of manual fields. Task/context isolation, verified branch-head baseline and the complete offline-roadmap scenario remain unaccepted."
     },
     {
       "id": "T03",
@@ -474,7 +483,7 @@
           "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "19e916eeb332476e300f533ed42e8a62473679cd061465b8c9fb386720c86644"
+          "scripts/smoke.mjs": "ec5d0c7b49d520cbafabb69b715f82344377be8884a0ded024a5b341e8bb512b"
         }
       }
     },
@@ -595,9 +604,12 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R2. **Krav:** REQ20. **Status:** not_run.\n\n**Givet:** Det finns lokal roadmap och senast känd repo-/CI-data.\n\n**När:** API-anrop misslyckas eller rate-limit uppstår.\n\n**Godkänt endast om:** Lokal plan är kvar. Extern data får egen staletid, backoff följs och inga aggressiva parallella retries startar.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/integrations/github/github.test.ts"
+        "apps/server/src/integrations/github/github.test.ts",
+        "apps/server/src/projects/registry.test.ts",
+        "apps/server/src/projects/registryApi.test.ts",
+        "docs/controlos/project-registry.md"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
+      "coverageNote": "Separate project/repository/checkout metadata registry has local regression evidence for stable IDs, observation freshness, explicit import and preservation of manual fields. Task/context isolation, verified branch-head baseline and the complete offline-roadmap scenario remain unaccepted."
     },
     {
       "id": "T35",
@@ -682,7 +694,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "a603cfb80ccf857e80a29c7b9caea6fce87563cabe0d1c02b7fe0a17ab487764",
+          "apps/server/src/app.ts": "a6c353c3eaafbb77ee839cdd5b2bf71a2db312f0cfb48bee7416d82f57ea65e9",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

@@ -47,12 +47,13 @@ export class OctokitClient implements GitHubClient {
       }),
     );
     return data.map((r) => ({
+      externalId: String(r.id),
       owner: r.owner.login,
       name: r.name,
       description: r.description,
       language: r.language ?? null,
       stargazers: r.stargazers_count ?? 0,
-      defaultBranch: r.default_branch ?? 'main',
+      defaultBranch: r.default_branch ?? '',
       pushedAt: r.pushed_at ?? null,
     }));
   }

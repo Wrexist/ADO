@@ -103,6 +103,24 @@ export const approvalPolicyVersions = sqliteTable('approval_policy_versions', {
   snapshotJson: text('snapshot_json').notNull(), createdTs: text('created_ts').notNull(),
 });
 
+export const portfolioProjects = sqliteTable('portfolio_projects', {
+  id: text('id').primaryKey(), name: text('name').notNull(), kind: text('kind').notNull(), goal: text('goal').notNull(),
+  lifecycle: text('lifecycle').notNull(), focus: integer('focus', { mode: 'boolean' }).notNull(), manualPriority: integer('manual_priority').notNull(),
+  nextTaskId: text('next_task_id'), createdTs: text('created_ts').notNull(), updatedTs: text('updated_ts').notNull(), version: integer('version').notNull(),
+});
+export const portfolioRepositories = sqliteTable('portfolio_repositories', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => portfolioProjects.id), host: text('host').notNull(), externalId: text('external_id').notNull(),
+  name: text('name').notNull(), canonicalRemote: text('canonical_remote'), defaultBranch: text('default_branch'), observedTs: text('observed_ts').notNull(),
+}, (t) => [uniqueIndex('portfolio_repository_identity').on(t.host, t.externalId)]);
+export const portfolioCheckouts = sqliteTable('portfolio_checkouts', {
+  id: text('id').primaryKey(), repositoryId: text('repository_id').notNull().references(() => portfolioRepositories.id), hostId: text('host_id').notNull(),
+  canonicalPath: text('canonical_path').notNull(), pathIdentity: text('path_identity').notNull(), gitIdentity: text('git_identity').notNull(), sourceId: text('source_id').notNull(),
+  managed: integer('managed', { mode: 'boolean' }).notNull(), headSha: text('head_sha'), observedTs: text('observed_ts').notNull(),
+}, (t) => [uniqueIndex('portfolio_checkout_path').on(t.hostId, t.canonicalPath), uniqueIndex('portfolio_checkout_identity').on(t.hostId, t.pathIdentity)]);
+export const portfolioSources = sqliteTable('portfolio_sources', {
+  id: text('id').primaryKey(), kind: text('kind').notNull(), dataJson: text('data_json').notNull(), observedTs: text('observed_ts').notNull(),
+});
+
 export const approvalPolicies = sqliteTable('approval_policies', {
   repoId: text('repo_id').primaryKey(), version: text('version').notNull().references(() => approvalPolicyVersions.version), digest: text('digest').notNull(),
 });

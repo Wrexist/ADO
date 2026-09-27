@@ -124,6 +124,7 @@ export class Scanner {
             branch: git.branch,
             updatedTs: git.lastCommitTs ?? ts,
             localPath,
+            scannedTs: ts,
             githubFullName: link.github ? `${link.github.owner}/${link.github.repo}`.toLowerCase() : undefined,
             openTasks: parseOpenTasks(dir),
           },
