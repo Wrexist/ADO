@@ -45,6 +45,14 @@ describe('server security + bus (gate p2 criteria)', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('pairs only a browser presenting the owner token, without returning credentials', async () => {
+    for (const token of ['', 'wrong-token', 'test-token']) {
+      const res = await srv.app.inject({ method: 'POST', url: '/api/session', headers: { ...HOST_OK, 'x-acc-token': token } });
+      expect(res.statusCode).toBe(token === 'test-token' ? 200 : 401);
+      expect(res.body).not.toContain('test-token');
+    }
+  });
+
   it('accepts app-open with the token and persists the event (p2.5 feed)', async () => {
     const res = await srv.app.inject({
       method: 'POST',
@@ -55,6 +63,13 @@ describe('server security + bus (gate p2 criteria)', () => {
     expect(res.statusCode).toBe(200);
     const opened = srv.bus.eventsSince(0).filter((e) => e.evt.type === 'app.opened');
     expect(opened.length).toBe(1);
+  });
+
+  it('rejects malformed dispatch fields before starting an agent', async () => {
+    for (const payload of [{ repoId: 4, task: 'test' }, { repoId: 'repo', task: {} }, { repoId: 'repo', task: 'test', provider: 'unknown' }, { repoId: 'repo', task: 'test', model: [] }]) {
+      const res = await srv.app.inject({ method: 'POST', url: '/api/dispatch', headers: { ...HOST_OK, 'x-acc-token': 'test-token' }, payload });
+      expect(res.statusCode).toBe(400);
+    }
   });
 
   it('refuses the SSE stream without a token (read-only ≠ public, S0)', async () => {

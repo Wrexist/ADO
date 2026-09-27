@@ -4,21 +4,26 @@
  * MINIMAL env allow-list (never the dashboard's GitHub/Anthropic/ACC secrets — council
  * S12; claude uses its own auth) and a turn cap, at reduced OS priority.
  */
+import type { AgentUpdate } from './adapter';
 import { spawn } from 'node:child_process';
 import { setPriority } from 'node:os';
 import { createInterface } from 'node:readline';
+import { commandFor, processEnv, supervise } from '../lib/processControl';
 
 export interface SpawnOpts {
   cwd: string;
   prompt: string;
   turnCap: number;
   model?: string;
+  provider?: string;
 }
 
 export interface SpawnHandle {
   lines: AsyncIterable<string>; // stdout, one JSONL line at a time
   done: Promise<number>; // exit code (or -1 if killed)
   kill: () => void;
+  diagnostics?: () => string;
+  updates?: AsyncIterable<AgentUpdate>;
 }
 
 export interface Spawner {
@@ -26,10 +31,6 @@ export interface Spawner {
 }
 
 /** Env allow-list: only what a child process legitimately needs. NO secrets. */
-function minimalEnv(): NodeJS.ProcessEnv {
-  const { PATH, HOME, USER, LANG, TERM, TMPDIR } = process.env;
-  return { PATH, HOME, USER, LANG, TERM, TMPDIR };
-}
 
 export class ClaudeSpawner implements Spawner {
   spawn(opts: SpawnOpts): SpawnHandle {
@@ -44,15 +45,14 @@ export class ClaudeSpawner implements Spawner {
     ];
     if (opts.model) args.push('--model', opts.model);
 
-    const child = spawn('claude', args, {
+    const executable = commandFor('claude', args);
+    const child = spawn(executable.command, executable.args, {
       cwd: opts.cwd,
-      env: minimalEnv(),
-      // stderr → 'ignore' (not 'pipe'): we consume only stdout (the stream-json line
-      // protocol) via readline. A piped-but-unread stderr deadlocks the child once it
-      // exceeds the OS pipe buffer (~64KB of verbose/auth diagnostics), so the run would
-      // hang until the wall-clock timeout. Merging stderr into stdout would corrupt the
-      // JSONL, so we drop it at the OS level instead.
-      stdio: ['ignore', 'pipe', 'ignore'],
+      env: processEnv(),
+      windowsHide: true,
+      detached: process.platform !== 'win32',
+      // Drain stderr separately into a bounded buffer; never mix diagnostics into JSONL.
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     // Best-effort: drop the child's scheduling priority so a build can't pin the box.
     try {
@@ -62,11 +62,14 @@ export class ClaudeSpawner implements Spawner {
     }
 
     const rl = createInterface({ input: child.stdout, crlfDelay: Infinity });
+    let diagnostics = '';
+    child.stderr.on('data', (chunk: Buffer) => { diagnostics = (diagnostics + chunk.toString()).slice(-4000); });
+    const kill = supervise(child);
     const done = new Promise<number>((resolve) => {
       child.on('close', (code) => resolve(code ?? -1));
-      child.on('error', () => resolve(-1)); // e.g. claude not installed
+      child.on('error', (error) => { diagnostics = error.message; rl.close(); resolve(-1); });
     });
 
-    return { lines: rl, done, kill: () => child.kill('SIGTERM') };
+    return { lines: rl, done, kill, diagnostics: () => diagnostics };
   }
 }

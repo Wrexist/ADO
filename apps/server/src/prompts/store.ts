@@ -4,8 +4,7 @@
  * live in @ado/shared and are never stored here; this holds only what the user adds, so
  * the API stays small and the built-ins can evolve in code without a migration.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readJsonStore, writeJsonStore } from '../lib/jsonStore';
 import {
   CustomPromptInput,
   type CustomPromptInputT,
@@ -36,16 +35,17 @@ export class PromptStore {
   }
 
   private load(): void {
-    try {
-      this.data = JSON.parse(readFileSync(this.filePath, 'utf8')) as Record<string, StoredPrompt>;
-    } catch {
-      this.data = {}; // no file yet — fine
+    const rows = readJsonStore(this.filePath) ?? {};
+    for (const [id, row] of Object.entries(rows)) {
+      if (!CustomPromptInput.safeParse(row).success || typeof (row as StoredPrompt).updatedTs !== 'string' || (row as StoredPrompt).id !== id) {
+        throw new Error(`Invalid prompt '${id}'; refusing to overwrite the store`);
+      }
     }
+    this.data = rows as Record<string, StoredPrompt>;
   }
 
   private persist(): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+    writeJsonStore(this.filePath, this.data);
   }
 
   /** All custom prompts, newest first. */

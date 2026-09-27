@@ -2,7 +2,19 @@
 
 Living tracker. Updated every session. Current phase drives what's actionable; `/gate` refuses Phase N+1 while N is open.
 
-**Current phase: 6 — Hardening** 🔴 (p0/p1/p2/p3(sim)/p4 passed; p2.5 real-usage gate + p3 real-claude confirmation pending Isac; p5 parked. Phase 4 command center done; Phase 6 in progress — Prompt Library + optimized loops + WAL-safe backup landed)
+**Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
+
+- [x] Retain the audited base in a separate checkout and implement on `codex/controlos-stabilization`.
+- [x] Implement runtime browser pairing, guarded task-file writes, queue recovery/idempotency, repository writer ownership, isolated Git results and content-bound verification.
+- [x] Add storage corruption checks, backup/restore validation, desktop OS credential encryption and safer process handling.
+- [x] Implement responsive core views and an experimental Codex protocol adapter with offline regression tests.
+- [x] Reproduce the Windows/Node 22.12 file identity incompatibility; require a corrected runtime without weakening the guard.
+- [ ] Complete R1 crash/process-identity, sandbox and native credential acceptance; interrupted writers remain quarantined.
+- [ ] Complete R2 planning, inbox, roadmap, context, Today and Universe domain work.
+- [ ] Complete R3 private mobile sessions, live provider acceptance and quota handling.
+- [ ] Complete R4 installer/update, real-profile recovery and five-session pilot.
+
+All checkboxes below this section are historical records, not current acceptance evidence.
 
 ---
 

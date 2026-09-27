@@ -28,6 +28,8 @@ export const REPO_STATUS_LOOK: Record<RepoStatus, { tone: Tone; label: string }>
 };
 
 export const CI_TONE: Record<CiState, 'gradient' | Tone> = {
+  cancelled: 'muted',
+  unknown: 'muted',
   success: 'gradient',
   running: 'warning',
   queued: 'warning',

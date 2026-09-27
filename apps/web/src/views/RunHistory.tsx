@@ -4,7 +4,7 @@ import type { AgentRun, RunDetail, RunHumanAction } from '@ado/shared';
 import { Button, Card, Chip, Icon, cx, type Tone } from '../kit';
 import { useBus } from '../store/bus';
 import { durationLabel, timeAgo } from '../lib/time';
-import { fetchRunDetail, fetchRuns, killRun, setRunOutcome } from '../lib/runs';
+import { fetchRunDetail, fetchRuns, killRun, setRunOutcome, verifyRun } from '../lib/runs';
 import { dispatchPrompt } from '../lib/prompts';
 
 const STATUS_TONE: Record<AgentRun['status'], Tone> = {
@@ -83,7 +83,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
     setBusy(true);
     setNote('');
     try {
-      const { runId: newId } = await dispatchPrompt(detail.repoId, detail.task, detail.model === 'default' ? undefined : detail.model);
+      const { runId: newId } = await dispatchPrompt(detail.repoId, detail.task, detail.model === 'default' ? undefined : detail.model, detail.provider);
       setNote(`Dispatched again — run ${newId.slice(0, 12)}.`);
       onChanged();
     } catch (e) {
@@ -96,7 +96,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   const judge = async (action: RunHumanAction) => {
     setBusy(true);
     try {
-      const updated = await setRunOutcome(detail.id, action);
+      const updated = await setRunOutcome(detail.id, action, { headSha: detail.headSha, diffDigest: detail.diffDigest });
       setDetail({ ...detail, humanAction: updated.humanAction });
       onChanged(); // the row chip reflects the verdict
     } catch (e) {
@@ -111,7 +111,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       <p className="whitespace-pre-wrap break-words rounded-tile bg-elevated px-3 py-2 text-label text-text2">{detail.task}</p>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-text3">
-        <span>model: {detail.model}</span>
+        <span>{detail.provider ?? 'claude'} · model: {detail.model}</span>
         <span>tokens: {fmtTokens(detail.tokensIn)} in · {fmtTokens(detail.tokensOut)} out</span>
         <span>turns: {detail.turns ?? '—'}</span>
         <span>exit: {detail.exitCode ?? '—'}</span>
@@ -119,6 +119,18 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       </div>
 
       {/* timeline — live (growing), ended (complete for this boot), or honestly unavailable */}
+      <div className="mt-3 break-all rounded-tile border p-3 text-label text-text2">
+        {detail.status === 'done' && detail.workspacePath && <Button size="sm" disabled={busy} onClick={() => {
+          setBusy(true); setNote('Running repository verification...');
+          void verifyRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Verification recorded. Review the result before accepting.'); })
+            .catch((error: Error) => setNote(error.message)).finally(() => setBusy(false));
+        }}>Run npm verify</Button>}
+        <p>Verification: {detail.verifyVerdict ?? 'not independently verified'}</p>
+        {detail.workspacePath && <p>Working copy: {detail.workspacePath}</p>}
+        {detail.branch && <p>Branch: {detail.branch}</p>}
+        {detail.baseSha && <p>Base revision: {detail.baseSha}</p>}
+        {detail.headSha && <p>Result revision: {detail.headSha}</p>}
+      </div>
       <div className="mt-3">
         <p className="text-label font-medium uppercase tracking-wider text-text3">
           Timeline{detail.timelineState === 'live' ? ' · live' : ''}
@@ -148,6 +160,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         )}
       </div>
 
+      {detail.diagnostics && <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap break-words text-label text-warning">{detail.diagnostics}</pre>}
       {detail.resultText ? (
         <div className="mt-3">
           <p className="text-label font-medium uppercase tracking-wider text-text3">Final report</p>

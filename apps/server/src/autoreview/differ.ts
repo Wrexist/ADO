@@ -29,6 +29,7 @@ const EXCLUDES = [
 ];
 
 export interface CollectedDiff {
+  headSha?: string;
   /** Commit sha reviewed, or 'working-tree' when uncommitted changes were reviewed. */
   ref: string;
   refLabel: string;
@@ -99,6 +100,7 @@ export async function collectDiff(cwd: string): Promise<DiffResult> {
     if (patch.trim().length === 0) return { error: 'only untracked/excluded files changed — nothing reviewable yet (add/commit them first)' };
     const { text, truncated } = cap(patch);
     return {
+      headSha: sha,
       ref: 'working-tree',
       refLabel: `uncommitted changes on ${branch}`,
       branch,
@@ -117,6 +119,7 @@ export async function collectDiff(cwd: string): Promise<DiffResult> {
   if (patch.trim().length === 0) return { error: 'the last commit touched only excluded files (locks/dist) — nothing reviewable' };
   const { text, truncated } = cap(patch);
   return {
+    headSha: sha,
     ref: sha,
     refLabel: `${sha.slice(0, 7)} · ${(subject ?? '').trim() || '(no subject)'}`,
     branch,

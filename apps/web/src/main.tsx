@@ -25,11 +25,11 @@ import { ReviewsPage } from './pages/ReviewsPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { CommandPalette } from './chrome/CommandPalette';
 import { ErrorBoundary } from './chrome/ErrorBoundary';
-import { startBus } from './bus/connect';
+import { PairingGate } from './chrome/PairingGate';
+import { MobileNav } from './chrome/MobileNav';
 import './index.css';
 
 // Connect to the event bus (SSE) — the only data source views render from.
-startBus();
 
 /** Routes wrapped in the root error boundary; the pathname is its reset key, so navigating
  *  away from a crashed screen recovers the app instead of leaving the fallback stuck. */
@@ -65,9 +65,12 @@ function AppRoutes() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <PairingGate>
+    <BrowserRouter>
       <CommandPalette />
+      <MobileNav />
       <AppRoutes />
     </BrowserRouter>
+    </PairingGate>
   </React.StrictMode>,
 );

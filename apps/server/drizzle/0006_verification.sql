@@ -1,0 +1,1 @@
+CREATE TABLE verification_evidence (id TEXT PRIMARY KEY NOT NULL, run_id TEXT NOT NULL, head_sha TEXT NOT NULL, diff_digest TEXT NOT NULL, command TEXT NOT NULL, exit_code INTEGER NOT NULL, verdict TEXT NOT NULL, output TEXT NOT NULL, recorded_ts TEXT NOT NULL);

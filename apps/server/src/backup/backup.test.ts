@@ -1,11 +1,11 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openDb } from '../db';
 import { events } from '../db/schema';
-import { backupDatabase } from './index';
+import { backupDatabase, restoreBackup } from './index';
 
 let dir: string;
 const newDb = () => {
@@ -25,6 +25,18 @@ const seed = (db: ReturnType<typeof openDb>['db'], n: number) => {
 };
 
 describe('WAL-safe backup (P6 / B5)', () => {
+  it('restores database and configuration together into a new profile and detects tampering', () => {
+    const { db, sqlite } = newDb(); seed(db, 2);
+    writeFileSync(join(dir, 'project-dirs.json'), JSON.stringify(['/projects']));
+    const backup = backupDatabase(sqlite, join(dir, 'backups'), { dataDir: dir });
+    const restored = join(dir, 'restored'); restoreBackup(backup.file, restored);
+    expect(JSON.parse(readFileSync(join(restored, 'project-dirs.json'), 'utf8'))).toEqual(['/projects']);
+    const copy = new Database(join(restored, 'acc.sqlite'), { readonly: true });
+    expect(copy.prepare('select count(*) as n from events').get()).toEqual({ n: 2 }); copy.close();
+    expect(() => restoreBackup(backup.file, restored)).toThrow(/must not exist/);
+    writeFileSync(backup.file, 'damaged'); expect(() => restoreBackup(backup.file, join(dir, 'other'))).toThrow(/checksum/);
+    sqlite.close();
+  });
   it('writes a consistent copy whose row count matches the source', () => {
     const { db, sqlite } = newDb();
     seed(db, 12);

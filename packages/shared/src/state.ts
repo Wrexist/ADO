@@ -21,7 +21,7 @@ export type RepoStatus = z.infer<typeof RepoStatus>;
 export const Language = z.enum(['typescript', 'swift', 'liquid', 'python']);
 export type Language = z.infer<typeof Language>;
 
-export const CiState = z.enum(['success', 'running', 'queued', 'failed']);
+export const CiState = z.enum(['success', 'running', 'queued', 'failed', 'cancelled', 'unknown']);
 export type CiState = z.infer<typeof CiState>;
 
 export const BuildState = z.enum(['running', 'queued', 'success', 'failed']);
@@ -66,6 +66,8 @@ export const Repo = z.object({
   description: z.string(),
   branch: z.string(),
   updatedTs: isoTs,
+  localPath: z.string().optional(),
+  githubFullName: z.string().optional(),
   language: Language.optional(),
   stars: z.number().int().nonnegative().optional(),
   prs: z.number().int().nonnegative().optional(),
@@ -92,6 +94,9 @@ export const Build = z.object({
   repo: z.string(),
   jobLabel: z.string(), // "#142 Build and Test"
   branch: z.string(),
+  headSha: z.string().optional(),
+  workflowRunId: z.number().optional(),
+  kind: z.enum(['agent', 'ci']).optional(),
   state: BuildState,
   startedTs: isoTs.nullable(),
   /** null while queued — honest absence, the UI masks it as "Queued". */

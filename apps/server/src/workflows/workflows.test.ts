@@ -28,6 +28,8 @@ describe('workflow meta extraction', () => {
   it('returns null when there is no meta or it is malformed (skipped, not guessed)', () => {
     expect(extractMeta('const notMeta = 1;', 'x.js')).toBeNull();
     expect(extractMeta('export const meta = { name: 123 };', 'x.js')).toBeNull(); // name not a string
+    expect(extractMeta('export const meta = { name: (() => { throw new Error("executed") })(), description: "bad" };', 'x.js')).toBeNull();
+    expect(extractMeta('export const meta = { name: `template ${process.exit(9)}`, description: "bad" };', 'x.js')).toBeNull();
   });
 
   it('reads the actual .claude/workflows recipes in lifecycle order', () => {

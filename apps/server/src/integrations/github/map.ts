@@ -43,17 +43,17 @@ export function categoryFromLanguage(lang: string | null): RepoCategory {
 
 /**
  * Latest Actions run → CI bar (DATA_MAP mapping):
- *   queued 10% · in_progress 50% (both amber) · success 100% green · failure red.
+ *   Pending progress is unknown; only terminal success/failure receives a full bar.
  * A failed run renders a full RED bar (state=failed drives the danger tone).
  */
 export function ciFromRun(run: GhRun): { label: string; pct: number; state: CiState } {
-  if (run.status === 'queued') return { label: run.workflowName, pct: 10, state: 'queued' };
-  if (run.status === 'in_progress') return { label: run.workflowName, pct: 50, state: 'running' };
+  if (run.status === 'queued') return { label: run.workflowName, pct: 0, state: 'queued' };
+  if (run.status === 'in_progress') return { label: run.workflowName, pct: 0, state: 'running' };
   // completed
   if (run.conclusion === 'success') return { label: run.workflowName, pct: 100, state: 'success' };
   if (run.conclusion === 'failure' || run.conclusion === 'timed_out')
     return { label: run.workflowName, pct: 100, state: 'failed' };
   // cancelled / skipped / neutral / null — terminal but NOT a failure; show a neutral
   // state instead of a false red "failed" bar.
-  return { label: run.workflowName, pct: 100, state: 'queued' };
+  return { label: run.workflowName, pct: 0, state: run.conclusion === 'cancelled' ? 'cancelled' : 'unknown' };
 }

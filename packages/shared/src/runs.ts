@@ -25,6 +25,7 @@ export const AgentRun = z.object({
   repoId: z.string(),
   task: z.string(),
   model: z.string(),
+  provider: z.enum(['claude', 'codex']).optional(),
   status: AgentRunStatus,
   startedTs: z.string(),
   endedTs: z.string().nullable(),
@@ -37,6 +38,12 @@ export const AgentRun = z.object({
   note: z.string().nullable(),
   /** Human verdict on the run's work (accepted/corrected/redone) — null until someone judges it. */
   humanAction: RunHumanAction.nullable(),
+  workspacePath: z.string().nullable().optional(),
+  baseSha: z.string().nullable().optional(),
+  branch: z.string().nullable().optional(),
+  headSha: z.string().nullable().optional(),
+  diffDigest: z.string().nullable().optional(),
+  verifyVerdict: z.enum(['pass', 'fail']).nullable().optional(),
 });
 export type AgentRun = z.infer<typeof AgentRun>;
 
@@ -49,6 +56,7 @@ export const RunTimelineEntry = z.object({
 export type RunTimelineEntry = z.infer<typeof RunTimelineEntry>;
 
 export const RunDetail = AgentRun.extend({
+  diagnostics: z.string().nullable().optional(),
   /**
    * live  = the run is in flight, timeline grows (poll again);
    * ended = finished while the server was up — the captured timeline is complete;

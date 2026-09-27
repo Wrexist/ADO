@@ -30,6 +30,7 @@ function Meta({ label, value }: { label: string; value: string | number }) {
 
 function DispatchBox({ repo }: { repo: Repo }) {
   const [task, setTask] = useState('');
+  const [provider, setProvider] = useState<'' | 'claude' | 'codex'>('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -38,7 +39,7 @@ function DispatchBox({ repo }: { repo: Repo }) {
     setBusy(true);
     setMsg(null);
     try {
-      const { runId } = await dispatchPrompt(repo.id, task.trim());
+      const { runId } = await dispatchPrompt(repo.id, task.trim(), undefined, provider || undefined);
       setMsg(`dispatched ${runId}`);
       setTask('');
     } catch (e) {
@@ -51,6 +52,14 @@ function DispatchBox({ repo }: { repo: Repo }) {
   return (
     <Card className="flex flex-col gap-3 p-5">
       <h2 className="text-section font-semibold text-text1">Dispatch an agent</h2>
+      <label className="flex items-center gap-3 text-body text-text2">
+        Agent
+        <select aria-label="Agent provider" value={provider} onChange={(event) => setProvider(event.target.value as typeof provider)} className="rounded-tile border bg-card p-2">
+          <option value="">Configured default</option>
+          <option value="claude">Claude Code</option>
+          <option value="codex">Codex (experimental)</option>
+        </select>
+      </label>
       <textarea
         value={task}
         onChange={(e) => setTask(e.target.value)}
@@ -369,7 +378,7 @@ export function ProjectPage() {
             <div className="flex items-center gap-2">
               <span className="shrink-0 text-label text-text2">{repo.ci.label}</span>
               <GradientProgress pct={repo.ci.pct} tone={CI_TONE[repo.ci.state]} />
-              <span className="w-10 shrink-0 text-right text-label tabular-nums text-text2">{repo.ci.pct}%</span>
+              <span className="w-10 shrink-0 text-right text-label tabular-nums text-text2">{repo.ci.state === 'success' || repo.ci.state === 'failed' ? `${repo.ci.pct}%` : repo.ci.state}</span>
             </div>
           ) : (
             <span className="text-label text-text3">No CI runs yet</span>
@@ -380,9 +389,9 @@ export function ProjectPage() {
 
       {showSettings ? <ProjectSettingsCard repoId={repo.id} /> : null}
 
-      <div className="mt-6 grid grid-cols-3 gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* left: dispatch + builds */}
-        <div className="col-span-2 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-2">
           <DispatchBox repo={repo} />
           <ReviewCard repo={repo} />
           <Card className="p-5">

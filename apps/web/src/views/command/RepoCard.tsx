@@ -104,7 +104,7 @@ export function RepoCard({ repo }: { repo: Repo }) {
           ) : null}
           <GradientProgress pct={repo.ci.pct} tone={CI_TONE[repo.ci.state]} />
           <span className="w-10 shrink-0 text-right text-label tabular-nums text-text2">
-            {repo.ci.pct}%
+            {repo.ci.state === 'success' || repo.ci.state === 'failed' ? `${repo.ci.pct}%` : repo.ci.state}
           </span>
         </div>
       ) : (

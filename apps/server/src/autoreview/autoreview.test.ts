@@ -68,7 +68,7 @@ const GOOD_REVIEW = {
 describe('autoreview differ (read-only git facts)', () => {
   const temps: string[] = [];
   afterAll(() => {
-    for (const t of temps) rmSync(t, { recursive: true, force: true });
+    for (const t of temps) rmSync(t, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('errors honestly on a repo with no commits', async () => {

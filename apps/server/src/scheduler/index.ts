@@ -26,6 +26,7 @@ export class Scheduler {
   private timers = new Map<string, NodeJS.Timeout>();
   private registered: Job[] = [];
   private stopped = false;
+  private inFlight = new Map<string, Promise<void>>();
 
   constructor(
     private db: Db,
@@ -56,6 +57,14 @@ export class Scheduler {
 
   private async fire(job: Job): Promise<void> {
     if (this.stopped) return;
+    const current = this.inFlight.get(job.name);
+    if (current) return current;
+    const work = this.execute(job);
+    this.inFlight.set(job.name, work);
+    try { await work; } finally { this.inFlight.delete(job.name); }
+  }
+
+  private async execute(job: Job): Promise<void> {
     const started = this.now();
     try {
       await job.run();
@@ -87,9 +96,10 @@ export class Scheduler {
     if (job) await this.fire(job);
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.stopped = true;
     for (const t of this.timers.values()) clearInterval(t);
     this.timers.clear();
+    await Promise.allSettled([...this.inFlight.values()]);
   }
 }

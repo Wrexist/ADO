@@ -3,6 +3,7 @@ import { TopBarA } from '../chrome/TopBarA';
 import { StaleBanner } from '../chrome/StaleBanner';
 import { MainColumn } from '../views/command/MainColumn';
 import { RightRail } from '../views/command/RightRail';
+import { MobileOverview } from '../views/MobileOverview';
 
 /**
  * View A — Command Center (/command). Prompts 1.1–1.3: chrome + main column +
@@ -11,7 +12,7 @@ import { RightRail } from '../views/command/RightRail';
  */
 export function CommandPage() {
   return (
-    <div className="min-h-screen min-w-[1280px] bg-app text-text1">
+    <><MobileOverview /><div className="hidden min-h-screen bg-app text-text1 lg:block">
       <TopBarA />
       <StaleBanner />
       <div className="flex items-stretch">
@@ -19,6 +20,6 @@ export function CommandPage() {
         <MainColumn />
         <RightRail />
       </div>
-    </div>
+    </div></>
   );
 }

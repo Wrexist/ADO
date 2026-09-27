@@ -6,5 +6,9 @@ export default defineConfig({
   test: {
     include: ['packages/**/*.test.ts', 'apps/**/*.test.{ts,tsx}'],
     environment: 'node',
+    // Git/native-process integration tests run on Windows too; bound process fan-out.
+    maxWorkers: 2,
+    testTimeout: 30000,
+    hookTimeout: 30000,
   },
 });

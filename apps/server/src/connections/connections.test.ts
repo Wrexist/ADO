@@ -56,3 +56,18 @@ describe('connections store (secrets never leave the server)', () => {
     expect(JSON.stringify(store.statusAll())).not.toContain('vercel_ondisk_secret'); // API is masked
   });
 });
+
+it('migrates plaintext through a codec and refuses to silently read ciphertext without it', () => {
+  const path = newPath(); new ConnectionsStore(path).set('github', 'sensitive-value');
+  const codec = { id: 'test-codec', encrypt: (value: string) => Buffer.from(value).toString('base64'), decrypt: (value: string) => Buffer.from(value, 'base64').toString() };
+  const store = new ConnectionsStore(path, undefined, codec);
+  expect(store.resolve('github')).toBe('sensitive-value');
+  expect(readFileSync(path, 'utf8')).not.toContain('sensitive-value');
+  expect(new ConnectionsStore(path, undefined, codec).resolve('github')).toBe('sensitive-value');
+  expect(() => new ConnectionsStore(path)).toThrow(/original OS key provider/);
+});
+it('preserves the original store if encryption verification fails', () => {
+  const path = newPath(); new ConnectionsStore(path).set('github', 'keep-me'); const original = readFileSync(path, 'utf8');
+  expect(() => new ConnectionsStore(path, undefined, { id: 'broken', encrypt: () => 'cipher', decrypt: () => 'wrong' })).toThrow(/round-trip/);
+  expect(readFileSync(path, 'utf8')).toBe(original);
+});

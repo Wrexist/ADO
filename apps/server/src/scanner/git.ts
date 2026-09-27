@@ -5,6 +5,7 @@
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { realpath } from 'node:fs/promises';
 
 const exec = promisify(execFile);
 
@@ -23,8 +24,14 @@ export interface GitInfo {
 }
 
 export async function isGitRepo(dir: string): Promise<boolean> {
-  const out = await git(dir, ['rev-parse', '--is-inside-work-tree']);
-  return out === 'true';
+  const root = await git(dir, ['rev-parse', '--show-toplevel']);
+  if (!root) return false;
+  try {
+    const [actual, expected] = await Promise.all([realpath(dir), realpath(root)]);
+    return process.platform === 'win32'
+      ? actual.toLowerCase() === expected.toLowerCase()
+      : actual === expected;
+  } catch { return false; }
 }
 
 export async function readGit(dir: string): Promise<GitInfo> {

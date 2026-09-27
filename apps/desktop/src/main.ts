@@ -16,10 +16,10 @@
  *                     is normal, and unsigned macOS builds can't auto-update — DESKTOP.md).
  */
 import { randomBytes } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, safeStorage } from 'electron';
 import fixPath from 'fix-path';
 import { buildServer, type AccServer } from '../../server/src/app';
 import { loadEnv } from '../../server/src/env';
@@ -40,13 +40,15 @@ function freePort(): Promise<number> {
 /** The shared secret lives in userData (0600) — created once, reused across launches. */
 function loadOrCreateToken(dir: string): string {
   const file = join(dir, 'acc-token');
-  if (existsSync(file)) {
-    const existing = readFileSync(file, 'utf8').trim();
-    if (existing) return existing;
-  }
-  const token = randomBytes(24).toString('hex');
-  writeFileSync(file, `${token}\n`, { mode: 0o600 });
-  chmodSync(file, 0o600);
+  const existing = existsSync(file) ? readFileSync(file, 'utf8').trim() : '';
+  const prefix = 'os:v1:';
+  if (existing.startsWith(prefix)) return safeStorage.decryptString(Buffer.from(existing.slice(prefix.length), 'base64'));
+  const token = existing || randomBytes(24).toString('hex');
+  const encrypted = safeStorage.encryptString(token);
+  if (safeStorage.decryptString(encrypted) !== token) throw new Error('Access key encryption failed');
+  const temp = `${file}.${randomBytes(12).toString('hex')}.tmp`;
+  writeFileSync(temp, `${prefix}${encrypted.toString('base64')}\n`, { mode: 0o600, flag: 'wx' });
+  renameSync(temp, file); chmodSync(file, 0o600);
   return token;
 }
 
@@ -56,6 +58,7 @@ async function start(): Promise<void> {
   fixPath();
   await app.whenReady();
 
+  if (!safeStorage.isEncryptionAvailable() || (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')) throw new Error('Unlock the OS credential store and restart ControlOS.');
   const userData = app.getPath('userData');
   mkdirSync(userData, { recursive: true });
   const accToken = loadOrCreateToken(userData);
@@ -64,6 +67,7 @@ async function start(): Promise<void> {
   // Packaged: web bundle + drizzle migrations ride in resources/ (electron-builder
   // extraResources). Dev (`npm run build && npx electron dist/main.cjs`): sibling workspaces.
   const webDir = app.isPackaged ? join(process.resourcesPath, 'web') : join(__dirname, '../../web/dist');
+  if (app.isPackaged) process.env.ACC_WORKFLOWS_DIR = join(process.resourcesPath, 'workflows');
   process.env.ACC_MIGRATIONS_DIR = app.isPackaged
     ? join(process.resourcesPath, 'drizzle')
     : join(__dirname, '../../server/drizzle');
@@ -76,7 +80,14 @@ async function start(): Promise<void> {
     demo: false,
     serveWebDir: webDir,
   });
-  server = await buildServer(env);
+  if (!safeStorage.isEncryptionAvailable() || (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')) {
+    throw new Error('The OS credential store is unavailable. Unlock it and restart ControlOS.');
+  }
+  server = await buildServer(env, { secretCodec: {
+    id: 'electron-safe-storage-v1',
+    encrypt: (value) => safeStorage.encryptString(value).toString('base64'),
+    decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),
+  } });
   await server.app.listen({ port, host: '127.0.0.1' });
 
   // One-shot sync IPC hands the renderer its config — the token never rides in argv
@@ -126,11 +137,15 @@ async function start(): Promise<void> {
 app.on('window-all-closed', () => {
   app.quit();
 });
-app.on('before-quit', () => {
-  void server?.close();
+let closing = false;
+app.on('before-quit', (event) => {
+  if (!server || closing) return;
+  event.preventDefault(); closing = true;
+  void server.close().finally(() => app.quit());
 });
 
-start().catch((err: Error) => {
+if (!app.requestSingleInstanceLock()) app.quit();
+else start().catch((err: Error) => {
   console.error('desktop boot failed:', err);
   // Surface the real reason instead of a silent zombie process.
   dialog.showErrorBox('AI Control Center failed to start', err.message);

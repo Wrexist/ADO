@@ -39,6 +39,12 @@ for (const route of routes) {
   const name = route.replace(/\W+/g, '-').replace(/^-|-$/g, '') || 'root';
   // NOT networkidle: the SSE stream keeps one connection open forever by design.
   await page.goto(base + route, { waitUntil: 'load' });
+  if (await page.getByLabel('Access key').count()) {
+    if (!process.env.ACC_TOKEN) throw new Error('Set ACC_TOKEN in the screenshot process environment for runtime pairing.');
+    await page.getByLabel('Access key').fill(process.env.ACC_TOKEN);
+    await page.getByRole('button', { name: 'Connect', exact: true }).click();
+    await page.getByRole('button', { name: 'Disconnect browser' }).waitFor();
+  }
   await page.waitForTimeout(1200); // let the snapshot frame land and paint
   const path = `${outDir}/${name}.png`;
   await page.screenshot({ path, fullPage: true });

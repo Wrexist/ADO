@@ -4,11 +4,12 @@
  * PREVIEW (what confirming will do) and the actual effect, which only runs on an
  * explicit confirm call.
  */
-import { appendFileSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { intentKind, type CommandResponse, type Intent } from '@ado/shared';
 import type { Bus } from '../bus';
 import type { Runner } from '../runner';
+import { appendTask } from './taskFile';
 
 interface Deps {
   bus: Bus;
@@ -88,7 +89,7 @@ export function execute(intent: Intent, deps: Deps): { ok: boolean; message: str
     const cwd = deps.cwdFor(intent.repoId);
     if (!cwd) return { ok: false, message: `Repo "${intent.repoId}" isn’t scanned.` };
     try {
-      appendFileSync(join(cwd, 'TASK.md'), `\n- [ ] ${intent.task}\n`);
+      appendTask(cwd, intent.task);
       return { ok: true, message: `Added to ${intent.repoId}/TASK.md: ${intent.task}` };
     } catch (e) {
       return { ok: false, message: `Couldn’t write TASK.md: ${(e as Error).message}` };

@@ -54,6 +54,7 @@ export const runs = sqliteTable(
     repoId: text('repo_id').notNull(),
     task: text('task').notNull(),
     model: text('model').notNull(),
+    provider: text('provider').notNull().default('claude'),
     status: text('status').notNull(), // queued | running | done | failed
     startedTs: text('started_ts').notNull(),
     endedTs: text('ended_ts'),
@@ -68,6 +69,30 @@ export const runs = sqliteTable(
     exitCode: integer('exit_code'),
     note: text('note'), // e.g. "orphaned on boot", "opaque stream"
     resultText: text('result_text'), // the agent's final message (capped); null = none captured
+    workspacePath: text('workspace_path'),
+    baseSha: text('base_sha'),
+    branch: text('branch'),
+    headSha: text('head_sha'),
+    diffDigest: text('diff_digest'),
+    engineVersion: integer('engine_version').notNull().default(0),
+    idempotencyKey: text('idempotency_key'),
+    requestHash: text('request_hash'),
+    diagnostics: text('diagnostics'),
   },
   (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status)],
 );
+
+/** Never expire a writer lock merely because its owner stopped heartbeating. */
+export const executionLocks = sqliteTable('execution_locks', {
+  resource: text('resource').primaryKey(),
+  runId: text('run_id').notNull(),
+  owner: text('owner').notNull(),
+  acquiredTs: text('acquired_ts').notNull(),
+});
+
+export const verificationEvidence = sqliteTable('verification_evidence', {
+  id: text('id').primaryKey(), runId: text('run_id').notNull(), headSha: text('head_sha').notNull(),
+  diffDigest: text('diff_digest').notNull(), command: text('command').notNull(),
+  exitCode: integer('exit_code').notNull(), verdict: text('verdict').notNull(),
+  output: text('output').notNull(), recordedTs: text('recorded_ts').notNull(),
+});

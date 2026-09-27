@@ -6,7 +6,7 @@
  * snapshot served to new SSE clients is always consistent with history, and
  * Last-Event-ID replay comes straight from the same table (council S5).
  */
-import { asc, gt, lt, sql } from 'drizzle-orm';
+import { asc, desc, gt, lt, sql } from 'drizzle-orm';
 import { parseEvent, type AccEvent, emptyState, reduce, type BusState, type Sample } from '@ado/shared';
 import type { Db } from './db';
 import { events, samples } from './db/schema';
@@ -61,8 +61,17 @@ export class Bus {
 
   /** Fold the persisted log into memory (boot). Corrupt rows are skipped, loudly. */
   replayFromDb(log: (msg: string) => void): void {
-    const rows = this.db.select().from(events).orderBy(asc(events.seq)).all();
-    for (const row of rows) {
+    const db = this.db;
+    function* rows() {
+      let cursor = 0;
+      while (true) {
+        const page = db.select().from(events).where(gt(events.seq, cursor)).orderBy(asc(events.seq)).limit(1000).all();
+        if (!page.length) return;
+        yield* page;
+        cursor = page[page.length - 1].seq;
+      }
+    }
+    for (const row of rows()) {
       try {
         const evt = parseEvent({
           id: row.id,
@@ -85,9 +94,9 @@ export class Bus {
     const rows = this.db
       .select()
       .from(samples)
-      .orderBy(asc(samples.ts))
-      .all()
-      .slice(-SAMPLE_LOAD);
+      .orderBy(desc(samples.ts))
+      .limit(SAMPLE_LOAD)
+      .all().reverse();
     this.state = {
       ...this.state,
       samples: rows.map((r) => ({ ts: r.ts, cpuPct: r.cpuPct, memPct: r.memPct, netPct: r.netPct })),

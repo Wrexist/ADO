@@ -71,6 +71,7 @@ export class Notifier {
   private tooSoon(key: string): boolean {
     const last = this.lastSent.get(key);
     const now = this.now();
+    for (const [id, at] of this.lastSent) if (now - at >= DEDUP_MS) this.lastSent.delete(id);
     if (last !== undefined && now - last < DEDUP_MS) return true;
     this.lastSent.set(key, now);
     return false;

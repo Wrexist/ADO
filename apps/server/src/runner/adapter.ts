@@ -39,6 +39,7 @@ export function parseStreamLine(raw: string): AgentUpdate[] {
   } catch {
     return [{ kind: 'opaque' }]; // not JSON → opaque, honest
   }
+  if (!obj || typeof obj !== 'object') return [{ kind: 'opaque' }];
 
   switch (obj.type) {
     case 'system':
@@ -49,6 +50,7 @@ export function parseStreamLine(raw: string): AgentUpdate[] {
       if (!Array.isArray(content)) return [{ kind: 'opaque' }];
       const out: AgentUpdate[] = [];
       for (const block of content) {
+        if (!block || typeof block !== 'object') continue;
         if (block.type === 'tool_use' && typeof block.name === 'string') {
           out.push({ kind: 'tool', name: block.name });
         } else if (block.type === 'text' && typeof block.text === 'string') {
@@ -66,7 +68,7 @@ export function parseStreamLine(raw: string): AgentUpdate[] {
       return [
         {
           kind: 'done',
-          ok: obj.is_error !== true,
+          ok: obj.is_error !== true && !(typeof obj.subtype === 'string' && obj.subtype.startsWith('error')),
           tokensIn: typeof obj.usage?.input_tokens === 'number' ? obj.usage.input_tokens : null,
           tokensOut: typeof obj.usage?.output_tokens === 'number' ? obj.usage.output_tokens : null,
           turns: typeof obj.num_turns === 'number' ? obj.num_turns : null,

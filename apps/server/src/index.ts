@@ -19,10 +19,16 @@ process.on('unhandledRejection', (reason) => {
   incidents.report({ source: 'server', kind: 'unhandledRejection', message: err.message, stack: err.stack });
 });
 process.on('uncaughtException', (err) => {
-  // Deliberately do NOT exit: for a local-first personal dashboard, staying up (degraded) beats
-  // dying. We log loudly, diagnose, and continue.
   app.log.error({ err }, 'uncaughtException');
   incidents.report({ source: 'server', kind: 'uncaughtException', message: err.message, stack: err.stack });
+  // Continuing after an uncaught exception could run jobs with corrupted process state.
+  void server.close().finally(() => process.exit(1));
+  setTimeout(() => process.exit(1), 10_000).unref();
+});
+let shuttingDown = false;
+for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
+  if (shuttingDown) return; shuttingDown = true;
+  void server.close().finally(() => process.exit(0));
 });
 
 app

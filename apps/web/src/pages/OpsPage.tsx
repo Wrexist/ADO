@@ -21,6 +21,7 @@ import { AssistantPanel } from '../views/ops/AssistantPanel';
 import { SystemMonitor } from '../views/ops/SystemMonitor';
 import { QuickActions } from '../views/ops/QuickActions';
 import { RecentDeployments } from '../views/ops/RecentDeployments';
+import { MobileOverview } from '../views/MobileOverview';
 
 /**
  * View B — Ops Dashboard (/ops), rendering exclusively from the bus store.
@@ -46,7 +47,7 @@ export function OpsPage() {
         : 'Some systems need attention.';
 
   return (
-    <div className="min-h-screen min-w-[1280px] bg-app text-text1">
+    <><MobileOverview /><div className="hidden min-h-screen bg-app text-text1 lg:block">
       <TopBarB />
       <StaleBanner />
       <div className="flex items-stretch">
@@ -148,6 +149,6 @@ export function OpsPage() {
           </div>
         </main>
       </div>
-    </div>
+    </div></>
   );
 }

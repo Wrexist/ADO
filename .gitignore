@@ -37,3 +37,6 @@ Thumbs.db
 # claude harness logs
 .claude/logs/
 apps/desktop/release/
+
+# Local version-specific provider protocol inspection
+docs/controlos/codex-schema-*/

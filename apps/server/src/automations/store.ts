@@ -3,8 +3,7 @@
  * data/ (same local-first trust model as prompts.json/connections.json). Holds only user
  * data; the built-in TEMPLATES live in @ado/shared and are merged in the UI.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readJsonStore, writeJsonStore } from '../lib/jsonStore';
 import { randomUUID } from 'node:crypto';
 import { AutomationInput, type Automation } from '@ado/shared';
 
@@ -16,16 +15,17 @@ export class AutomationStore {
   }
 
   private load(): void {
-    try {
-      this.data = JSON.parse(readFileSync(this.filePath, 'utf8')) as Record<string, Automation>;
-    } catch {
-      this.data = {}; // no file yet — fine
+    const rows = readJsonStore(this.filePath) ?? {};
+    for (const [id, row] of Object.entries(rows)) {
+      if (!AutomationInput.safeParse(row).success || typeof (row as Automation).createdTs !== 'string' || (row as Automation).id !== id) {
+        throw new Error(`Invalid automation '${id}'; refusing to overwrite the store`);
+      }
     }
+    this.data = rows as Record<string, Automation>;
   }
 
   private persist(): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+    writeJsonStore(this.filePath, this.data);
   }
 
   /** All automations, newest first. */
