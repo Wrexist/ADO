@@ -8,7 +8,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] Preserve versioned queued jobs through normal shutdown and add explicit recovery-only cancellation with retained locks and transactional task/audit history.
 - [x] Bind restored profiles to database metadata, reject lost/mismatched markers and corrupt copied bytes, enroll present legacy markers, and verify refusal plus migration in the packaged Windows app.
 - [x] Preserve automation memory and disk state on rejected writes; identify already-dispatched runs and stop further session dispatch if history recording fails, with injected and real Windows file-denial regressions.
-- [ ] Bind automation dispatch intent and history durably across restart; the current session guard is not an automation outbox.
+- [x] Commit accepted automation receipts with runs and queue events, then repair last-run history across restart without dispatch; verify four actual process-exit boundaries.
+- [ ] Add explicit restored-profile review/resolution for pending automation receipts and remote-event occurrence identities; legacy unjournaled outcomes remain unproven.
 
 - [x] Retain the audited base in a separate checkout and implement on `codex/controlos-stabilization`.
 - [x] Implement runtime browser pairing, guarded task-file writes, queue recovery/idempotency, repository writer ownership, isolated Git results and content-bound verification.

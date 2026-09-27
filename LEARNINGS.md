@@ -114,3 +114,4 @@ One line per learning. The nightly analyzer (parked, p5) consumes this file; kee
 - 2026-09-27: A missing sidecar must not turn a restored database into normal operation; bind restore identity in the database and inspect it before queue recovery.
 - 2026-09-27: Electron app.quit can exit 0 despite process.exitCode=1; set the failure exit status at will-quit after asynchronous before-quit cleanup, and verify the real packaged executable.
 - 2026-09-27: Commit settings to disk before replacing their in-memory map; a failed history save after dispatch must identify the created run. A session stop guard cannot replace durable dispatch reconciliation across restart.
+- 2026-09-27: Commit an automation receipt with the accepted run and outbox event; replay only its JSON history projection after a crash, never dispatch from the receipt.

@@ -6,8 +6,9 @@
  */
 import { eventMatches, isScheduleDue, type Automation } from '@ado/shared';
 import type { AutomationStore } from './store';
+import type { AutomationJournal } from './journal';
 
-export type DispatchFn = (repoId: string, task: string, model?: string) => { runId: string };
+export type DispatchFn = (repoId: string, task: string, model?: string, automationId?: string) => { runId: string };
 
 const DEBOUNCE_MS = 2 * 60 * 1000; // don't refire the same automation within 2 min
 
@@ -21,7 +22,22 @@ export class AutomationEngine {
     /** Per-project switch (project settings → "Automations"). Manual runNow ignores it —
      *  a deliberate click outranks the background switch; schedules/events honor it. */
     private isRepoEnabled: (repoId: string) => boolean = () => true,
+    private journal?: AutomationJournal,
   ) {}
+
+  /** Repair local history only. Never dispatch, signal a process or release a lock. */
+  reconcile(): void {
+    for (const receipt of this.journal?.pending() ?? []) {
+      try {
+        if (!this.store.get(receipt.automationId)) throw new Error('automation definition is missing');
+        this.store.markRun(receipt.automationId, receipt.runId, receipt.acceptedTs);
+        this.journal!.complete(receipt.runId, new Date(this.now()).toISOString());
+      } catch {
+        this.recordingFailure = `Automation run ${receipt.runId} has unrecorded history. Further automation starts are paused. Preserve the profile and repair its automation history before restarting.`;
+        this.log(this.recordingFailure); return;
+      }
+    }
+  }
 
   /** Run one automation now (manual). Returns the runId, or throws (unknown / not dispatchable). */
   runNow(id: string): { runId: string } {
@@ -32,8 +48,22 @@ export class AutomationEngine {
 
   private fire(a: Automation): { runId: string } {
     if (this.recordingFailure) throw new Error(this.recordingFailure);
-    const { runId } = this.dispatch(a.repoId, a.task, a.model);
-    try { this.store.markRun(a.id, runId, new Date(this.now()).toISOString()); }
+    const pending = this.journal?.pending(a.id)[0];
+    let runId: string;
+    try { runId = pending?.runId ?? this.dispatch(a.repoId, a.task, a.model, this.journal ? a.id : undefined).runId; }
+    catch (error) {
+      // Dispatch may throw after accepting the run. Its receipt proves acceptance;
+      // no receipt means the atomic run/event/receipt transaction did not commit.
+      const accepted = this.journal?.pending(a.id)[0];
+      if (!accepted) throw error;
+      runId = accepted.runId;
+    }
+    try {
+      const accepted = this.journal?.pending(a.id)[0];
+      if (this.journal && accepted?.runId !== runId) throw new Error('missing automation dispatch receipt');
+      this.store.markRun(a.id, runId, accepted?.acceptedTs ?? new Date(this.now()).toISOString());
+      this.journal?.complete(runId, new Date(this.now()).toISOString());
+    }
     catch {
       this.recordingFailure = `Automation dispatched run ${runId}, but could not save its history. Further automation starts are paused in this session. Inspect the run and repair the profile before restarting.`;
       throw new Error(this.recordingFailure);

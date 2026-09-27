@@ -54,6 +54,7 @@ import { connectionProbe, probeAll, detectCapabilities, type ProbeContext } from
 import { Installer } from './setup/install';
 import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
 import { AutomationStore } from './automations/store';
+import { AutomationJournal } from './automations/journal';
 import { AutomationEngine } from './automations/engine';
 import { ReviewRunner } from './review/runner';
 import { Notifier } from './notify/notifier';
@@ -583,11 +584,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   }
   const automationEngine = new AutomationEngine(
     automations,
-    (repoId, task, model) => runner.dispatch({ repoId, task, model }),
+    (repoId, task, model, automationId) => runner.dispatch({ repoId, task, model, automationId }),
     (msg) => app.log.info(msg),
     () => Date.now(),
     (repoId) => projectSettings.isEnabled(repoId, 'automations'),
+    new AutomationJournal(db),
   );
+  if (!recovery) automationEngine.reconcile();
 
   // Outbound notifications to connected Slack/Discord webhooks (real CI failures + deploys).
   const notifier = new Notifier(

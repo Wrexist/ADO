@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## Beständig avstämning av accepterade automationskörningar
+
+En accepterad automationskörning sparar nu körningsrad, köhändelse och automationskvitto i samma SQLite-transaktion. Högst ett oavstämt kvitto per automation tillåts. Historiken i JSON skrivs från det kvittot och markeras därefter som avstämd. Vanlig serverstart reparerar kvarvarande historik utan att anropa dispatch. Ett fel efter commit kan därför hitta den redan accepterade körningen. Saknad automationsdefinition eller misslyckad reparation behåller kvittot och spärrar fler automationstarter.
+
+Fyra riktiga processavbrott har provats: före transaktionscommit, efter commit, efter JSON-skrivning och efter kvittots avstämning. Återöppning bevarar accepterat arbete utan en extra dispatch. Ytterligare prov täcker transaktionsrollback, fel efter commit, lagringsfel, upprepad pending-dispatch samt riktig serverstart. Återställda profiler gör ingen automatisk historikreparation; oavstämda kvitton ingår i granskningsdigest och blockerar aktivering. [Kontrakt och kraschmatris](docs/controlos/automation-persistence.md).
+
+Hela `npm run verify` passerade: typkontroll, lint, 379 tester i 82 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. 24 riktade tester passerade också. Loggar: `controlos-automation-journal-integration.log` och `controlos-automation-journal-verify.log`. Webbchunkens varning kvarstår vid cirka 572 kB före gzip. Ingen agent eller provider startades i de nya proven.
+
+13/46 fullständiga acceptansscenarier är fortsatt lokalt godkända. Explicit kvittohantering i återställda profiler, äldre körningar utan kvitto, fjärrhändelsers identiteter, oklara externa utfall och strömavbrott återstår. Den nya migrationen och körvägen har inte provats i en ny paketerad Windows-artefakt. R1–R4 är öppna; ingen merge eller publicering kördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## Automationer vid nekad lagring
 
 Automationers skapa/ändra/ta bort och körningshistorik uppdaterar nu minnet först efter lyckad lagring. Nekad filersättning behåller föregående sparade tillstånd. Om en körning redan skapats men dess automationshistorik inte kan sparas visar felet körnings-ID och motorn stoppar fler manuella, schemalagda och händelsestyrda starter i den sessionen. Den felaktiga beskrivningen att en sådan körning ”skippats” är borttagen.

@@ -4,6 +4,7 @@
  * own high-volume table in 2.4; jobs backs the catch-up scheduler (Phase 4).
  */
 import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
 export const events = sqliteTable(
   'events',
@@ -85,6 +86,14 @@ export const runs = sqliteTable(
   },
   (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status)],
 );
+
+/** Accepted automation dispatch and its run commit together; JSON history is a projection. */
+export const automationDispatches = sqliteTable('automation_dispatches', {
+  runId: text('run_id').primaryKey().references(() => runs.id),
+  automationId: text('automation_id').notNull(),
+  acceptedTs: text('accepted_ts').notNull(),
+  recordedTs: text('recorded_ts'),
+}, (t) => [uniqueIndex('automation_pending_dispatch').on(t.automationId).where(sql`${t.recordedTs} IS NULL`)]);
 
 /** Never expire a writer lock merely because its owner stopped heartbeating. */
 export const executionLocks = sqliteTable('execution_locks', {

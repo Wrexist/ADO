@@ -20,6 +20,7 @@ operation. This mechanism does not provide exactly-once external side effects.
 | Process-completion observation fails | Run fails and writer lock remains, including after restart | File-backed recovery tests with successful and throwing stop requests |
 | Process finishes but terminal state cannot be committed | Writer lock remains; next writer waits | Runner terminal-event abort-trigger test |
 | An SSE subscriber throws | Subscriber is removed; committed work and other subscribers continue | Reentrant ordered-delivery test |
+| Automation queue acceptance or history projection is interrupted | Run, queue event and receipt commit together; normal boot repairs JSON history from the receipt without dispatch; failed repair blocks further automation | Transaction rejection, four actual child-process exit boundaries, reopen and restored-profile checks in `automations/journal.test.ts`; see [automation persistence](automation-persistence.md) |
 | Client cursor predates retained events or crosses a replay gap | Server sends an authoritative snapshot and its cursor | `sse-recovery.test.ts` uses a real loopback HTTP connection after compaction |
 
 Tests are local evidence, not proof of power-loss durability, OS sandboxing,

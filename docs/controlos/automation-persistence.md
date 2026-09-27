@@ -4,7 +4,20 @@ Automation create, update, removal and last-run recording now build a candidate 
 
 Dispatch and the automation JSON history are still separate commits. If dispatch returns a run ID but recording that ID fails, the engine reports the already-created run and blocks all further manual, event and scheduled dispatch in that engine session. It does not describe the dispatch as skipped, retry it, or report the run as failed. Unlocking the file alone does not clear this session guard.
 
-This is not a durable automation outbox. A crash between dispatch and history recording, or restart after such a failure, still requires reconciliation against the run store before automation is enabled. A session guard cannot prove exactly-once execution across restarts. Persistent automation intent, stable dispatch identity and recovery reconciliation remain required work; these tests do not certify T18 or the complete R1 gate.
+Production dispatch now commits an `automation_dispatches` receipt together with the accepted run and queue event in the existing SQLite transaction. The receipt contains the automation identity, run identity and original acceptance timestamp. A partial unique index permits only one unrecorded receipt per automation. Repeating dispatch for that pending automation returns the accepted run; it does not create a run using an edited recipe. The accepted run retains its original task, model and provider.
+
+JSON last-run history is a projection of the receipt. Only after saving that projection does the engine mark the receipt recorded. A dispatch exception after commit is reconciled by looking up the pending receipt. Normal server startup projects outstanding receipts before starting automation triggers; reconciliation never calls dispatch, signals processes or releases locks. If the definition is missing or history cannot be saved, the receipt stays pending and the engine refuses further starts. Restored profiles skip this automatic history repair; outstanding receipts block manual activation and are included in its reviewed digest. An explicit recovery-review action for those receipts remains to be implemented.
+
+| Interrupted boundary | Reopened state |
+| --- | --- |
+| Before queue transaction commit | No accepted run, receipt or queue event |
+| After queue commit, before dispatch returns | Run and pending receipt survive; local history is repaired without dispatch |
+| After JSON history save, before receipt completion | The same run and acceptance time are projected again, then the receipt completes |
+| After receipt completion | No pending projection and no reconciliation write |
+
+`journal.test.ts` exercises these four boundaries through actual abrupt child-process exits and file-backed SQLite reopen. It also injects transaction rejection and a post-commit exception, denies history saving, checks duplicate pending dispatch, and boots both a normal and a restored server through the authenticated API. SQLite integrity and foreign keys are checked after the crash probes. No real agent or provider is started.
+
+This closes the tested local accepted-run/history crash window for newly journaled automation dispatches. It does not identify old unjournaled automation runs, deduplicate separate manual clicks or repeated remote events, prove power-loss durability, or reconcile an uncertain external provider operation. The queue's existing process ownership and quarantine rules still apply. SQLite remains `synchronous=NORMAL`; the evidence covers process interruption. Standalone test engines constructed without a journal retain only their session guard. These tests do not certify T18 or the complete R1 gate.
 
 `apps/server/src/automations/persistence.test.ts` injects `EPERM` at rename for create/update/remove/history writes, checks committed in-memory state, exact file bytes, reopened state and temporary-file cleanup, then checks a successful subsequent save. A separate engine test creates one run, denies its history write and proves later manual/event/schedule triggers dispatch nothing even after the file becomes writable and the debounce interval expires.
 

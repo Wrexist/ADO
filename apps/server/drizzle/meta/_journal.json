@@ -134,6 +134,13 @@
       "when": 1790531000000,
       "tag": "0018_workspace_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790543000000,
+      "tag": "0019_automation_dispatches",
+      "breakpoints": true
     }
   ]
 }

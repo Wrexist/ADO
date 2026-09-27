@@ -7,10 +7,10 @@
  * spawns get a turn cap + minimal env (in the Spawner). Registry survives restart: a
  * `running` row on boot is an orphan, reconciled to `failed`.
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { Bus } from '../bus';
 import type { Db } from '../db';
-import { executionLocks, runs, portfolioCheckouts } from '../db/schema';
+import { automationDispatches, executionLocks, runs, portfolioCheckouts } from '../db/schema';
 import { TaskDispatchRequest } from '@ado/shared';
 import { TaskExecutionStore, taskPrompt, type TaskRunBinding } from './taskExecution';
 import { commonGitIdentity } from '../projects/checkoutIdentity';
@@ -33,6 +33,7 @@ export interface DispatchInput {
   provider?: string;
   idempotencyKey?: string;
   taskBinding?: TaskRunBinding;
+  automationId?: string;
 }
 
 interface RunnerOpts {
@@ -229,6 +230,10 @@ export class Runner {
     if (this.stopped) throw new Error('runner is stopping; no new dispatches accepted');
     input = { ...input, provider: input.provider ?? this.opts.defaultProvider ?? 'claude' };
     if (!['claude', 'codex'].includes(input.provider!)) throw new Error('Unsupported provider');
+    if (input.automationId) {
+      const pending = this.db.select().from(automationDispatches).where(and(eq(automationDispatches.automationId, input.automationId), isNull(automationDispatches.recordedTs))).get();
+      if (pending) return { runId: pending.runId };
+    }
     const requestHash = createHash('sha256').update(JSON.stringify([input.repoId, input.task, input.model ?? 'default', input.provider, ...(input.taskBinding ? [input.taskBinding] : [])])).digest('hex');
     if (input.idempotencyKey) {
       if (input.idempotencyKey.length > 200) throw new Error('idempotency key too long');
@@ -254,6 +259,7 @@ export class Runner {
       .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', provider: input.provider, status: 'queued', startedTs: now, engineVersion: 1, idempotencyKey: input.idempotencyKey, requestHash })
       .run();
       if (input.taskBinding) this.taskExecutions.enqueue(runId, input.taskBinding, input.task);
+      if (input.automationId) tx.insert(automationDispatches).values({ runId, automationId: input.automationId, acceptedTs: now }).run();
     }, [this.buildEvent(runId, input, 'queued', null)]);
 
     // Reflect as a queued build immediately (backs the Build Queue), then let the
