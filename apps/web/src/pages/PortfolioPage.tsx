@@ -29,6 +29,7 @@ export function PortfolioPage() {
   };
   return <PageShell title="Projects" subtitle="Your products and goals, with separately identified repositories and working copies.">
     <div className="mt-5 space-y-5">
+      <Link className="block text-body text-primary" to="/tasks">Plan tasks and capture ideas →</Link>
       <Link className="text-body text-primary" to="/repositories">Manage scanned repositories and GitHub connections →</Link>
       <Button variant="outline" disabled={busy} onClick={() => void act(async () => { setEditing(null); setDraft(initial); }, 'Registry reloaded. Select Edit to use the current version.')}>Reload registry</Button>
       {error && <p role="alert" className="text-body text-danger">{error}</p>}

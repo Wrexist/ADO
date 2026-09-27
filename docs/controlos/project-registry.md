@@ -8,7 +8,8 @@ observations are candidates for explicit import, not automatically created proje
 A project has its own UUID, user-owned name, kind, goal, lifecycle, focus and manual
 priority. Updates require the current version and reject lost updates. Repository
 observations never overwrite these fields. The next-task field is reserved and
-currently null; tasks and milestone planning are subsequent work.
+currently null. [Tasks, Inbox and milestones](planning-domain.md) now have a separate
+planning store; choosing a project's next task remains subsequent work.
 
 GitHub repository identity uses the API's numeric repository ID, stored as a string,
 plus the host. Owner/name is a mutable label. Successful observations update the

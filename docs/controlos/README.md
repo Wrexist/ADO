@@ -29,7 +29,7 @@ This does not claim OS sandbox isolation.
 
 ## Expansion sequence
 
-Prove R1 execution, permissions, secrets and recovery before broad R2 planning/inbox/context work. R3 covers a tested Codex adapter and private mobile access. R4 covers installer updates, three pilot projects, heavy tools, capacity and real usage. Historical phase checkmarks are not evidence for these gates.
+R1 execution, permissions, secrets and recovery remain gates for dependent execution features. Independent local [project metadata](project-registry.md) and [planning](planning-domain.md) now provide project/task identities without enabling dispatch or claiming R1/R2 acceptance. Task-bound execution and criterion-level review must use the same protected execution boundary. R3 covers a tested Codex adapter and private mobile access. R4 covers installer updates, three pilot projects, heavy tools, capacity and real usage. Historical phase checkmarks are not evidence for these gates.
 
 ## Provider references
 

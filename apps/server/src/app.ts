@@ -21,6 +21,8 @@ import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
 import { ProjectRegistry } from './projects/registry';
+import { PlanningStore } from './projects/planning';
+import { ZodError } from 'zod';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
 import { Scanner } from './scanner';
@@ -162,6 +164,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
   const bus = new Bus(db);
   const registry = new ProjectRegistry(db, () => Object.values(bus.snapshot().state.repos), (id) => scanner?.cwdFor(id) ?? null);
+  const planning = new PlanningStore(db);
   bus.compact((msg) => app.log.info(msg)); // prune superseded latest-only rows before replay
   bus.replayFromDb((msg) => app.log.warn(msg));
 
@@ -640,6 +643,24 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     try { return await registry.importSource(req.body); }
     catch (error) { return reply.code(409).send({ error: registryError(error) }); }
   });
+  app.get('/api/planning', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return planning.snapshot();
+  });
+  app.get('/api/planning/history/:id', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    return { revisions: planning.history((req.params as { id: string }).id) };
+  });
+  const planningMutation = (reply: FastifyReply, work: () => unknown) => {
+    try { return work(); } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
+  };
+  app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
+  app.put('/api/planning/tasks/:id', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body, (req.params as { id: string }).id) })));
+  app.post('/api/planning/milestones', async (req, reply) => planningMutation(reply, () => ({ milestone: planning.saveMilestone(req.body) })));
+  app.put('/api/planning/milestones/:id', async (req, reply) => planningMutation(reply, () => ({ milestone: planning.saveMilestone(req.body, (req.params as { id: string }).id) })));
+  app.post('/api/planning/inbox', async (req, reply) => planningMutation(reply, () => ({ item: planning.capture(req.body) })));
+  app.post('/api/planning/inbox/:id/promote', async (req, reply) => planningMutation(reply, () => ({ task: planning.promote((req.params as { id: string }).id, req.body) })));
+  app.post('/api/planning/inbox/:id/archive', async (req, reply) => planningMutation(reply, () => ({ item: planning.archiveInbox((req.params as { id: string }).id, req.body) })));
 
   // Run log + live run control. History is the REAL persisted `runs` table (survives
   // restarts); the tool-by-tool timeline lives only for runs started this boot — older

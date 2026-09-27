@@ -121,6 +121,26 @@ export const portfolioSources = sqliteTable('portfolio_sources', {
   id: text('id').primaryKey(), kind: text('kind').notNull(), dataJson: text('data_json').notNull(), observedTs: text('observed_ts').notNull(),
 });
 
+export const planningMilestones = sqliteTable('planning_milestones', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => portfolioProjects.id), title: text('title').notNull(),
+  exitCriteriaJson: text('exit_criteria_json').notNull(), status: text('status').notNull(), version: integer('version').notNull(), createdTs: text('created_ts').notNull(), updatedTs: text('updated_ts').notNull(),
+});
+export const planningTasks = sqliteTable('planning_tasks', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull().references(() => portfolioProjects.id), repositoryId: text('repository_id').references(() => portfolioRepositories.id), milestoneId: text('milestone_id').references(() => planningMilestones.id),
+  title: text('title').notNull(), outcome: text('outcome').notNull(), scope: text('scope').notNull(), outOfScope: text('out_of_scope').notNull(), acceptanceJson: text('acceptance_json').notNull(), sourceRefsJson: text('source_refs_json').notNull(),
+  priority: integer('priority').notNull(), status: text('status').notNull(), version: integer('version').notNull(), createdTs: text('created_ts').notNull(), updatedTs: text('updated_ts').notNull(),
+});
+export const planningDependencies = sqliteTable('planning_dependencies', {
+  taskId: text('task_id').notNull().references(() => planningTasks.id), dependsOn: text('depends_on').notNull().references(() => planningTasks.id),
+}, (t) => [uniqueIndex('planning_dependency_identity').on(t.taskId, t.dependsOn)]);
+export const planningInbox = sqliteTable('planning_inbox', {
+  id: text('id').primaryKey(), idempotencyKey: text('idempotency_key').notNull().unique(), requestHash: text('request_hash').notNull(), text: text('text').notNull(),
+  projectId: text('project_id').references(() => portfolioProjects.id), taskId: text('task_id').references(() => planningTasks.id), promotionHash: text('promotion_hash'), status: text('status').notNull(), version: integer('version').notNull(), createdTs: text('created_ts').notNull(), updatedTs: text('updated_ts').notNull(),
+});
+export const planningRevisions = sqliteTable('planning_revisions', {
+  id: text('id').primaryKey(), entityId: text('entity_id').notNull(), kind: text('kind').notNull(), version: integer('version').notNull(), snapshotJson: text('snapshot_json').notNull(), recordedTs: text('recorded_ts').notNull(),
+}, (t) => [uniqueIndex('planning_revision_identity').on(t.entityId, t.version)]);
+
 export const approvalPolicies = sqliteTable('approval_policies', {
   repoId: text('repo_id').primaryKey(), version: text('version').notNull().references(() => approvalPolicyVersions.version), digest: text('digest').notNull(),
 });

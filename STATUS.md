@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R2: uppgifter, Inbox, milstolpar och atomiska beroenden
+
+Den nya vyn `/tasks` sparar uppgifter och milstolpar i en egen planeringsdomän. Uppgifter har mål, avgränsning, acceptanskriterier, prioritet, projekt-/repokoppling och beroenden. Projektägarskap kan inte flyttas genom redigering. GitHub-issues är enkelriktade referenslänkar. Versionskontroll nekar gamla ändringar; fält, beroenden och oföränderlig revisionshistorik sparas atomiskt. Beroendecykler visas med namn och ID:n och lämnar ingen halv uppdatering. Kriteriernas ID:n och obligatorisk/frivillig status bevaras vid omordning av oförändrad text.
+
+Inbox accepterar idéer utan projekt. En innehållsbunden nyckel förhindrar dubblerad fångst vid retry. Konvertering skapar ett uppgiftsutkast och kvitterar idén i samma transaktion; upprepad identisk konvertering ger samma uppgift. Migration 0011 är additiv. Planeringsanrop kan inte sätta körnings-/acceptansstatus och startar ingen agent. Se [kontrakt, tester och återstående gränser](docs/controlos/planning-domain.md).
+
+`npm run verify` passerade på Windows x64, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 311 tester i 58 filer och byggning. Det riktiga API-testet provar cykelavslag och bevarat tillstånd efter återöppning av en SQLite-profil; lagringsfel mitt i konverteringen provas med full rollback. Efter sista rättningen av tillgänglighetsnamn passerade separat webbtypkontroll/riktad lint och hela `npm run smoke` igen. Webbläsarprovet använder riktig lokal HTTP/SQLite med uttryckliga demodata vid 1536/390 px: skapa/redigera, nekad cykel med exakt oförändrad plan, Inbox-konvertering, milstolpsredigering, omladdning och bevarade kriterieegenskaper. Körhistoriken är oförändrad före/efter. Bilderna har granskats. Slutloggar: `controlos-planning-complete-verify.log`, `controlos-planning-ui-final.log` och `controlos-planning-ui-final-smoke.log` (ignorerade). Tidigare browser-/syntaxfel och deras rättningar finns kvar i övriga `controlos-planning-*.log`. Webbens chunkvarning kvarstår, cirka 541 kB före gzip.
+
+T07 är nu lokalt godkänd med versionsbundna källhashar; T20/T22/T43 har omprovats. Totalt är 4 av 46 scenarier lokalt godkända. Uppgiftsbunden exekvering, aktuella bevis per kriterium, vald nästa uppgift, offlineutkast och full R1–R4 återstår. Ingen modell eller pilotagent har startats, och piloternas filer är orörda. Följande avsnitt är historiska kontrollpunkter.
+
 ## R2-grund: separata projekt, repon och arbetskopior
 
 Vyn `/projects` har nu ett beständigt register för projektmål, livscykel, fokus och manuell prioritet. Projekt, repon och arbetskopior får separata UUID:n. GitHub-identitet kommer från API:ts repo-ID; lokala arbetskopior binds till katalog- och Git-identitet. Importen är uttrycklig och visar observationernas tid. Arbetskopior i samma Git-repo återanvänder repoidentiteten; omdöpning på samma filsystem behåller arbetskopians ID. Utbytta kataloger och tyst omflyttning mellan projekt nekas. Migration 0010 bevarar äldre data. Se [kontrakt och begränsningar](docs/controlos/project-registry.md).

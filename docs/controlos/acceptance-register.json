@@ -313,8 +313,31 @@
     {
       "id": "T07",
       "title": "Beroendecykel",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R2. **Krav:** REQ05. **Status:** not_run.\n\n**Givet:** Task A beror på B.\n\n**När:** B uppdateras till att bero på A.\n\n**Godkänt endast om:** Transaktionen nekas och visar cykeln. Ingen halv uppdatering lämnas kvar.\n\n**Gäller:** always."
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R2. **Krav:** REQ05. **Status:** passed (local Windows evidence).\n\n**Givet:** Task A beror på B.\n\n**När:** B uppdateras till att bero på A.\n\n**Godkänt endast om:** Transaktionen nekas och visar cykeln. Ingen halv uppdatering lämnas kvar.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/projects/planning.test.ts",
+        "apps/server/src/projects/planningApi.test.ts",
+        "scripts/smoke-planning.mjs",
+        "docs/controlos/planning-domain.md"
+      ],
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows x64, Node 22.18.0, npm 11.7.0, Chromium via Playwright",
+        "command": "npm run verify; npm run smoke",
+        "result": "Passed: real SQLite and authenticated HTTP reject a cyclic dependency with its named path. The complete plan and revision history remain unchanged, including after profile reopen. Real browser create/edit flows at 1536/390 pixels display the cycle and verify unchanged API state. Multi-hop and cross-project dependency cycles are also rejected.",
+        "scope": "Local planning dependency transaction and desktop/mobile browser scenario with synthetic content. No provider, pilot, offline-device, task-execution or criterion-acceptance claim.",
+        "sourceSha256": {
+          "packages/shared/src/planning.ts": "f421f1262d8fb6db293aef5c1cf6d0fffbec049d32cb3944b7eba709f85baf8d",
+          "apps/server/drizzle/0011_planning.sql": "80357053d3a276aa3e775dc810161897c70ccdcc0a9845b7523beb106bfa0f24",
+          "apps/server/src/projects/planning.ts": "edabc05b4a12f2f8e1879873734c4686fbd2c3a07591e2ea6aac81bc552375d4",
+          "apps/server/src/projects/planning.test.ts": "e3e333860109c94f26cf93c91fff83d6e04dba04809277bc7beffdbd908a547e",
+          "apps/server/src/projects/planningApi.test.ts": "190fc8ecd3070b038b85f9cc6f91ec21113e3db1044dfd168580edf75d27c71e",
+          "apps/server/src/app.ts": "134203a2f9e32199f0ec8b42f70412f1eb984e9b3f3d104aaa4cc6aa2bbf7d25",
+          "apps/web/src/pages/PlanningPage.tsx": "02e1ad12716e77d20c229e562cad7d1269eb100f3b5a61ddae0ade124b991942",
+          "scripts/smoke-planning.mjs": "9eab7b15f2a4aae7ff3478db32b4688a03d36366cf8d12025d7aa66a24d8a3ae"
+        }
+      }
     },
     {
       "id": "T08",
@@ -483,7 +506,7 @@
           "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "ec5d0c7b49d520cbafabb69b715f82344377be8884a0ded024a5b341e8bb512b"
+          "scripts/smoke.mjs": "e525a49b1aa0bd4572a31b2bd2de44266e922ac2362a2f583ccea07685c550c5"
         }
       }
     },
@@ -694,7 +717,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "a6c353c3eaafbb77ee839cdd5b2bf71a2db312f0cfb48bee7416d82f57ea65e9",
+          "apps/server/src/app.ts": "134203a2f9e32199f0ec8b42f70412f1eb984e9b3f3d104aaa4cc6aa2bbf7d25",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }
