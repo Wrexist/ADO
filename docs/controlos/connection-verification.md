@@ -20,11 +20,27 @@ Checks older than five minutes are stale. Settings refreshes local status every
 15 seconds and on focus; this does not recheck the provider. The UI distinguishes
 configuration from verification and displays the check timestamp and limitation.
 
+Setup uses the same distinction. A stored credential produces `configured`, never
+`installed` or Ready. Only a currently verified credential produces `verified`,
+with the explicit limit that repository permissions were not checked. Rejected,
+expired, inconclusive and unsupported checks keep a non-ready status and explain
+the next action. Every Setup response recomputes connection status from the store;
+cached machine probes cannot preserve an expired green credential result. The
+page refreshes local status every 15 seconds and on focus without provider calls.
+Restart clears authentication while retaining configuration. Setup's access-key
+instructions now use server configuration and runtime pairing, not a web-build key.
+
 Local evidence: `connections/verification.test.ts` injects HTTP responses for
 expired/rejected, forbidden, accepted and unsupported checks, advances the clock,
 reopens storage and races credential replacement against a late response.
+`setup/connectionStatus.test.ts` exercises authenticated Setup and Verify API
+handlers with stored fixture credentials and injected 401/200 provider responses,
+then reopens the server and confirms that only configuration remains. Setup reads
+themselves send no provider request. Probe tests cover every authentication state.
 `scripts/smoke.mjs` renders an explicitly labeled rejection fixture and exercises
 the Verify action at 1536/390 pixels. No real GitHub credential was checked.
+It also shows Setup moving from rejected to verified to expired through focus
+refreshes, with no Ready label for the expired credential.
 Full T25 remains not_run pending actual expired-credential acceptance; fixture
 success does not establish a live provider account or all connector support.
 

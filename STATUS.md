@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: verifieringsstatus även i Setup
+
+Setup räknar inte längre en sparad GitHub-nyckel som installerad/redo. Konfigurerad, nyligen verifierad, nekad, utgången och otillgänglig verifiering hålls isär. Varje Setup-svar läser anslutningsstatus på nytt; cache för maskinens verktyg kan inte hålla kvar ett gammalt grönt anslutningsresultat. Vyn hämtar lokal status var 15:e sekund och vid fokus utan automatisk providerverifiering. Verifierat betyder endast godkänt credential vid det stödda anropet, inte verifierade repobehörigheter. Setup anger också runtime-parning i stället för att lägga åtkomstnyckeln i webbbygget.
+
+Ett API-prov använder sparad syntetisk nyckel och injicerade 401/200-svar för att kontrollera konfigurerad → nekad → verifierad, utan provideranrop vid Setup-läsning. Omstart behåller konfigurationen men tar bort autentiseringen. Riktade prov och `npm run verify` passerade: typkontroll, lint, 354 tester i 71 filer samt byggning på Windows x64, Node 22.18.0/npm 11.7.0. Hela `npm run smoke` passerade, inklusive fokusuppdatering från verifierad till utgången vid 1536/390 px. Bilderna har granskats och är DEMO-fixtures. Loggar: `controlos-setup-auth-focused.log`, `controlos-setup-auth-verify.log` och `controlos-setup-auth-smoke.log` (ignorerade). Se [verifieringskontraktet](docs/controlos/connection-verification.md).
+
+13 av 46 fullständiga scenarier är fortsatt lokalt godkända. T25 saknar fortfarande verkligt utgånget credential-prov; injicerade svar ersätter inte det. Fulla R1–R4-grindar är öppna. Browsergranskningen identifierade även föråldrade Node- och installationsuppgifter i Setup, vilka behöver rättas i nästa steg. Ingen modell, pilotagent, merge eller deploy kördes. Chunkvarningen kvarstår, cirka 560 kB före gzip. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: bevara anslutningslagret vid korruption och nekad läsning
 
 Anslutningslagret kontrolleras före SQLite-start och sparar identitet/innehållshash för filen som lästes. En redan öppen instans vägrar skriva över en senare ändrad, raderad, utbytt, länkad eller oläsbar fil. Nya bytes flushas till en privat temporär fil och ursprunget kontrolleras igen före rename. Nekad uppdatering och frånkoppling bevarar även minnesvärdet. Fel visar en återställningsväg utan att återge korrupt JSON eller hemligheter. Se [lagringskontraktet](docs/controlos/native-credentials.md).

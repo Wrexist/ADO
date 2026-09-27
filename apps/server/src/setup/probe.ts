@@ -8,11 +8,11 @@
  * with a minimal env allow-list and a short timeout, so probing is safe and can't hang boot.
  */
 import { spawn } from 'node:child_process';
-import { REQUIREMENTS, type ProbeResult, type Requirement } from '@ado/shared';
+import { REQUIREMENTS, type ConnectionStatus, type ProbeResult, type Requirement } from '@ado/shared';
 
 export interface ProbeContext {
-  /** Is a connector connected (token/key stored or in .env)? */
-  connectionConnected: (id: string) => boolean;
+  /** Configuration is not authentication; checks may expire between reads. */
+  connectionStatus: (id: string) => Pick<ConnectionStatus, 'configured' | 'authentication' | 'checkedTs'>;
   /** Does the running server have this env var set (non-empty)? */
   envHas: (name: string) => boolean;
 }
@@ -80,6 +80,21 @@ export interface Capabilities {
   claude: boolean; // Claude Code CLI (sign-in)
 }
 
+export function connectionProbe(req: Requirement, ctx: ProbeContext, checkedTs: string): ProbeResult {
+  if (req.detect.via !== 'connection') throw new Error('Connection detector required');
+  const state = ctx.connectionStatus(req.detect.connectionId);
+  const detail = !state.configured ? 'No credential configured.' : {
+    verified: 'Credential accepted by the provider. Repository permissions were not checked.',
+    rejected: 'Credential rejected. Update it in Connections and verify again.',
+    stale: 'Credential verification expired. Verify again in Connections.',
+    unverified: 'Credential saved, but not verified. Verify it in Connections.',
+    unavailable: 'Provider verification was inconclusive. Retry in Connections.',
+    unsupported: 'Provider verification is not supported for this connector.',
+  }[state.authentication];
+  return { id: req.id, status: !state.configured ? 'missing' : state.authentication === 'verified' ? 'verified' : 'configured', version: null,
+    detail: detail + (state.configured && state.checkedTs ? ` Checked ${state.checkedTs}.` : ''), installable: false, checkedTs };
+}
+
 const ranOk = (r: ExecResult) => !r.failed && r.code === 0;
 
 export async function detectCapabilities(): Promise<Capabilities> {
@@ -127,8 +142,7 @@ export async function probeOne(
     return { ...base, status: ok ? 'installed' : 'missing', version: null, detail: ok ? null : `${d.envVar} is not set`, installable };
   }
   if (d.via === 'connection') {
-    const ok = ctx.connectionConnected(d.connectionId);
-    return { ...base, status: ok ? 'installed' : 'missing', version: null, detail: null, installable };
+    return connectionProbe(req, ctx, checkedTs);
   }
   if (d.via === 'claude-auth') {
     const r = await exec('claude', ['auth', 'status'], 8000);

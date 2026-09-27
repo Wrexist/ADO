@@ -14,6 +14,8 @@ import { fetchSetup, probeSetup, startInstall, pollInstall } from '../lib/setup'
 
 const STATUS: Record<ReqStatus, { tone: Tone; label: string }> = {
   installed: { tone: 'success', label: 'Installed' },
+  verified: { tone: 'success', label: 'Verified recently' },
+  configured: { tone: 'warning', label: 'Configured · not verified' },
   missing: { tone: 'warning', label: 'Missing' },
   manual: { tone: 'info', label: 'Action needed' },
   unknown: { tone: 'muted', label: 'Unknown' },
@@ -230,6 +232,13 @@ export function SetupPage() {
       .catch(() => {})
       .finally(() => void refresh());
   }, [refresh]);
+
+  useEffect(() => {
+    const poll = () => { void fetchSetup().then(setResults).catch(() => {}); };
+    const timer = setInterval(poll, 15000);
+    window.addEventListener('focus', poll);
+    return () => { clearInterval(timer); window.removeEventListener('focus', poll); };
+  }, []);
 
   const byId = new Map((results ?? []).map((r) => [r.id, r]));
   const requiredTotal = REQUIREMENTS.filter((r) => r.required).length;

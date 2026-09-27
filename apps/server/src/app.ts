@@ -45,7 +45,7 @@ import { respond, execute } from './command/execute';
 import { TokenRollup } from './command/tokens';
 import { Scheduler } from './scheduler';
 import { backupDatabase } from './backup';
-import { probeAll, detectCapabilities, type ProbeContext } from './setup/probe';
+import { connectionProbe, probeAll, detectCapabilities, type ProbeContext } from './setup/probe';
 import { Installer } from './setup/install';
 import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
 import { AutomationStore } from './automations/store';
@@ -1262,10 +1262,14 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return typeof v === 'string' && v.trim().length > 0;
   };
   const probeCtx: ProbeContext = {
-    connectionConnected: (id) => connections.status(id).configured,
+    connectionStatus: (id) => connections.status(id),
     envHas,
   };
   let setupResults: ProbeResult[] = [];
+  const currentSetup = () => [
+    ...setupResults.filter((result) => REQUIREMENT_BY_ID[result.id]?.detect.via !== 'connection'),
+    ...Object.values(REQUIREMENT_BY_ID).filter((req) => req.detect.via === 'connection').map((req) => connectionProbe(req, probeCtx, new Date().toISOString())),
+  ];
   const refreshSetup = async () => {
     try {
       setupResults = await probeAll(probeCtx);
@@ -1280,12 +1284,12 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
 
   app.get('/api/setup', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
-    return { results: setupResults };
+    return { results: currentSetup() };
   });
   app.post('/api/setup/probe', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     await refreshSetup();
-    return { results: setupResults };
+    return { results: currentSetup() };
   });
   app.post('/api/setup/install', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;

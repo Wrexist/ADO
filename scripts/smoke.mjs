@@ -160,6 +160,25 @@ try {
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Connection recovery overflow');
     await page.screenshot({ path: join(out, `connection-recovery-${width}.png`), fullPage: true });
   }
+  const setupCredential = { id: 'github-token', status: 'configured', version: null, detail: 'DEMO: Credential rejected. Update it in Connections and verify again.', installable: false, checkedTs: new Date().toISOString() };
+  await page.route('**/api/setup**', (route) => route.fulfill({ json: { results: [setupCredential] } }));
+  for (const width of [1536, 390]) {
+    setupCredential.status = 'configured'; setupCredential.detail = 'DEMO: Credential rejected. Update it in Connections and verify again.';
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto(base + '/setup'); await pair();
+    await page.getByText('Configured · not verified', { exact: true }).waitFor();
+    await page.getByText('Note: ' + setupCredential.detail, { exact: true }).waitFor();
+    setupCredential.status = 'verified'; setupCredential.detail = 'DEMO: Credential accepted. Repository permissions were not checked.';
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.getByText('Verified recently', { exact: true }).waitFor();
+    setupCredential.status = 'configured'; setupCredential.detail = 'DEMO: Credential verification expired. Verify again in Connections.';
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.getByText('Configured · not verified', { exact: true }).waitFor();
+    await page.getByText('Note: ' + setupCredential.detail, { exact: true }).waitFor();
+    if (await page.getByText('Ready', { exact: true }).count()) throw new Error('Unverified setup credential shown as Ready');
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Setup authentication overflow');
+    await page.screenshot({ path: join(out, `setup-credential-expired-${width}.png`), fullPage: true });
+  }
   // Explicit API fixtures: exercise terminal process-stop UI without starting an agent.
   const runFixture = {
     id: 'demo-stop', repoId: 'demo-process-fixture', task: 'DEMO: process stop confirmation', model: 'fixture', provider: 'codex', status: 'failed',

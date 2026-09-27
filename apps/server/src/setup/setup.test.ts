@@ -6,7 +6,7 @@ import { installCommandFor } from './install';
 
 const TS = '2026-07-12T00:00:00.000Z';
 const CTX = (over: Partial<ProbeContext> = {}): ProbeContext => ({
-  connectionConnected: () => false,
+  connectionStatus: () => ({ configured: false, authentication: 'unverified', checkedTs: null }),
   envHas: () => false,
   ...over,
 });
@@ -37,7 +37,11 @@ describe('setup probe — honest detection', () => {
   });
 
   it('connection detector reflects the connections store', async () => {
-    expect((await probeOne(REQUIREMENT_BY_ID['github-token'], CTX({ connectionConnected: () => true }), TS, CAPS())).status).toBe('installed');
+    for (const authentication of ['unverified', 'rejected', 'stale', 'unsupported', 'unavailable', 'verified'] as const) {
+      const result = await probeOne(REQUIREMENT_BY_ID['github-token'], CTX({ connectionStatus: () => ({ configured: true, authentication, checkedTs: TS }) }), TS, CAPS());
+      expect(result.status).toBe(authentication === 'verified' ? 'verified' : 'configured');
+      expect(result.detail).toContain(authentication === 'verified' ? 'Repository permissions were not checked' : authentication === 'rejected' ? 'Credential rejected' : '');
+    }
     expect((await probeOne(REQUIREMENT_BY_ID['github-token'], CTX(), TS, CAPS())).status).toBe('missing');
   });
 

@@ -187,7 +187,7 @@ export const REQUIREMENTS: Requirement[] = [
     detect: { via: 'connection', connectionId: 'github' },
     install: { via: 'manual' },
     actionTo: '/settings',
-    actionLabel: 'Add on Connections',
+    actionLabel: 'Manage and verify',
     docsUrl: 'https://github.com/settings/tokens/new?scopes=repo,workflow&description=AI%20Control%20Center',
   }),
 
@@ -210,12 +210,12 @@ export const REQUIREMENTS: Requirement[] = [
     category: 'config',
     required: true,
     blurb: 'The shared secret the server and web use to talk.',
-    why: 'The server refuses to boot without it, and the web must send the same value (VITE_ACC_TOKEN) or the UI shows offline. Generate with: openssl rand -hex 24.',
+    why: 'The server requires an access key. Enter it at browser pairing; desktop supplies it through its private runtime channel. Keep it out of the web build. Generate with: openssl rand -hex 24.',
     detect: { via: 'env', envVar: 'ACC_TOKEN' },
     install: { via: 'manual' },
     commands: [
       { label: 'Generate', command: 'openssl rand -hex 24' },
-      { label: '.env (both must match)', command: 'ACC_TOKEN=<value>\nVITE_ACC_TOKEN=<same value>' },
+      { label: 'Server .env only', command: 'ACC_TOKEN=<value>' },
     ],
   }),
 ];
@@ -228,7 +228,7 @@ export const REQUIREMENT_BY_ID: Record<string, Requirement> = Object.fromEntries
 // Zod contracts (convention 2): the web client PARSES these payloads at the boundary
 // instead of as-casting, so a server-side shape drift fails loudly, never renders garbage.
 
-export const ReqStatus = z.enum(['installed', 'missing', 'manual', 'unknown']);
+export const ReqStatus = z.enum(['installed', 'verified', 'configured', 'missing', 'manual', 'unknown']);
 export type ReqStatus = z.infer<typeof ReqStatus>;
 
 export const ProbeResult = z.object({
