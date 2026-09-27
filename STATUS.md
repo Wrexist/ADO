@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Today på dator och mobil: T08 lokalt godkänt
+
+Även hela `npm run smoke` passerade, inklusive navigations-/temavyer, anslutning, desktop-runtime och uppgiftsgranskning. Slutlig separat typkontroll och lint passerade. Underlagets käll-, bygg- och bildhashar stämmer efter smoke-byggningen. Loggar: `controlos-today-ui-smoke.log`, `controlos-today-ui-final-typecheck.log` och `controlos-today-ui-final-lint.log`.
+
+Today finns nu i dator-/mobilnavigation och från Tasks & Inbox. Användaren anger tidsfönster, projekt, låst uppgift och osäkra tidsintervall. Vyn visar alternativ och bortvalsorsaker med laddnings-/genereringstid. Ändrade indata eller misslyckade anrop tar bort föregående förslag. Gamla uppgiftsversioner avvisas och uppskattningen markeras för granskning efter omladdning av planen.
+
+Ett separat syntetiskt profilprov genom produktions-API och byggd webb passerade vid 1536/390 px: 30 minuter, låst fokus, synlig osäkerhet, inget byte till högre prioritet, tids-/beroendeblockering, gammal version, tangentbordsinskickning och nätverksfel. Förslagen ändrade inte planen eller skapade körningar. Bilderna är granskade och använder DEMO-data. [Kontrakt](docs/controlos/today-planning.md), [käll-/bygg-/bildhashar](docs/controlos/today-ui-evidence.json).
+
+`npm run verify` passerade med typkontroll, lint, 412 tester i 87 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Slutprovet kördes med Chromium 153.0.8010.12. Loggar: `controlos-today-ui-verify.log` och `controlos-today-ui-probe-final.log`; bilder: `smoke-shots/today-1536.png` och `smoke-shots/today-390.png`.
+
+16/46 scenarier är nu lokalt godkända. T08 gäller sessionsbaserad manuell planering. Sparade fokus-/uppskattningsval och full miljö-/policygranskning återstår för REQ06. R1–R4 är fortsatt öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## Grund för tidsbegränsade Today-förslag
 
 Slutlig `npm run verify` passerade på Windows x64 / Node 22.18.0 / npm 11.7.0: typkontroll, lint, 412 tester i 87 filer och byggning. Logg: `controlos-today-final-verify.log`.

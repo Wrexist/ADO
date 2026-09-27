@@ -18,6 +18,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
     items: [
       { icon: 'repos', label: 'Projects', to: '/projects' },
       { icon: 'list', label: 'Tasks & Inbox', to: '/tasks' },
+      { icon: 'list', label: 'Today', to: '/today' },
       { icon: 'repos', label: 'Repositories', count: counts.repositories, to: '/repositories' },
       { icon: 'games', label: 'Games', count: counts.games, to: '/repositories?cat=game' },
       { icon: 'agents', label: 'Agents', count: counts.agents, to: '/agents' },

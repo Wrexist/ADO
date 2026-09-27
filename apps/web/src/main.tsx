@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { PortfolioPage } from './pages/PortfolioPage';
 import { PlanningPage } from './pages/PlanningPage';
+import { TodayPage } from './pages/TodayPage';
 // Self-hosted Inter (@fontsource) — must render offline; weights 400/500/600 only.
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="/repositories" element={<RepositoriesPage />} />
         <Route path="/projects" element={<PortfolioPage />} />
         <Route path="/tasks" element={<PlanningPage />} />
+        <Route path="/today" element={<TodayPage />} />
         <Route path="/repositories/:id" element={<ProjectPage />} />
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/deployments" element={<DeploymentsPage />} />

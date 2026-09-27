@@ -61,6 +61,7 @@ export function PlanningPage() {
   };
   return <PageShell title="Tasks & Inbox" subtitle="Capture ideas, define outcomes and review explicitly started runs.">
     <div className="mt-5 min-w-0 space-y-5">
+      <Link to="/today" className="block text-body text-primary">Choose a next step in Today →</Link>
       <div className="flex flex-wrap items-center gap-3"><Link className="text-body text-primary" to="/projects">Manage projects</Link><Button variant="outline" disabled={busy} onClick={() => void act(async () => { setEditing(null); setTask(emptyTask); setEditingMilestone(null); setMilestone(emptyMilestone); setPromotion(null); }, 'Planning reloaded.')}>Reload planning</Button></div>
       {error && <p role="alert" className="break-words text-body text-danger">{error}</p>}
       {message && <p role="status" className="text-body text-text2">{message}</p>}

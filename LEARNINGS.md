@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: Clear a planning proposal when its inputs change or its request fails. Keep draft estimate versions across refresh and require review after task changes; a previous successful suggestion must not imply a new request succeeded.
+
 - 2026-09-28: Time-window proposals should fit the upper user estimate and retain a locked focus even when it yields no option. Bind estimates to task versions, explain exclusions and keep proposals separate from execution eligibility.
 
 - 2026-09-28: Terminal provider evidence needs an explicit, consistent outcome and typed resource counters. Optional opaque telemetry must not make malformed result fields acceptable, even when the child exits zero.

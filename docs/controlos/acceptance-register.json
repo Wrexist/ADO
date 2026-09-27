@@ -439,15 +439,26 @@
     {
       "id": "T08",
       "title": "Begränsat tidsfönster",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R2. **Krav:** REQ06. **Status:** not_run.\n\n**Givet:** Användaren anger 30 minuter och en låst uppgift.\n\n**När:** Planeraren föreslår nästa arbete.\n\n**Godkänt endast om:** Förslaget respekterar fönstret och låset, visar osäker uppskattning och ändrar ingen kalender.\n\n**Gäller:** always.",
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R2. **Krav:** REQ06. **Status:** passed (local Windows browser evidence).\n\n**Givet:** Användaren anger 30 minuter och en låst uppgift.\n\n**När:** Planeraren föreslår nästa arbete.\n\n**Godkänt endast om:** Förslaget respekterar fönstret och låset, visar osäker uppskattning och ändrar ingen kalender.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/projects/today.ts",
         "apps/server/src/projects/todayApi.test.ts",
         "packages/shared/src/today.ts",
-        "docs/controlos/today-planning.md"
+        "docs/controlos/today-planning.md",
+        "apps/web/src/pages/TodayPage.tsx",
+        "scripts/probe-today.mts",
+        "docs/controlos/today-ui-evidence.json"
       ],
-      "coverageNote": "Read-only authenticated proposal API now uses version-bound user estimate ranges, upper-bound time-window filtering, locked focus, recorded dependency/readiness/project/attempt-lock exclusions and at most three alternatives. Production API regression checks 30-minute focus and unchanged planning/history/runs. User-facing Today, durable focus/estimates, execution environment/policy review and complete T08 remain unaccepted."
+      "coverageNote": "T08 passed for a session-scoped 30-minute manual planning focus through the production API and built renderer at 1536/390 pixels. Durable focus/estimate preferences and execution environment/policy review remain open for complete REQ06/R2.",
+      "acceptanceEvidence": {
+        "date": "2026-09-27T22:18:08.585Z",
+        "environment": "Windows x64 / Node 22.18.0 / Chromium 153.0.8010.12",
+        "command": "node --import tsx scripts/probe-today.mts",
+        "result": "Locked task respected despite higher-priority alternative; upper estimate must fit 30 minutes, uncertainty is shown, blockers and stale versions are rejected. Keyboard submit, network failure and unchanged planning/run state verified. Screenshots reviewed.",
+        "scope": "Synthetic local profile through production API and built renderer. Session-only manual planning choices. No agent, calendar, external provider, durable preferences or execution-policy acceptance.",
+        "artifactEvidence": "docs/controlos/today-ui-evidence.json"
+      }
     },
     {
       "id": "T09",

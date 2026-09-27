@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Add Today desktop/mobile UI with session focus and estimates, stale-version/error handling, timestamps, keyboard submission and a built-renderer probe through the real API; durable preferences and execution eligibility remain open.
+
 - [x] Add a read-only Today proposal API with version-bound user estimates, locked focus, eligibility exclusions and at most three explainable alternatives; UI, durable preferences and complete T08 remain open.
 
 - [x] Reject incompatible Claude terminal outcomes and counters, retain unknown absent usage, and prove exit zero cannot turn protocol failure into success; full T30 remains open.

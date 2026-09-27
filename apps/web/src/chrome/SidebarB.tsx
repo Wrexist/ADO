@@ -16,6 +16,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { icon: 'repos', label: 'Projects', to: '/projects' },
       { icon: 'list', label: 'Tasks & Inbox', to: '/tasks' },
+      { icon: 'list', label: 'Today', to: '/today' },
       { icon: 'repos', label: 'Repositories', to: '/repositories' },
       { icon: 'games', label: 'Games', to: '/repositories?cat=game' },
       { icon: 'grid', label: 'Apps', to: '/repositories?cat=app' },
