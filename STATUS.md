@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: bevara anslutningslagret vid korruption och nekad läsning
+
+Anslutningslagret kontrolleras före SQLite-start och sparar identitet/innehållshash för filen som lästes. En redan öppen instans vägrar skriva över en senare ändrad, raderad, utbytt, länkad eller oläsbar fil. Nya bytes flushas till en privat temporär fil och ursprunget kontrolleras igen före rename. Nekad uppdatering och frånkoppling bevarar även minnesvärdet. Fel visar en återställningsväg utan att återge korrupt JSON eller hemligheter. Se [lagringskontraktet](docs/controlos/native-credentials.md).
+
+T24 provas med riktig korruption och en separat PowerShell-process som håller ett exklusivt Windows-filhandtag. Serverstart nekas innan databasen skapas; efter tidigare lyckad start nekas sparning/radering via autentiserade API-anrop och filen förblir oförändrad. Upplåsning tillåter åter normal sparning. Browserprovet visar motsvarande fel efter både uppdatering och frånkoppling vid 1536/390 px; bilderna har granskats och använder DEMO-data.
+
+`npm run verify` passerade: typkontroll, lint, 353 tester i 70 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Efter klientens lilla rättning av frånkopplingsfelet passerade webbtypkontroll, riktad lint och hela `npm run smoke`. Det första browserprovet flaggade avsiktliga HTTP 400-fixtures; slutprovet räknar exakt fyra sådana svar och behåller felkontrollen för andra fel. `npm run smoke:native-profile` passerade också i fem separata Electron 44.4.5-processer. Loggar: `controlos-connection-preservation-verify.log`, `controlos-connection-web-check.log`, `controlos-connection-preservation-final-smoke.log` och `controlos-connection-native-profile.log` (ignorerade).
+
+T24 är lokalt godkänt: 13 av 46 scenarier är nu verifierade och 33 återstår. Filkontrollen är optimistisk konfliktdetektering, inte en atomisk transaktion mellan flera appinstanser eller en OS-sandbox. Full profilmigrering, installeruppdatering och övriga R1–R4-grindar är fortfarande öppna. Ingen modell, pilotagent, merge eller deploy kördes. Chunkvarningen kvarstår. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: beständig arbetskopietyp och kontroll av utbytt resultat
 
 Migration 0018 sparar nya arbetskopior som `isolated_clone` tillsammans med deras fysiska Git-identitet. Typ, identitet, sökväg, basrevision och branch låses efter registrering. Ofullständig proveniens och en isolerad kopia med originalets identitet nekas av databasen. Historiska rader får ingen gissad klassificering: API och körhistorik visar att typen inte är registrerad. Den privata identiteten lämnas inte ut av API:t.

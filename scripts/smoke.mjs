@@ -42,8 +42,10 @@ try {
   await page.getByLabel('Access key').fill('wrong'); await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: 'not accepted' }).waitFor();
   const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+  let expectedConnectionRejections = 0, observedConnectionRejections = 0;
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
+    if (message.text().includes('400') && message.location().url === `${base}/api/connections/github` && observedConnectionRejections < expectedConnectionRejections) { observedConnectionRejections++; return; }
     if (message.text().includes('409') && /\/api\/runs\/demo-stop\/(outcome|verify)$/.test(message.location().url)) return; // explicit stale-review fixtures below
     errors.push(`${message.text()} (${message.location().url.split(/[?#]/)[0] || 'inline'})`);
   });
@@ -127,13 +129,15 @@ try {
   // Credential state fixture: no real provider request or saved credential.
   const connectionFixture = { id: 'github', configured: true, authentication: 'unverified', checkedTs: null,
     verificationMessage: 'DEMO credential fixture', hint: '••••demo', updatedTs: null };
+  const connectionRecovery = 'Connection store is unreadable, invalid or changed outside this instance. Original file preserved. Close ControlOS, unlock the original file or restore a verified backup into a new profile, then reopen.';
   await page.route('**/api/connections**', async (route) => {
     if (new URL(route.request().url()).pathname.endsWith('/verify')) {
       connectionFixture.authentication = 'rejected';
       connectionFixture.checkedTs = new Date().toISOString();
       connectionFixture.verificationMessage = 'DEMO: GitHub rejected this credential.';
       await route.fulfill({ json: { status: connectionFixture } });
-    } else await route.fulfill({ json: { connections: [connectionFixture] } });
+    } else if (route.request().method() !== 'GET') { expectedConnectionRejections++; await route.fulfill({ status: 400, json: { error: connectionRecovery } }); }
+    else await route.fulfill({ json: { connections: [connectionFixture] } });
   });
   for (const width of [1536, 390]) {
     connectionFixture.authentication = 'unverified';
@@ -145,6 +149,16 @@ try {
     await page.getByText('Credential rejected', { exact: true }).waitFor();
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Credential verification mobile overflow');
     await page.screenshot({ path: join(out, `credential-rejected-${width}.png`), fullPage: true });
+    await page.locator('input[type="password"]').fill('DEMO replacement fixture');
+    await page.getByRole('button', { name: 'Update', exact: true }).click();
+    await page.getByText(connectionRecovery, { exact: true }).waitFor();
+    await Promise.all([
+      page.waitForResponse((response) => response.url() === `${base}/api/connections/github` && response.request().method() === 'DELETE' && response.status() === 400),
+      page.getByRole('button', { name: 'Disconnect', exact: true }).click(),
+    ]);
+    await page.getByText(connectionRecovery, { exact: true }).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Connection recovery overflow');
+    await page.screenshot({ path: join(out, `connection-recovery-${width}.png`), fullPage: true });
   }
   // Explicit API fixtures: exercise terminal process-stop UI without starting an agent.
   const runFixture = {
@@ -312,6 +326,7 @@ try {
   await smokePlanning(browser, base, token, out);
   await smokeTaskExecution(browser, base, token, out);
   await smokeTaskReview(browser, base, token, out);
+  if (expectedConnectionRejections !== 4 || observedConnectionRejections !== 4) throw new Error('Expected four explicit connection preservation rejections');
   if (errors.length) throw new Error(errors.join('\n'));
   console.log('Smoke passed: no bundled credential, pairing/rejection/disconnect/reload, desktop runtime access, desktop and mobile routes, process-stop fixtures and redispatch controls.');
 } finally {

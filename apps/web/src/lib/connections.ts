@@ -28,6 +28,6 @@ export async function saveConnection(id: string, value: string): Promise<Connect
 
 export async function removeConnection(id: string): Promise<ConnectionStatus> {
   const res = await fetch(`${SERVER_URL}/api/connections/${id}`, { method: 'DELETE', headers: headers() });
-  if (!res.ok) throw new Error(`remove failed (${res.status})`);
+  if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? `remove failed (${res.status})`);
   return ConnectionStatus.parse(((await res.json()) as { status: unknown }).status);
 }

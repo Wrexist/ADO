@@ -149,6 +149,36 @@ function reviewFixTask(review: AutoReview, findingIdx?: number): string {
 }
 
 export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServer> {
+  // Secrets store: stored keys override .env; secrets never leave the server.
+  const ENV_FALLBACK: Record<string, string> = {
+    github: 'GITHUB_TOKEN',
+    gitlab: 'GITLAB_TOKEN',
+    anthropic: 'ANTHROPIC_API_KEY',
+    openai: 'OPENAI_API_KEY',
+    google: 'GOOGLE_API_KEY',
+    mistral: 'MISTRAL_API_KEY',
+    xai: 'XAI_API_KEY',
+    groq: 'GROQ_API_KEY',
+    openrouter: 'OPENROUTER_API_KEY',
+    huggingface: 'HUGGINGFACE_TOKEN',
+    supabase: 'SUPABASE_ACCESS_TOKEN',
+    vercel: 'VERCEL_TOKEN',
+    netlify: 'NETLIFY_TOKEN',
+    cloudflare: 'CLOUDFLARE_API_TOKEN',
+    figma: 'FIGMA_TOKEN',
+    sentry: 'SENTRY_AUTH_TOKEN',
+    stripe: 'STRIPE_SECRET_KEY',
+  };
+  const connectionsPath =
+    env.dbPath === ':memory:'
+      ? join(tmpdir(), `acc-conn-${process.pid}.json`)
+      : join(dirname(env.dbPath), 'connections.json');
+  const connections = new ConnectionsStore(connectionsPath, (id) => {
+    const key = ENV_FALLBACK[id];
+    return key ? process.env[key] : undefined;
+  }, deps.secretCodec);
+
+
   const { db, sqlite } = openDb(env.dbPath);
   // The SSE token rides the URL (`/events?token=…`) because EventSource can't set headers,
   // and the default logger serializes req.url — writing the shared secret to the log file.
@@ -276,35 +306,6 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     seedDemo(bus);
     app.log.info('demo seed applied (deterministic fixture events)');
   }
-
-  // Secrets store: stored keys override .env; secrets never leave the server.
-  const ENV_FALLBACK: Record<string, string> = {
-    github: 'GITHUB_TOKEN',
-    gitlab: 'GITLAB_TOKEN',
-    anthropic: 'ANTHROPIC_API_KEY',
-    openai: 'OPENAI_API_KEY',
-    google: 'GOOGLE_API_KEY',
-    mistral: 'MISTRAL_API_KEY',
-    xai: 'XAI_API_KEY',
-    groq: 'GROQ_API_KEY',
-    openrouter: 'OPENROUTER_API_KEY',
-    huggingface: 'HUGGINGFACE_TOKEN',
-    supabase: 'SUPABASE_ACCESS_TOKEN',
-    vercel: 'VERCEL_TOKEN',
-    netlify: 'NETLIFY_TOKEN',
-    cloudflare: 'CLOUDFLARE_API_TOKEN',
-    figma: 'FIGMA_TOKEN',
-    sentry: 'SENTRY_AUTH_TOKEN',
-    stripe: 'STRIPE_SECRET_KEY',
-  };
-  const connectionsPath =
-    env.dbPath === ':memory:'
-      ? join(tmpdir(), `acc-conn-${process.pid}.json`)
-      : join(dirname(env.dbPath), 'connections.json');
-  const connections = new ConnectionsStore(connectionsPath, (id) => {
-    const key = ENV_FALLBACK[id];
-    return key ? process.env[key] : undefined;
-  }, deps.secretCodec);
 
   // Self-diagnosis: capture failures, ask the AI (or a heuristic offline) WHY they happened,
   // and stream both through the bus. The diagnoser reserves the top model for this debugging
@@ -1045,7 +1046,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   app.delete('/api/connections/:id', async (req, reply) => {
     const id = (req.params as { id: string }).id;
     if (!CONNECTOR_BY_ID[id]) return reply.code(404).send({ error: 'unknown connector' });
-    connections.remove(id);
+    try { connections.remove(id); }
+    catch (error) { return reply.code(400).send({ error: (error as Error).message }); }
     if (id === 'github') startGithub();
     return { status: connections.status(id) };
   });

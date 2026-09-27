@@ -6,7 +6,7 @@
  * Resolution order for any integration: stored value → .env fallback. So existing .env
  * keys keep working, and the Settings page overrides them per-connector.
  */
-import { readJsonStore, writeJsonStore } from '../lib/jsonStore';
+import { ConnectionFile } from './file';
 import { CONNECTOR_BY_ID, type ConnectionStatus } from '@ado/shared';
 import { createHash } from 'node:crypto';
 
@@ -24,22 +24,24 @@ interface StoredConn {
 }
 
 export class ConnectionsStore {
+  private file: ConnectionFile;
   private data: Record<string, StoredConn> = {};
   private checks = new Map<string, { fingerprint: string; at: number; state: ConnectionStatus['authentication']; message: string }>();
   private revisions = new Map<string, number>();
 
   constructor(
-    private filePath: string,
+    filePath: string,
     private envFallback: (id: string) => string | undefined = () => undefined,
     private codec?: SecretCodec,
     private fetchImpl: typeof fetch = fetch,
     private now: () => number = Date.now,
   ) {
+    this.file = new ConnectionFile(filePath);
     this.load();
   }
 
   private load(): void {
-    const rows = readJsonStore(this.filePath) ?? {};
+    const rows = this.file.read();
     const decoded: Record<string, StoredConn> = {};
     let needsMigration = false;
     for (const [id, row] of Object.entries(rows)) {
@@ -65,7 +67,7 @@ export class ConnectionsStore {
       if (this.codec.decrypt(value) !== row.value) throw new Error('Credential encryption round-trip failed; original store preserved');
       return [id, { ...row, value, encoding: this.codec.id }];
     }));
-    writeJsonStore(this.filePath, encoded);
+    this.file.write(encoded);
   }
 
   /** The value an integration should use: stored wins, else .env fallback. */

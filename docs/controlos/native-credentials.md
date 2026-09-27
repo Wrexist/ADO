@@ -22,6 +22,24 @@ publication. Token bytes are flushed before rename. The two files migrate
 independently, so interruption between them is safe to resume. Empty, malformed,
 unreadable or undecryptable files stop startup instead of silently resetting.
 
+Connection-file preservation now also applies after startup. The store remembers
+the physical file identity and content hash it loaded or last wrote. Before
+publication it reads the current file through an identified handle and refuses
+changed, missing, replaced, linked or unreadable files. New bytes are flushed to
+a private sibling temporary file and the baseline is checked again before rename.
+A failed save leaves the in-memory credential unchanged. Startup checks the
+connection store before opening/migrating SQLite. Save and disconnect API errors
+return a recovery message without echoing corrupt JSON or credential bytes.
+
+This is optimistic conflict detection, not a filesystem transaction across
+multiple app instances. Same-user changes in the final check/rename window are
+not excluded. Close other instances before editing or migrating the profile.
+`connections/preservation.test.ts` covers startup refusal, an authenticated API
+save/disconnect after corruption, deleted/replaced/linked files, and a real Windows
+exclusive file handle denying reads. Browser fixtures exercise the recovery
+message at desktop/mobile widths; the native credential probe checks that the
+preservation guard still permits supported DPAPI migration and reopening.
+
 An already lost Electron profile key cannot be reconstructed by this migration.
 Preserve the affected profile and use a verified backup in a separate profile;
 credentials may need to be re-entered. DPAPI requires the original Windows user
