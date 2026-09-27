@@ -108,3 +108,27 @@ is empty but before the supervisor finishes its own cleanup. Windows may still
 hold that directory open in this interval. Asynchronous bounded cleanup retries
 preserve any original test error alongside a cleanup error; a valid agent-stop
 receipt alone is not used as proof that the supervisor has exited.
+
+## Adapter failure before returning a handle
+
+The runner marks process outcome uncertain **before** calling `Spawner.spawn`.
+A synchronous exception may occur after process creation, so it does not release
+the repository writer lock. The capacity slot is released; unrelated repositories
+can proceed. The failed run stores `processTermination=unconfirmed`. Restart also
+records that state for an interrupted versioned run whose identity was never
+persisted, while retaining its lock and refusing automatic replacement.
+
+`ProcessNotStartedError` is reserved for synchronous preflight that has not
+attempted OS process creation: missing provider executable resolution, invalid
+absolute executable/host configuration, or failure to prepare the receipt directory.
+These known refusals can release ownership. Adapters must not wrap arbitrary spawn,
+protocol, stream or cleanup failures in that class. Verification applies the same
+distinction and records `not_started` only for a definitive preflight refusal.
+
+`runner/spawnFailure.test.ts` starts a real Node writer and deliberately throws
+before returning its handle. The same-repository job remains queued while an
+independent repository runs, and reopening the profile preserves the quarantine.
+Even after the test stops its own live handle, production recovery refuses to infer
+safe unlock from a PID or missing in-memory handle. This does not close the native
+launch window before a durable identity/reservation exists; that case can still
+require retained quarantine rather than automatic recovery.

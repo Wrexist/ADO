@@ -6,6 +6,7 @@ import { runs } from '../db/schema';
 import { parseStreamLine } from './adapter';
 import { Runner } from './index';
 import type { SpawnHandle, SpawnOpts, Spawner } from './spawner';
+import { ProcessNotStartedError } from '../lib/processLaunch';
 
 describe('stream-json adapter (council B5)', () => {
   it('normalizes known line shapes', () => {
@@ -243,7 +244,7 @@ describe('runner (Prompts 3.1–3.2)', () => {
     sqlite.close();
   });
 
-  it('a throw inside run() releases the slot and drains the queue (no wedge)', async () => {
+  it('a confirmed preflight failure releases the slot and repository for the next job', async () => {
     const { db, sqlite } = openDb(':memory:');
     const bus = new Bus(db);
     // First spawn throws; the second works. With maxConcurrent=1, the second only runs
@@ -252,7 +253,7 @@ describe('runner (Prompts 3.1–3.2)', () => {
     const flaky: Spawner = {
       spawn(): SpawnHandle {
         calls++;
-        if (calls === 1) throw new Error('spawn boom');
+        if (calls === 1) throw new ProcessNotStartedError('preflight refused before process creation');
         async function* gen() { for (const l of SUCCESS_STREAM) yield l; }
         return { lines: gen(), done: Promise.resolve(0), kill: () => {} };
       },

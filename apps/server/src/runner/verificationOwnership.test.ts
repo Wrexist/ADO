@@ -15,6 +15,7 @@ import { Bus } from '../bus';
 import { Runner } from './index';
 import type { ProcessIdentity } from '../lib/ownedProcess';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
+import { ProcessNotStartedError } from '../lib/processLaunch';
 
 async function fixture(script = 'console.log("verification completed")') {
   const root = mkdtempSync(join(tmpdir(), 'controlos-verify-owner-')), repo = join(root, 'repo'); mkdirSync(repo);
@@ -80,6 +81,17 @@ it('retains the lock if spawning throws with an uncertain outcome', async () => 
     await expect(verifier.verify('result')).rejects.toThrow('lost process channel');
     expect(h.db.select().from(verificationAttempts).get()).toMatchObject({ status: 'termination_unconfirmed', processTermination: 'unconfirmed' });
     expect(h.db.select().from(executionLocks).all()).toHaveLength(1);
+    expect(h.db.select().from(verificationEvidence).all()).toEqual([]);
+  } finally { h.close(); }
+});
+
+it('releases verification ownership for a classified refusal before process creation', async () => {
+  const h = await fixture();
+  try {
+    const verifier = new Verifier(h.db, () => [], undefined, { spawn() { throw new ProcessNotStartedError('preflight refusal'); } });
+    await expect(verifier.verify('result')).rejects.toThrow('preflight refusal');
+    expect(h.db.select().from(verificationAttempts).get()).toMatchObject({ status: 'failed', processTermination: 'not_started' });
+    expect(h.db.select().from(executionLocks).all()).toEqual([]);
     expect(h.db.select().from(verificationEvidence).all()).toEqual([]);
   } finally { h.close(); }
 });

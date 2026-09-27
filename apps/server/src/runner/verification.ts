@@ -8,6 +8,7 @@ import { workspaceEvidence } from './workspace';
 import { spawnOwned, type OwnedProcess } from '../lib/ownedProcess';
 import { boundedDiagnostics } from '../lib/processOutput';
 import { VerificationOwnership } from './verificationOwnership';
+import { ProcessNotStartedError } from '../lib/processLaunch';
 import { ApprovalStore, type AcceptanceBinding } from './approvals';
 import { TaskAcceptanceRequest, TaskReviewRequest } from '@ado/shared';
 import { TaskReviewStore, type TaskCriterionBinding } from './taskReview';
@@ -195,8 +196,9 @@ export class Verifier {
       if (proc && !settled) { proc.kill(); await proc.done.catch(() => {}); }
       if (attemptId) {
         const confirmed = Boolean(proc?.terminationConfirmed());
-        const release = !spawned || confirmed || (process.platform !== 'win32' && settled);
-        this.db.transaction(() => this.ownership.finish(attemptId!, release ? 'failed' : 'termination_unconfirmed', !spawned ? 'not_started' : confirmed ? 'confirmed' : settled && process.platform !== 'win32' ? 'root_exited' : 'unconfirmed', release, 'Verification did not produce accepted evidence'));
+        const notStarted = !spawned || (!proc && error instanceof ProcessNotStartedError);
+        const release = notStarted || confirmed || (process.platform !== 'win32' && settled);
+        this.db.transaction(() => this.ownership.finish(attemptId!, release ? 'failed' : 'termination_unconfirmed', notStarted ? 'not_started' : confirmed ? 'confirmed' : settled && process.platform !== 'win32' ? 'root_exited' : 'unconfirmed', release, 'Verification did not produce accepted evidence'));
         finished = release;
       }
       throw error;

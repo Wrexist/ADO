@@ -1,6 +1,7 @@
 import { execFile, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { delimiter, join, isAbsolute } from 'node:path';
+import { ProcessNotStartedError } from './processLaunch';
 
 const active = new Map<ChildProcess, { kill: () => void; done: Promise<void> }>();
 
@@ -24,7 +25,7 @@ export function commandFor(command: string, args: string[]): { command: string; 
     const entry = command === 'claude' ? join(dir, 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js') : join(dir, 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
     if (isAbsolute(entry) && existsSync(entry)) return { command: process.execPath, args: [entry, ...args] };
   }
-  throw new Error(`${command} was not found. Install its native CLI or npm package, then restart ControlOS.`);
+  throw new ProcessNotStartedError(`${command} was not found. Install its native CLI or npm package, then restart ControlOS.`);
 }
 
 /** Each POSIX child owns a process group; Windows taskkill targets only its PID tree. */

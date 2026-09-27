@@ -31,6 +31,8 @@ export interface SpawnHandle {
 }
 
 export interface Spawner {
+  /** A synchronous exception is an unknown process outcome unless preflight
+   * explicitly throws ProcessNotStartedError before attempting process creation. */
   spawn(opts: SpawnOpts): SpawnHandle;
 }
 

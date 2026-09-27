@@ -96,6 +96,19 @@ describe('durable execution', () => {
     expect(db.select().from(executionLocks).all()).toHaveLength(0);
     await runner.stop(); sqlite.close();
   });
+  it('persists unknown stop after a crash before process identity was written', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const ts = new Date().toISOString();
+    db.insert(runs).values({ id: 'pre-identity', repoId: 'a', task: 'interrupted', model: 'default', status: 'running', startedTs: ts, engineVersion: 1 }).run();
+    db.insert(executionLocks).values({ resource: 'old-resource', runId: 'pre-identity', owner: 'previous-owner', acquiredTs: ts }).run();
+    const runner = new Runner(new Bus(db), db, { spawn() { throw new Error('Interrupted attempts must never be retried'); } }, { cwdFor: () => '/repos/a' });
+    try {
+      expect(runner.reconcileOrphans()).toBe(1);
+      expect(db.select().from(runs).get()).toMatchObject({ status: 'failed', processIdentity: null, processTermination: 'unconfirmed' });
+      expect(db.select().from(executionLocks).all()).toHaveLength(1);
+      expect(runner.reconcileRun('pre-identity')).toBe(false);
+    } finally { await runner.stop(); sqlite.close(); }
+  });
   it('retains an uncertain writer lock and lets unrelated repos proceed', async () => {
     const { db, sqlite } = openDb(':memory:');
     const root = process.platform === 'win32' ? 'c:/repos/a' : '/repos/a';

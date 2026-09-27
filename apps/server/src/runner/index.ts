@@ -23,6 +23,7 @@ import { redact } from '../lib/redact';
 import { prepareWorkspace, workspaceEvidence } from './workspace';
 import { readTerminationReceipt } from '../lib/terminationReceipt';
 import { verificationBlocks } from './verificationOwnership';
+import { ProcessNotStartedError } from '../lib/processLaunch';
 
 export interface DispatchInput {
   repoId: string;
@@ -118,7 +119,10 @@ export class Runner {
         if (!this.queue.some((q) => q.id === o.id)) this.queue.push({ id: o.id, input: { repoId: o.repoId, task: o.task, model: o.model === 'default' ? undefined : o.model, provider: o.provider } });
         continue;
       }
-      this.failRun(o.id, { repoId: o.repoId, task: o.task, model: o.model === 'default' ? undefined : o.model, provider: o.provider }, null, o.engineVersion === 1 ? 'interrupted; previous process outcome unknown; writer lock retained' : 'orphaned on boot');
+      // A crash before identity persistence is still an unknown process outcome.
+      // Persist that uncertainty so the UI does not mistake missing metadata for
+      // an ordinary terminal run without a retained writer.
+      this.failRun(o.id, { repoId: o.repoId, task: o.task, model: o.model === 'default' ? undefined : o.model, provider: o.provider }, null, o.engineVersion === 1 ? 'interrupted; previous process outcome unknown; writer lock retained' : 'orphaned on boot', o.engineVersion === 1);
     }
     for (const lock of this.db.select().from(executionLocks).all()) this.recoverReceipt(lock.runId);
     this.drainNext();
@@ -356,7 +360,7 @@ export class Runner {
   }
 
   /** Mark a run failed end-to-end (DB + build + agent). Best-effort; never throws. */
-  private failRun(runId: string, input: DispatchInput, startedMs: number | null, reason: string): void {
+  private failRun(runId: string, input: DispatchInput, startedMs: number | null, reason: string, outcomeUnknown = false): void {
     try {
       const changed = this.bus.commit((tx) => {
         const current = tx.select().from(runs).where(eq(runs.id, runId)).get();
@@ -369,7 +373,7 @@ export class Runner {
           durationMs: startedMs ? Date.now() - startedMs : null,
           note: redact(reason, this.opts.secrets?.()).slice(0, 200),
           diagnostics: this.handles.get(runId)?.diagnostics ? redact(this.handles.get(runId)!.diagnostics!(), this.opts.secrets?.()).slice(-4000) : null,
-          processTermination: this.handles.get(runId)?.terminationConfirmed?.() ? 'confirmed' : this.unconfirmedProcesses.has(runId) ? 'unconfirmed' : undefined,
+          processTermination: this.handles.get(runId)?.terminationConfirmed?.() ? 'confirmed' : outcomeUnknown || this.unconfirmedProcesses.has(runId) ? 'unconfirmed' : undefined,
         })
         .where(eq(runs.id, runId))
         .run();
@@ -458,21 +462,29 @@ export class Runner {
       });
     const upsertAgent = (status: 'running' | 'done' | 'failed', pct: number | null) => this.bus.publish(agentEvent(status, pct));
 
-    this.record(runId, 'status', 'Spawned');
+    this.record(runId, 'status', 'Process launch requested');
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
     upsertAgent('running', null);
 
-    const handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot, secrets: this.opts.secrets?.(),
-      onProcessIdentity: (identity) => {
-        this.assertTaskCanRun(runId, input.repoId, originalCwd);
-        const saved = this.db.update(runs).set({ processIdentity: JSON.stringify(identity), processTermination: 'unconfirmed' })
-          .where(and(eq(runs.id, runId), eq(runs.status, 'running'))).run();
-        if (saved.changes !== 1) throw new Error('Process identity could not be recorded');
-        return !this.stopped && !this.killed.has(runId) && !this.opts.blockedReason?.(input.repoId);
-      },
-    });
-    this.handles.set(runId, handle);
+    // An adapter can create a process and then throw before returning its handle.
+    // Capacity may be released on failure; repository ownership may not.
     this.unconfirmedProcesses.add(runId);
+    let handle: SpawnHandle;
+    try {
+      handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot, secrets: this.opts.secrets?.(),
+        onProcessIdentity: (identity) => {
+          this.assertTaskCanRun(runId, input.repoId, originalCwd);
+          const saved = this.db.update(runs).set({ processIdentity: JSON.stringify(identity), processTermination: 'unconfirmed' })
+            .where(and(eq(runs.id, runId), eq(runs.status, 'running'))).run();
+          if (saved.changes !== 1) throw new Error('Process identity could not be recorded');
+          return !this.stopped && !this.killed.has(runId) && !this.opts.blockedReason?.(input.repoId);
+        },
+      });
+    } catch (error) {
+      if (error instanceof ProcessNotStartedError) this.unconfirmedProcesses.delete(runId);
+      throw error;
+    }
+    this.handles.set(runId, handle);
     const processDone = handle.done.then((code) => {
       this.unconfirmedProcesses.delete(runId);
       return code;

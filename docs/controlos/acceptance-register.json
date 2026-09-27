@@ -305,7 +305,7 @@
           "apps/server/src/runner/taskExecution.ts": "e1bf687e4f15b04f194225994ea8536da38e1187cb2878f64d5c6a034d2e91f8",
           "apps/server/src/runner/taskExecutionApi.test.ts": "56f247db96cd4bcf566aed64a44e01329bcdb5ae3cc5ffd7d869f602981572f2",
           "apps/server/src/runner/taskExecution.test.ts": "b3bf3edcee002ec71b933447734f45c5b286e267ed8bff6ac86d99b6f12e653b",
-          "apps/server/src/runner/index.ts": "a83e398e65e6e36f6e6046815557b9e1672f637449a1917c562a070e5af454b4",
+          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
           "apps/server/src/runner/workspace.ts": "735cd32b7729206f58fc08acd6c4c6b0e994af65b07bff5be93558382e1c88a0",
           "apps/server/src/projects/checkoutIdentity.ts": "d84e47e4b798f80e916d9367e7ff626437ed66a266c03e1f368c56795bbaccd2",
           "apps/server/src/projects/registry.ts": "5b1d98bd7d00c65f9a74b6025ea961a67c2c6e1d02fcd6c2f8b66fed2e00f132",
@@ -318,7 +318,14 @@
           "scripts/smoke.mjs": "9216bfca21605d02e42a220cd0269bbe78f46b1bf8384f7211e412f6fd41b80f",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "8dc5a402ba9862e6c10c74e6284a1002d418b0f91c274536723c8052d44144ea",
-          "apps/server/src/runner/verificationOwnership.test.ts": "398af974e250c3f092b25b830ad75baf3c5d72272aebd57adac9a45cf670d038"
+          "apps/server/src/runner/verificationOwnership.test.ts": "2916550cca3553471a77f9ae47e5337743e080c1b6b9149f19653c444943479a",
+          "apps/server/src/lib/processLaunch.ts": "70c06bf0a65a5ac2948868a0ef4e1b7be14d41841a845dc577f7b3ecc25c4f59"
+        },
+        "revalidation": {
+          "date": "2026-09-27",
+          "command": "npm run verify",
+          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
         }
       }
     },
@@ -351,12 +358,12 @@
           "apps/server/drizzle/0013_task_reviews.sql": "850646bb51cc28f3ecd30d22139116bc5a9fffc7acb6e0df4a10c0b7fc745886",
           "apps/server/drizzle/meta/_journal.json": "14041d9d77b66c4124363c6be1e90e9d862cdbe857aba0d1fc2a389d26699932",
           "apps/server/src/db/schema.ts": "f00d5cc7ff5aa9d5f679c6bcdc4fb0e225718278c77cf1c9f7ea1a164993e552",
-          "apps/server/src/runner/verification.ts": "2561d224328b77ede58f88b05e53dd135aeb2d6a1e0eea6107960788e25c9349",
+          "apps/server/src/runner/verification.ts": "75d740031677b980648f48299944d57aa1cca2cb5b3fc183b78307427d016230",
           "apps/server/src/runner/approvals.ts": "075afdf5e6b078bce8fc4da8a93cd252f14eb77e7d19afc37c823cd060b89e5d",
           "apps/server/src/runner/taskReview.ts": "9ce2e48c6a29812ae9015bf761fe7582198b234e6cfd292701f8ff6d58c1a905",
           "apps/server/src/runner/taskReviewApi.test.ts": "0990bdc372662b35472afa16401dff06b7ad95bf8623d1048a9bb9a8325443d9",
           "apps/server/src/runner/taskReviewMigration.test.ts": "efb231baa436d6bb624d0922585a5196f9af2fdc485c83f876db146aeef69895",
-          "apps/server/src/runner/index.ts": "a83e398e65e6e36f6e6046815557b9e1672f637449a1917c562a070e5af454b4",
+          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
           "apps/server/src/projects/planning.ts": "f7a7c256ea47315f7bf006d84d0d0b106510f820c44e16907f06f9beae562699",
           "apps/server/src/app.ts": "8fb0371dc4e49951321be8530afed9f92096d00478d3ae6e2d0edffa550067bc",
           "packages/shared/src/planning.ts": "fdfa16c97f74f1cba395d3a54bce0f57b851c2c195d57de4c3bd080fa31d6bba",
@@ -370,8 +377,15 @@
           "apps/web/src/pages/TaskReopeningPanel.tsx": "8df0db1c514ac42e3fa19ce32b8a00f64614402af0a3388c26508492d185479c",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "8dc5a402ba9862e6c10c74e6284a1002d418b0f91c274536723c8052d44144ea",
-          "apps/server/src/runner/verificationOwnership.test.ts": "398af974e250c3f092b25b830ad75baf3c5d72272aebd57adac9a45cf670d038",
-          "apps/server/src/runner/verification.test.ts": "1e78dee57b9376895174ee8ffc57afda8dbba5da24f4682f53286f146b7db7f5"
+          "apps/server/src/runner/verificationOwnership.test.ts": "2916550cca3553471a77f9ae47e5337743e080c1b6b9149f19653c444943479a",
+          "apps/server/src/runner/verification.test.ts": "1e78dee57b9376895174ee8ffc57afda8dbba5da24f4682f53286f146b7db7f5",
+          "apps/server/src/lib/processLaunch.ts": "70c06bf0a65a5ac2948868a0ef4e1b7be14d41841a845dc577f7b3ecc25c4f59"
+        },
+        "revalidation": {
+          "date": "2026-09-27",
+          "command": "npm run verify",
+          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
         }
       }
     },
@@ -401,6 +415,12 @@
           "apps/server/src/app.ts": "8fb0371dc4e49951321be8530afed9f92096d00478d3ae6e2d0edffa550067bc",
           "apps/web/src/pages/PlanningPage.tsx": "4f7a03d1bdd17556dc2aa8cf6b92e6da2f7195a428971356abbd7302ec2e6121",
           "scripts/smoke-planning.mjs": "9eab7b15f2a4aae7ff3478db32b4688a03d36366cf8d12025d7aa66a24d8a3ae"
+        },
+        "revalidation": {
+          "date": "2026-09-27",
+          "command": "npm run verify",
+          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
         }
       }
     },
@@ -437,7 +457,9 @@
         "apps/server/src/runner/lifecycle.test.ts",
         "apps/server/src/runner/recovery.test.ts",
         "apps/server/src/runner/verificationOwnership.test.ts",
-        "docs/controlos/verification-processes.md"
+        "docs/controlos/verification-processes.md",
+        "apps/server/src/runner/spawnFailure.test.ts",
+        "apps/server/src/lib/processLaunch.test.ts"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },
@@ -478,7 +500,9 @@
         "apps/server/src/lib/terminationReceipt.test.ts",
         "docs/controlos/native-process-host.md",
         "apps/server/src/runner/verificationOwnership.test.ts",
-        "docs/controlos/verification-processes.md"
+        "docs/controlos/verification-processes.md",
+        "apps/server/src/runner/spawnFailure.test.ts",
+        "apps/server/src/lib/processLaunch.test.ts"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified.",
       "evidenceLimit": "Local Windows protocol-v2 receipt recovery and transaction rollback tested. Stale identity with a live unrelated PID is injected metadata, not forced OS PID recycling. Full scenario status remains unchanged."
@@ -528,13 +552,20 @@
         "nativeArtifactSha256": "467dae76f64bee0e3f1771f1427dc8376ea409f87ed812dc113e7d0c48475b1e",
         "sourceSha256": {
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
+          "apps/server/src/lib/ownedProcess.ts": "986d1a4b8bcb6f67625e2c6c90625080bba36ccf2ea0129d0dfc840d8f5aa29e",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "a83e398e65e6e36f6e6046815557b9e1672f637449a1917c562a070e5af454b4",
+          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
           "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "8dc5a402ba9862e6c10c74e6284a1002d418b0f91c274536723c8052d44144ea",
-          "apps/server/src/runner/verificationOwnership.test.ts": "398af974e250c3f092b25b830ad75baf3c5d72272aebd57adac9a45cf670d038"
+          "apps/server/src/runner/verificationOwnership.test.ts": "2916550cca3553471a77f9ae47e5337743e080c1b6b9149f19653c444943479a",
+          "apps/server/src/lib/processLaunch.ts": "70c06bf0a65a5ac2948868a0ef4e1b7be14d41841a845dc577f7b3ecc25c4f59"
+        },
+        "revalidation": {
+          "date": "2026-09-27",
+          "command": "npm run verify",
+          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
         }
       }
     },
@@ -573,15 +604,22 @@
           "apps/server/src/lib/redact.ts": "e81dee7a1ce9328c9985cbe10b50406e69b6d069854fc56ddd8d9c38c70c377a",
           "apps/server/src/runner/outputFlood.test.ts": "c97637e8167a356d1fd413bb019573a1ac2ae9f1a6e6e42f8298f3ae9ed4ad4e",
           "apps/server/src/runner/codex.test.ts": "50f8a3f42f1033ded56733a17a791fcd5c02dbb450afd1f5bef59c83d34270c5",
-          "apps/server/src/runner/spawner.ts": "178a51ae136e1d9750a591b2a98f1bc15c6dc7b9a90827381c3248003da5c22b",
+          "apps/server/src/runner/spawner.ts": "6c216be8c7b73004c8fdb2ca3fe0335dcfda8d310e310e7d9d09609906544008",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "a83e398e65e6e36f6e6046815557b9e1672f637449a1917c562a070e5af454b4",
-          "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
+          "apps/server/src/runner/index.ts": "655ed209b5c3e41ccd207bc2fcf2b4ac9b77c43811e21c363e9a3aa1d3b059f4",
+          "apps/server/src/lib/ownedProcess.ts": "986d1a4b8bcb6f67625e2c6c90625080bba36ccf2ea0129d0dfc840d8f5aa29e",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "scripts/smoke.mjs": "9216bfca21605d02e42a220cd0269bbe78f46b1bf8384f7211e412f6fd41b80f",
           "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
           "apps/server/src/runner/verificationOwnership.ts": "8dc5a402ba9862e6c10c74e6284a1002d418b0f91c274536723c8052d44144ea",
-          "apps/server/src/runner/verificationOwnership.test.ts": "398af974e250c3f092b25b830ad75baf3c5d72272aebd57adac9a45cf670d038"
+          "apps/server/src/runner/verificationOwnership.test.ts": "2916550cca3553471a77f9ae47e5337743e080c1b6b9149f19653c444943479a",
+          "apps/server/src/lib/processLaunch.ts": "70c06bf0a65a5ac2948868a0ef4e1b7be14d41841a845dc577f7b3ecc25c4f59"
+        },
+        "revalidation": {
+          "date": "2026-09-27",
+          "command": "npm run verify",
+          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
         }
       }
     },
@@ -797,6 +835,12 @@
           "apps/server/src/app.ts": "8fb0371dc4e49951321be8530afed9f92096d00478d3ae6e2d0edffa550067bc",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
+        },
+        "revalidation": {
+          "date": "2026-09-27",
+          "command": "npm run verify",
+          "result": "Typecheck, lint, 340 tests in 65 files and build passed on Windows x64 / Node 22.18.0 / npm 11.7.0.",
+          "browser": "Browser sources unchanged; most recent full desktop/mobile smoke is recorded at f4e4221."
         }
       }
     },

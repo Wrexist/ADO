@@ -5,6 +5,7 @@ import { createServer, type Socket } from 'node:net';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { processEnv, supervise } from './processControl';
+import { ProcessNotStartedError } from './processLaunch';
 
 export interface ProcessIdentity {
   version: 2;
@@ -39,17 +40,21 @@ export function spawnOwned(command: string, args: string[], cwd: string, onIdent
     void done.catch(() => {});
     return { child, done, kill, terminationConfirmed: () => false };
   }
-  if (!isAbsolute(command)) throw new Error('Windows owned processes require an absolute executable path');
+  if (!isAbsolute(command)) throw new ProcessNotStartedError('Windows owned processes require an absolute executable path');
   const id = randomUUID();
   let receiptPath: string | undefined;
   const receiptKey = receiptRoot ? randomBytes(32).toString('hex') : undefined;
   if (receiptRoot) {
-    mkdirSync(receiptRoot, { recursive: true, mode: 0o700 });
-    receiptPath = join(realpathSync(receiptRoot), `${id}.json`);
+    try {
+      mkdirSync(receiptRoot, { recursive: true, mode: 0o700 });
+      receiptPath = join(realpathSync(receiptRoot), `${id}.json`);
+    } catch (error) {
+      throw new ProcessNotStartedError('Process receipt directory could not be prepared', { cause: error });
+    }
   }
   const pipeName = `controlos-${id}`;
   const host = process.env.ACC_PROCESS_HOST ?? fileURLToPath(new URL('../../native/dist/ControlOS.JobHost.exe', import.meta.url));
-  if (!isAbsolute(host)) throw new Error('Windows process host path must be absolute');
+  if (!isAbsolute(host)) throw new ProcessNotStartedError('Windows process host path must be absolute');
   let socket: Socket | undefined;
   let prepared = false;
   let acknowledged = false;

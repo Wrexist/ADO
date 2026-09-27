@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: osäkert adapterfel före returnerat processhandtag
+
+Agentmotorn markerar nu processutfallet som osäkert före anropet till processadaptern. Om adaptern skapar en process och sedan kastar ett fel behålls det beständiga repolåset, även om motorn aldrig fick processhandtaget. Körkapaciteten frigörs för andra repon. Vid omstart får även avbrutna körningar utan sparad processidentitet uttrycklig status `unconfirmed`; avsaknad av metadata räknas inte som stoppbevis.
+
+Endast ett uttryckligt `ProcessNotStartedError` från förkontroll före OS-processkapande får frigöra ägarskapet direkt. Klassen används för saknad providerexekverbar, ogiltiga absoluta körvägar och fel när kvittokatalogen förbereds. Vanliga adapter-, spawn-, protokoll- och strömfel får inte klassas om till detta. Verifieraren använder samma åtskillnad. Se [processkontraktet](docs/controlos/native-process-host.md).
+
+`npm run verify` passerade: typkontroll, lint, 340 tester i 65 filer och byggning på Windows x64, Node 22.18.0/npm 11.7.0. Ett nytt prov startar en riktig Node-process och kastar bort handtaget: nästa uppdrag i samma repo väntar, ett oberoende repo körs och återöppnad databas behåller karantänen. Även när testet stoppar sin egen process vägrar produktens återhämtning att gissa utifrån PID eller saknat handtag. Förkontrollfallen och återhämtning före sparad identitet provas separat. Loggar: `controlos-spawn-boundary-focused.log` och `controlos-spawn-boundary-verify.log` (ignorerade). Browservyerna är oförändrade; senaste fulla browserprovet hör till `f4e4221`.
+
+6 av 46 fullständiga acceptansscenarier är fortfarande lokalt godkända. Nästa R1-kontroll gäller kö- och kraschmatrisen: vänteskäl, oregistrerade syskon-worktrees och atomisk lagring av agentens synliga terminalstatus även i felvägen. Native-fönstret före beständig processidentitet/reservation kan fortfarande lämna karantän; ingen automatisk upplåsning eller full R1–R4-grind påstås vara klar. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: beständigt ägarskap för verifieringsprocesser
 
 Verifieringskommandon tar nu beständiga repolås före förkontroll och spawn. Varje försök sparar oföränderligt mål, kommando och processidentitet. Agentkö och verifierare delar spärren för registrerade repon, fysiska Git-kataloger, syskon-worktrees och befintliga GitHub-resursnycklar. Nya verifieringsbevis binds till försökets ID. Tidigare bevis, uppgiftsbeslut och agentstatus hålls åtskilda. Se [kontrakt och gränser](docs/controlos/verification-processes.md).
