@@ -39,7 +39,8 @@ quarantine until existing authenticated stop evidence permits lock release.
 
 Successful process exit yields `executionStatus: succeeded` on the run and
 `awaiting_review` on the task. It never creates criterion evidence or marks a task
-accepted. Failed/cancelled/interrupted attempts currently use the existing failed
+accepted. [Explicit criterion review](task-criteria.md) now records acceptance
+against current verification in a separate operation. Failed/cancelled/interrupted attempts currently use the existing failed
 run status and blocked task status with diagnostic context; a richer attempt
 state model remains open. Existing run-result acceptance does not accept a task.
 
@@ -57,8 +58,8 @@ explicit DEMO responses. Browser fixtures are not provider execution evidence.
 
 This is trusted local execution, not an OS sandbox. Same-user filesystem races,
 shared Git metadata, scanner-ID-based permission migration, default-branch/fetch
-selection, versioned context packets and criterion-level acceptance remain
+selection and versioned context packets remain
 separate work. The reviewed base is the imported checkout observation and is
 rechecked against actual HEAD; a stale observation requires refresh/reimport.
-The operation approval ledger still covers only `result.accept`, not task
+The operation approval ledger covers `result.accept` and `task.accept`, not task
 dispatch. No full R1–R4 gate is certified by this feature.

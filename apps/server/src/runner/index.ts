@@ -14,6 +14,7 @@ import { executionLocks, runs, portfolioCheckouts } from '../db/schema';
 import { TaskDispatchRequest } from '@ado/shared';
 import { TaskExecutionStore, taskPrompt, type TaskRunBinding } from './taskExecution';
 import { commonGitIdentity } from '../projects/checkoutIdentity';
+import { TaskReviewStore } from './taskReview';
 import { parseStreamLine, type AgentUpdate } from './adapter';
 import type { Spawner, SpawnHandle } from './spawner';
 import { createHash, randomUUID } from 'node:crypto';
@@ -400,10 +401,13 @@ export class Runner {
     // active-- lived past the last await with no catch: one throw leaked a slot forever
     // (and surfaced as an unhandledRejection), eventually wedging the runner.
     try {
+      const taskId = this.taskExecutions.get(runId)?.taskId;
+      if (taskId) await new TaskReviewStore(this.db).recheckDependencies(taskId);
       this.assertTaskCanRun(runId, input.repoId, cwd);
       const workspace = this.opts.workspaceRoot ? await prepareWorkspace(this.opts.workspaceRoot, cwd, this.taskExecutions.get(runId)?.baseSha) : null;
       if (workspace) this.db.update(runs).set({ workspacePath: workspace.path, baseSha: workspace.baseSha, branch: workspace.branch }).where(eq(runs.id, runId)).run();
       if (this.stopped || this.killed.has(runId) || this.opts.blockedReason?.(input.repoId)) throw new Error('Run cancelled before process start');
+      if (taskId) await new TaskReviewStore(this.db).recheckDependencies(taskId);
       this.assertTaskCanRun(runId, input.repoId, cwd);
       await this.runBody(runId, input, workspace?.path ?? cwd, startedMs, workspace?.baseSha, cwd);
     } catch (err) {

@@ -305,25 +305,25 @@
           "apps/server/src/runner/taskExecution.ts": "e1bf687e4f15b04f194225994ea8536da38e1187cb2878f64d5c6a034d2e91f8",
           "apps/server/src/runner/taskExecutionApi.test.ts": "cf458149f97b0ffcada82172257092524aa61621353a9575e930b03a60888536",
           "apps/server/src/runner/taskExecution.test.ts": "302ec29e0d8c5621c6954d31802d44e4b8548f20058252f3e57d37390cc058ea",
-          "apps/server/src/runner/index.ts": "f635d6779cf4886e4609dd24b3aafb710422a9722adf6af25edbc5e514af5b85",
+          "apps/server/src/runner/index.ts": "987df6e1b74ddedbc84b94109cae702bbe3e2bd700d59f4f9bfc1aa2819fc8a0",
           "apps/server/src/runner/workspace.ts": "735cd32b7729206f58fc08acd6c4c6b0e994af65b07bff5be93558382e1c88a0",
           "apps/server/src/projects/checkoutIdentity.ts": "d84e47e4b798f80e916d9367e7ff626437ed66a266c03e1f368c56795bbaccd2",
           "apps/server/src/projects/registry.ts": "5b1d98bd7d00c65f9a74b6025ea961a67c2c6e1d02fcd6c2f8b66fed2e00f132",
-          "apps/server/src/projects/planning.ts": "0d3c7c02c71955f1a9067f46542e1ee4a2ddd8558707a4b1cb9469e3033dc600",
-          "apps/server/src/app.ts": "7ed5d9e00faace8cafd9258a2954c08f9fc1fc8ba81f4d747bc27a0bcd6964ea",
-          "packages/shared/src/planning.ts": "e790196a3334a92ae7a2842419a5123e796afd29a5725ad880b81d90b4e2b708",
-          "packages/shared/src/runs.ts": "98f8d5e2bd696980ac9c1154ad8ecaf1978b4bbf2a1c2188cc0ac5ca8b8bfc77",
-          "apps/web/src/pages/PlanningPage.tsx": "70142e146d2a954b759bda227b69f6c80fac23ccfa5594a49e0e5dfe3e0c73d4",
+          "apps/server/src/projects/planning.ts": "cfc64bc475fe47f0503dcaf5c4f33b63694f01c640670bbd99cef908eb7dd2f2",
+          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
+          "packages/shared/src/planning.ts": "0e7244f8541602ea1d714d73dbdca59bf935e58c42e8a9e57ab36e62d4b83e94",
+          "packages/shared/src/runs.ts": "2c333b556b4f2792ca510cd549d167fb6133c5e30712a44ace910671efa6f4df",
+          "apps/web/src/pages/PlanningPage.tsx": "f852b49796f243beaafce5afe2757279e6afbdaa15c6691b35b0432cb3e315ab",
           "scripts/smoke-task-execution.mjs": "f19a73e3ffa84f5b85f73ee69b09b9a763da64eeaf6ebc16c5e316a0f15f2a6d",
-          "scripts/smoke.mjs": "dad4d90b98fc438a9844f4fe6e39f5061410a7b7d62019e217ac2ec1b0f0b575"
+          "scripts/smoke.mjs": "92620d8b1c39ae9c7310cfe3073dbba4af43ca46f75e07b35ea3fa3ec71b4f5b"
         }
       }
     },
     {
       "id": "T06",
       "title": "Fel commit i testbevis",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ04, REQ16. **Status:** not_run.\n\n**Givet:** Tester har passerat på commit A och koden ändras till B.\n\n**När:** Godkännande eller färdigmarkering begärs.\n\n**Godkänt endast om:** Beviset betraktas som utdaterat. Nya kontroller eller explicit dokumenterat undantag krävs.\n\n**Gäller:** always.",
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ04, REQ16. **Status:** passed (local Windows evidence).\n\n**Givet:** Tester har passerat på commit A och koden ändras till B.\n\n**När:** Godkännande eller färdigmarkering begärs.\n\n**Godkänt endast om:** Beviset betraktas som utdaterat. Nya kontroller eller explicit dokumenterat undantag krävs.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/runner/verification.test.ts",
         "apps/server/src/runner/workspace.test.ts",
@@ -331,9 +331,38 @@
         "scripts/smoke.mjs",
         "apps/server/src/runner/approvals.test.ts",
         "apps/server/src/runner/approvalApi.test.ts",
-        "apps/server/src/runner/approvalMigration.test.ts"
+        "apps/server/src/runner/approvalMigration.test.ts",
+        "apps/server/src/runner/taskReviewApi.test.ts",
+        "apps/server/src/runner/taskReviewMigration.test.ts",
+        "scripts/smoke-task-review.mjs",
+        "docs/controlos/task-criteria.md"
       ],
-      "coverageNote": "Local result.accept ledger coverage: exact operation/content/evidence/policy, expiry, one-time atomic consumption, historical policy snapshots and previous-schema migration. Other operation paths and the full scenario remain unaccepted."
+      "acceptanceEvidence": {
+        "date": "2026-09-27",
+        "environment": "Windows x64, Node 22.18.0, npm 11.7.0, Chromium via Playwright",
+        "command": "npm run verify; npm run smoke",
+        "result": "Passed: real npm verification on commit A followed by committed B refuses task acceptance of the old proof and clears its verification. Binary changes in a leading-space filename also invalidate it. Exact required/optional criterion decisions, verification ID, task versions and result are bound to one-time task.accept approval; changed notes, swapped evidence and another operation are refused. Acceptance/revision/approval writes roll back together. Correction or reverification invalidates recorded task acceptance; a changed dependency blocks the next process before spawn. Profile reopen and prior-schema migration preserve history without inventing task acceptance.",
+        "scope": "Local Git/npm/SQLite and authenticated HTTP, plus explicit DEMO desktop/mobile criterion review and stale-evidence rendering. No real provider, exception waiver, OS-sandbox, continuous filesystem monitoring or full R1-R4 claim.",
+        "sourceSha256": {
+          "apps/server/drizzle/0013_task_reviews.sql": "850646bb51cc28f3ecd30d22139116bc5a9fffc7acb6e0df4a10c0b7fc745886",
+          "apps/server/drizzle/meta/_journal.json": "396521d7c28ba11f64b9d8160572a9b4268f66d39a1c9eb4c0a7eb810a8daa78",
+          "apps/server/src/db/schema.ts": "8767f328ff1dc3f8495c273fad90804d3ff8693d825c2432cb3d437386b9124e",
+          "apps/server/src/runner/verification.ts": "7d67f83d84fba4e52443986936012bbc2c3a4aa7913aafd4fe809723b08b9c2a",
+          "apps/server/src/runner/approvals.ts": "075afdf5e6b078bce8fc4da8a93cd252f14eb77e7d19afc37c823cd060b89e5d",
+          "apps/server/src/runner/taskReview.ts": "9ce2e48c6a29812ae9015bf761fe7582198b234e6cfd292701f8ff6d58c1a905",
+          "apps/server/src/runner/taskReviewApi.test.ts": "086c614545ea022ede5de2178a60434bd9c6d59d8ead26ee590c4acd791e5ed1",
+          "apps/server/src/runner/taskReviewMigration.test.ts": "1c0696e98702ab118cd48da9f009a826e005610b75b7a82105fa00592c496801",
+          "apps/server/src/runner/index.ts": "987df6e1b74ddedbc84b94109cae702bbe3e2bd700d59f4f9bfc1aa2819fc8a0",
+          "apps/server/src/projects/planning.ts": "cfc64bc475fe47f0503dcaf5c4f33b63694f01c640670bbd99cef908eb7dd2f2",
+          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
+          "packages/shared/src/planning.ts": "0e7244f8541602ea1d714d73dbdca59bf935e58c42e8a9e57ab36e62d4b83e94",
+          "packages/shared/src/runs.ts": "2c333b556b4f2792ca510cd549d167fb6133c5e30712a44ace910671efa6f4df",
+          "apps/web/src/pages/PlanningPage.tsx": "f852b49796f243beaafce5afe2757279e6afbdaa15c6691b35b0432cb3e315ab",
+          "apps/web/src/pages/TaskCriterionReview.tsx": "2c350e7773a56d456f8429c67cf893e72a7f820e1a50bd2d08d729b38e74a738",
+          "scripts/smoke-task-review.mjs": "322e1912fd6a1b7042d191c86ee9ce5199e36f5a4684a787a1a67d668909668f",
+          "scripts/smoke.mjs": "92620d8b1c39ae9c7310cfe3073dbba4af43ca46f75e07b35ea3fa3ec71b4f5b"
+        }
+      }
     },
     {
       "id": "T07",
@@ -353,13 +382,13 @@
         "result": "Passed: real SQLite and authenticated HTTP reject a cyclic dependency with its named path. The complete plan and revision history remain unchanged, including after profile reopen. Real browser create/edit flows at 1536/390 pixels display the cycle and verify unchanged API state. Multi-hop and cross-project dependency cycles are also rejected.",
         "scope": "Local planning dependency transaction and desktop/mobile browser scenario with synthetic content. No provider, pilot, offline-device, task-execution or criterion-acceptance claim.",
         "sourceSha256": {
-          "packages/shared/src/planning.ts": "e790196a3334a92ae7a2842419a5123e796afd29a5725ad880b81d90b4e2b708",
+          "packages/shared/src/planning.ts": "0e7244f8541602ea1d714d73dbdca59bf935e58c42e8a9e57ab36e62d4b83e94",
           "apps/server/drizzle/0011_planning.sql": "80357053d3a276aa3e775dc810161897c70ccdcc0a9845b7523beb106bfa0f24",
-          "apps/server/src/projects/planning.ts": "0d3c7c02c71955f1a9067f46542e1ee4a2ddd8558707a4b1cb9469e3033dc600",
+          "apps/server/src/projects/planning.ts": "cfc64bc475fe47f0503dcaf5c4f33b63694f01c640670bbd99cef908eb7dd2f2",
           "apps/server/src/projects/planning.test.ts": "e3e333860109c94f26cf93c91fff83d6e04dba04809277bc7beffdbd908a547e",
           "apps/server/src/projects/planningApi.test.ts": "190fc8ecd3070b038b85f9cc6f91ec21113e3db1044dfd168580edf75d27c71e",
-          "apps/server/src/app.ts": "7ed5d9e00faace8cafd9258a2954c08f9fc1fc8ba81f4d747bc27a0bcd6964ea",
-          "apps/web/src/pages/PlanningPage.tsx": "70142e146d2a954b759bda227b69f6c80fac23ccfa5594a49e0e5dfe3e0c73d4",
+          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
+          "apps/web/src/pages/PlanningPage.tsx": "f852b49796f243beaafce5afe2757279e6afbdaa15c6691b35b0432cb3e315ab",
           "scripts/smoke-planning.mjs": "9eab7b15f2a4aae7ff3478db32b4688a03d36366cf8d12025d7aa66a24d8a3ae"
         }
       }
@@ -486,7 +515,7 @@
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "f635d6779cf4886e4609dd24b3aafb710422a9722adf6af25edbc5e514af5b85",
+          "apps/server/src/runner/index.ts": "987df6e1b74ddedbc84b94109cae702bbe3e2bd700d59f4f9bfc1aa2819fc8a0",
           "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209"
         }
       }
@@ -528,10 +557,10 @@
           "apps/server/src/runner/codex.test.ts": "50f8a3f42f1033ded56733a17a791fcd5c02dbb450afd1f5bef59c83d34270c5",
           "apps/server/src/runner/spawner.ts": "178a51ae136e1d9750a591b2a98f1bc15c6dc7b9a90827381c3248003da5c22b",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
-          "apps/server/src/runner/index.ts": "f635d6779cf4886e4609dd24b3aafb710422a9722adf6af25edbc5e514af5b85",
+          "apps/server/src/runner/index.ts": "987df6e1b74ddedbc84b94109cae702bbe3e2bd700d59f4f9bfc1aa2819fc8a0",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "dad4d90b98fc438a9844f4fe6e39f5061410a7b7d62019e217ac2ec1b0f0b575"
+          "scripts/smoke.mjs": "92620d8b1c39ae9c7310cfe3073dbba4af43ca46f75e07b35ea3fa3ec71b4f5b"
         }
       }
     },
@@ -584,9 +613,11 @@
         "scripts/smoke.mjs",
         "apps/server/src/runner/approvals.test.ts",
         "apps/server/src/runner/approvalApi.test.ts",
-        "apps/server/src/runner/approvalMigration.test.ts"
+        "apps/server/src/runner/approvalMigration.test.ts",
+        "apps/server/src/runner/taskReviewApi.test.ts",
+        "docs/controlos/task-criteria.md"
       ],
-      "coverageNote": "Local result.accept ledger coverage: exact operation/content/evidence/policy, expiry, one-time atomic consumption, historical policy snapshots and previous-schema migration. Other operation paths and the full scenario remain unaccepted."
+      "coverageNote": "Exact current-result ledger coverage now includes result.accept and task.accept with criterion decisions. Other operation paths and the full scenario remain unaccepted."
     },
     {
       "id": "T27",
@@ -742,7 +773,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "7ed5d9e00faace8cafd9258a2954c08f9fc1fc8ba81f4d747bc27a0bcd6964ea",
+          "apps/server/src/app.ts": "2526040ef537eea1e0df7c63201c3809ee269afe76a2d85c30639d221f02e4e1",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

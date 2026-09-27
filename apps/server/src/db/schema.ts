@@ -98,6 +98,12 @@ export const verificationEvidence = sqliteTable('verification_evidence', {
   output: text('output').notNull(), recordedTs: text('recorded_ts').notNull(),
 });
 
+export const taskReviews = sqliteTable('task_reviews', {
+  id: text('id').primaryKey(), taskId: text('task_id').notNull(), taskVersion: integer('task_version').notNull(), definitionVersion: integer('definition_version').notNull(), acceptedTaskVersion: integer('accepted_task_version').notNull(),
+  runId: text('run_id').notNull(), verificationId: text('verification_id').notNull(), headSha: text('head_sha').notNull(), diffDigest: text('diff_digest').notNull(), criteriaJson: text('criteria_json').notNull(),
+  actorId: text('actor_id').notNull(), recordedTs: text('recorded_ts').notNull(), invalidatedTs: text('invalidated_ts'), invalidationReason: text('invalidation_reason'),
+});
+
 export const approvalPolicyVersions = sqliteTable('approval_policy_versions', {
   version: text('version').primaryKey(), repoId: text('repo_id').notNull(), digest: text('digest').notNull(),
   snapshotJson: text('snapshot_json').notNull(), createdTs: text('created_ts').notNull(),

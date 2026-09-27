@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { InboxInput, InboxItem, MilestoneInput, PlanningExecution, PlanningMilestone, PlanningTask, TaskInput } from '@ado/shared';
+import { InboxInput, InboxItem, MilestoneInput, PlanningExecution, PlanningMilestone, PlanningTask, TaskInput, TaskReview } from '@ado/shared';
 import type { Db } from '../db';
+import { taskReviews } from '../db/schema';
 import { portfolioProjects as projects, portfolioRepositories as repositories, planningTasks as tasks, planningMilestones as milestones, planningDependencies as dependencies, planningInbox as inbox, planningRevisions as revisions, taskExecutions, executionLocks } from '../db/schema';
 
 const version = z.number().int().positive();
@@ -26,6 +27,7 @@ export class PlanningStore {
         milestones: this.db.select().from(milestones).all().map(milestoneView),
         inbox: this.db.select().from(inbox).all().map((row) => InboxItem.parse(row)),
         executions: this.db.select().from(taskExecutions).all().map((row) => PlanningExecution.parse(row)),
+        reviews: this.db.select().from(taskReviews).all().map(({ criteriaJson, ...row }) => TaskReview.parse({ ...row, criteria: JSON.parse(criteriaJson) })),
       };
     });
   }

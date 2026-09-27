@@ -2,11 +2,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db';
 import { approvalPolicies, approvalPolicyVersions, operationApprovals } from '../db/schema';
+import type { TaskCriterionBinding } from './taskReview';
 
 export const LOCAL_OWNER = 'local-owner';
 export interface AcceptanceBinding {
-  operation: 'result.accept'; runId: string; repoId: string; headSha: string; diffDigest: string;
+  operation: 'result.accept' | 'task.accept'; runId: string; repoId: string; headSha: string; diffDigest: string;
   workspacePath: string; baseSha: string; verificationId: string; priorHumanAction: string | null;
+  taskReview?: TaskCriterionBinding;
 }
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -14,6 +16,7 @@ const payload = (binding: AcceptanceBinding) => JSON.stringify({
   operation: binding.operation, runId: binding.runId, repoId: binding.repoId,
   headSha: binding.headSha, diffDigest: binding.diffDigest, workspacePath: binding.workspacePath,
   baseSha: binding.baseSha, verificationId: binding.verificationId, priorHumanAction: binding.priorHumanAction,
+  ...(binding.taskReview ? { taskReview: binding.taskReview } : {}),
 });
 const pending = and(isNull(operationApprovals.consumedTs), isNull(operationApprovals.revokedTs));
 
@@ -43,7 +46,7 @@ export class ApprovalStore {
   }
 
   prepare(binding: AcceptanceBinding, policyVersion: string, actorId = LOCAL_OWNER) {
-    if (binding.operation !== 'result.accept') throw new Error('Unsupported approval operation');
+    if (!['result.accept', 'task.accept'].includes(binding.operation) || (binding.operation === 'task.accept') !== Boolean(binding.taskReview)) throw new Error('Unsupported approval operation or missing task binding');
     if (policyVersion !== this.policyVersion(binding.repoId)) throw new Error('Project policy changed; reload and review again');
     const payloadJson = payload(binding);
     const time = this.now();

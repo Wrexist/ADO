@@ -31,7 +31,8 @@ execution/review operations and are rejected by ordinary planning writes. Neithe
 process exit nor an external issue can mark these tasks accepted. A separate
 [reviewed dispatch operation](task-execution.md) now binds an exact task revision
 to a checkout/base and run. Successful exit leaves the task awaiting review;
-criterion-level current-result acceptance and T06 remain incomplete.
+[criterion-level review](task-criteria.md) uses a separate, current-result-bound
+acceptance operation. Ordinary planning edits still cannot accept a task.
 
 Milestones contain versioned exit criteria and planned/active/archived status. An
 active milestone requires a required exit criterion. No invented deadline,
@@ -55,6 +56,5 @@ real local HTTP server and SQLite with demo content, rather than mocked planning
 responses: desktop/mobile create, edit, cyclic-edge rejection with unchanged
 snapshot, capture/conversion, milestone edit and reload. No provider is started.
 
-The project registry still reserves nextTaskId. Accepted
-criterion evidence, context packets, Today/capacity planning, offline drafts and
+The project registry still reserves nextTaskId. Context packets, Today/capacity planning, offline drafts and
 full acceptance of B11/R1–R4 remain separate unfinished work.

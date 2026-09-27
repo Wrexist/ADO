@@ -12,7 +12,7 @@ import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { CONNECTOR_BY_ID, REQUIREMENT_BY_ID, AUTOMATION_TEMPLATES, RunHumanAction, type ProbeResult, type AutomationTrigger, type IncidentRecord } from '@ado/shared';
 import { openDb } from './db';
-import { runs } from './db/schema';
+import { runs, verificationEvidence } from './db/schema';
 import { expandHome, type Env } from './env';
 import { Bus } from './bus';
 import { registerSecurity, sseAuthorized, tokenMatches } from './security';
@@ -35,6 +35,7 @@ import { Runner } from './runner';
 import { PROVIDERS, ProviderSpawner } from './runner/providers';
 import { Verifier } from './runner/verification';
 import { ApprovalStore } from './runner/approvals';
+import { TaskReviewStore } from './runner/taskReview';
 import { ResultReviewRequest, ResultAcceptanceRequest } from '@ado/shared';
 import { type Spawner } from './runner/spawner';
 import { HeuristicParser } from './command/parser';
@@ -674,7 +675,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     autoReview: autoReviewStore.settings(repoId).enabled,
   });
   const approvals = new ApprovalStore(db, (repoId) => JSON.stringify({
-    contract: 'trusted-local-result-accept-v1', features: Object.entries(featureMap(repoId)).sort(([a], [b]) => a.localeCompare(b)),
+    contract: 'trusted-local-review-v2', operations: ['result.accept', 'task.accept'], taskCriteria: 'all-required-pass-with-current-verification', features: Object.entries(featureMap(repoId)).sort(([a], [b]) => a.localeCompare(b)),
   }));
   const runRow = (r: typeof runs.$inferSelect) => ({
     id: r.id,
@@ -763,6 +764,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         ...runRow(row),
         approvalPolicyVersion: row.engineVersion === 1 ? approvals.policyVersion(row.repoId) : null,
         approvalHistory: approvals.history(id),
+        verificationEvidence: db.select().from(verificationEvidence).where(eq(verificationEvidence.runId, id)).orderBy(desc(verificationEvidence.recordedTs), desc(verificationEvidence.id)).limit(20).all(),
         timelineState: runner.isLive(id) ? 'live' : timeline ? 'ended' : 'unavailable',
         timeline: timeline ?? [],
         resultText: row.resultText,
@@ -786,6 +788,18 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // Human verdict on a finished run's work — the seed data the (parked) self-learning
   // analyzer will consume at ≥100 runs. Only a human sets this, only on finished runs.
   const verifier = new Verifier(db, () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))], approvals);
+  app.post('/api/planning/tasks/:id/approval', async (req, reply) => {
+    try { return { approval: await verifier.prepareTaskAcceptance((req.params as { id: string }).id, req.body) }; }
+    catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
+  });
+  app.post('/api/planning/tasks/:id/accept', async (req, reply) => {
+    try { const id = (req.params as { id: string }).id; await verifier.acceptTask(id, req.body); return { task: planning.snapshot().tasks.find((t) => t.id === id) }; }
+    catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
+  });
+  app.post('/api/planning/tasks/:id/recheck', async (req, reply) => {
+    try { const id = (req.params as { id: string }).id; return { current: await new TaskReviewStore(db).recheck(id), task: planning.snapshot().tasks.find((t) => t.id === id) }; }
+    catch (error) { return reply.code(409).send({ error: registryError(error) }); }
+  });
   app.post('/api/runs/:id/approval', async (req, reply) => {
     const parsed = ResultReviewRequest.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'A specific result.accept review with revision, digest and policy version is required' });
@@ -813,8 +827,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       catch (error) { return reply.code(409).send({ error: redact((error as Error).message, [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]) }); }
     }
     if ((req.body as { approvalId?: unknown; operation?: unknown }).approvalId !== undefined || (req.body as { operation?: unknown }).operation !== undefined) return reply.code(400).send({ error: 'This review cannot authorize another operation' });
-    approvals.invalidateRun(id, 'Human outcome changed');
-    db.update(runs).set({ humanAction: parsed.data }).where(eq(runs.id, id)).run();
+    verifier.changeOutcome(id, parsed.data);
     return { run: runRow({ ...row, humanAction: parsed.data }) };
   });
 

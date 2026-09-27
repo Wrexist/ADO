@@ -24,7 +24,7 @@ export const ResultReviewRequest = z.object({
 }).strict();
 export const ResultAcceptanceRequest = ResultReviewRequest.extend({ action: z.literal('accepted'), approvalId: z.string().uuid() }).strict();
 export const OperationApproval = z.object({
-  id: z.string().uuid(), actorId: z.string(), operation: z.literal('result.accept'), runId: z.string(), repoId: z.string(),
+  id: z.string().uuid(), actorId: z.string(), operation: z.enum(['result.accept', 'task.accept']), runId: z.string(), repoId: z.string(),
   headSha: z.string(), diffDigest: z.string(), payloadHash: z.string(), policyVersion: z.string().uuid(), policySnapshot: z.string(),
   issuedTs: z.string(), expiresTs: z.string(), consumedTs: z.string().nullable(), revokedTs: z.string().nullable(), revokeReason: z.string().nullable(),
 });
@@ -70,7 +70,10 @@ export const RunTimelineEntry = z.object({
 });
 export type RunTimelineEntry = z.infer<typeof RunTimelineEntry>;
 
+export const VerificationEvidence = z.object({ id: z.string().uuid(), runId: z.string(), headSha: z.string(), diffDigest: z.string(), command: z.string(), exitCode: z.number().int(), verdict: z.enum(['pass', 'fail']), output: z.string(), recordedTs: z.string() });
+
 export const RunDetail = AgentRun.extend({
+  verificationEvidence: z.array(VerificationEvidence).optional(),
   approvalPolicyVersion: z.string().uuid().nullable().optional(),
   approvalHistory: z.array(OperationApproval).optional(),
   diagnostics: z.string().nullable().optional(),

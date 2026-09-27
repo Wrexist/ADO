@@ -5,6 +5,7 @@ import { PageShell } from '../chrome/PageShell';
 import { Button, Card } from '../kit';
 import { fetchPortfolio } from '../lib/portfolio';
 import { fetchPlanning, planningRequest } from '../lib/planning';
+import { TaskCriterionReview } from './TaskCriterionReview';
 
 const field = 'mt-1 w-full min-w-0 rounded-tile border bg-card px-3 py-2 text-body text-text1';
 const emptyTask = { projectId: '', repositoryId: '', milestoneId: '', title: '', outcome: '', scope: '', outOfScope: '', acceptance: '', dependsOn: [] as string[], priority: 0, status: 'draft', sourceRefs: '' };
@@ -29,6 +30,7 @@ export function PlanningPage() {
   const [task, setTask] = useState(emptyTask), [editing, setEditing] = useState<PlanningTask | null>(null);
   const [milestone, setMilestone] = useState(emptyMilestone), [editingMilestone, setEditingMilestone] = useState<PlanningMilestone | null>(null);
   const [filter, setFilter] = useState('');
+  const [criterionReview, setCriterionReview] = useState<{ taskId: string; runId: string } | null>(null);
   const [runReview, setRunReview] = useState<{ task: PlanningTask; checkoutId: string; provider: string; submission: { version: number; checkoutId: string; baseSha: string; provider: string; idempotencyKey: string } | null } | null>(null);
   const taskTitle = useRef<HTMLInputElement>(null), promotionTitle = useRef<HTMLInputElement>(null), milestoneTitle = useRef<HTMLInputElement>(null);
   const runReviewTitle = useRef<HTMLHeadingElement>(null);
@@ -60,6 +62,7 @@ export function PlanningPage() {
       <div className="flex flex-wrap items-center gap-3"><Link className="text-body text-primary" to="/projects">Manage projects</Link><Button variant="outline" disabled={busy} onClick={() => void act(async () => { setEditing(null); setTask(emptyTask); setEditingMilestone(null); setMilestone(emptyMilestone); setPromotion(null); }, 'Planning reloaded.')}>Reload planning</Button></div>
       {error && <p role="alert" className="break-words text-body text-danger">{error}</p>}
       {message && <p role="status" className="text-body text-text2">{message}</p>}
+      {criterionReview && data?.tasks.find((t) => t.id === criterionReview.taskId && t.status === 'awaiting_review') && <TaskCriterionReview key={criterionReview.runId} task={data.tasks.find((t) => t.id === criterionReview.taskId)!} runId={criterionReview.runId} onChanged={load} onClose={() => setCriterionReview(null)} />}
       {runReview && <Card role="region" aria-label="Review task run" className="min-w-0 break-words p-4">
         <h2 ref={runReviewTitle} tabIndex={-1} className="text-title font-semibold">Review task run</h2>
         <p className="mt-2 text-body">{runReview.task.title} · task version {runReview.task.version}</p>
@@ -123,10 +126,12 @@ export function PlanningPage() {
           <h3 className="text-title font-semibold">{t.title}</h3><p className="text-body text-text2">{projectName(t.projectId)} · {t.status.replaceAll('_', ' ')} · priority {t.priority} · version {t.version}</p>
           <p className="mt-2 whitespace-pre-wrap text-body">{t.outcome || 'Outcome not defined.'}</p>
           {t.blockedBy.length > 0 && <p className="mt-2 text-body text-warn">Unresolved dependencies: {t.blockedBy.map((id) => data.tasks.find((dependency) => dependency.id === id)?.title ?? id).join(', ')}</p>}
-          <details className="mt-2 text-body"><summary>Scope and acceptance</summary><p className="mt-2 whitespace-pre-wrap">In scope: {t.scope || 'Not defined'}</p><p className="whitespace-pre-wrap">Out of scope: {t.outOfScope || 'Not defined'}</p><ul className="ml-5 list-disc">{t.acceptance.map((c) => <li key={c.id}>{c.text} ({c.required ? 'required' : 'optional'}; no evidence recorded)</li>)}</ul>{t.sourceRefs.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-primary">{url}</a>)}</details>
+          <details className="mt-2 text-body"><summary>Scope and acceptance</summary><p className="mt-2 whitespace-pre-wrap">In scope: {t.scope || 'Not defined'}</p><p className="whitespace-pre-wrap">Out of scope: {t.outOfScope || 'Not defined'}</p><ul className="ml-5 list-disc">{t.acceptance.map((c) => <li key={c.id}>{c.text} ({c.required ? 'required' : 'optional'}; {data.reviews.some((r) => r.taskId === t.id) ? 'see review history' : 'no review recorded'})</li>)}</ul>{t.sourceRefs.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-2 block break-all text-primary">{url}</a>)}</details>
           <Button disabled={busy || !['draft', 'ready', 'blocked', 'archived'].includes(t.status)} variant="outline" size="sm" className="mt-3" onClick={() => editTask(t)}>Edit {t.title}</Button>
           {t.status === 'ready' && <Button aria-label={`Review run for ${t.title}`} disabled={busy || t.blockedBy.length > 0 || !t.repositoryId || !portfolio?.checkouts.some((c) => c.repositoryId === t.repositoryId && c.headSha)} variant="outline" size="sm" className="ml-2 mt-3" onClick={() => setRunReview({ task: t, checkoutId: '', provider: '', submission: null })}>Review run</Button>}
-          {data.executions.filter((run) => run.taskId === t.id).map((run) => <p key={run.runId} className="mt-2 text-body"><Link className="text-primary" to={`/agents?run=${encodeURIComponent(run.runId)}`}>Run for task version {run.taskVersion}: {run.state === 'done' ? 'process succeeded' : run.state}</Link>{run.state === 'done' ? ' · Criterion review required.' : ''}</p>)}
+          {data.executions.filter((run) => run.taskId === t.id).map((run) => <div key={run.runId} className="mt-2 text-body"><Link className="text-primary" to={`/agents?run=${encodeURIComponent(run.runId)}`}>Run for task version {run.taskVersion}: {run.state === 'done' ? 'process succeeded' : run.state}</Link>{run.state === 'done' && t.status === 'awaiting_review' ? ' · Criterion review required.' : ''}{t.status === 'awaiting_review' && run.state === 'done' && run.currentTaskVersion === t.version && <Button size="sm" variant="outline" className="ml-2 mt-2" aria-label={`Review criteria for ${t.title}`} onClick={() => setCriterionReview({ taskId: t.id, runId: run.runId })}>Review criteria</Button>}</div>)}
+          {t.status === 'accepted' && <div className="mt-3 text-body"><p>Acceptance recorded for the reviewed result. Recheck current files before relying on it.</p><Button disabled={busy} variant="outline" size="sm" onClick={() => void act(() => planningRequest(`/tasks/${t.id}/recheck`, 'POST', {}), 'Current result checked; see task status and review history.')}>Recheck accepted result</Button></div>}
+          {data.reviews.some((r) => r.taskId === t.id) && <details className="mt-3 text-body"><summary>Criterion review history</summary>{data.reviews.filter((r) => r.taskId === t.id).map((r) => <div key={r.id} className="mt-2 border-t pt-2"><p>{r.invalidatedTs ? `Stale: ${r.invalidationReason}` : 'Acceptance recorded'} · {new Date(r.recordedTs).toLocaleString()}</p><p className="break-all text-label text-text2">Definition version {r.definitionVersion} · {r.headSha} · {r.diffDigest}</p>{r.criteria.map((c) => <p key={c.criterionId} className="mt-2 whitespace-pre-wrap">{t.acceptance.find((a) => a.id === c.criterionId)?.text ?? c.criterionId}: {c.verdict} — {c.evidence}</p>)}</div>)}</details>}
         </Card>)}
         {data && !data.tasks.some((t) => !filter || t.projectId === filter) && <p className="text-body text-text2">No tasks in this selection.</p>}
       </section>
