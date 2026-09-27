@@ -9,7 +9,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 - [x] Bind restored profiles to database metadata, reject lost/mismatched markers and corrupt copied bytes, enroll present legacy markers, and verify refusal plus migration in the packaged Windows app.
 - [x] Preserve automation memory and disk state on rejected writes; identify already-dispatched runs and stop further session dispatch if history recording fails, with injected and real Windows file-denial regressions.
 - [x] Commit accepted automation receipts with runs and queue events, then repair last-run history across restart without dispatch; verify four actual process-exit boundaries.
-- [ ] Add explicit restored-profile review/resolution for pending automation receipts and remote-event occurrence identities; legacy unjournaled outcomes remain unproven.
+- [x] Add content-bound, typed restored-profile receipt review, including missing-definition acknowledgement, guarded history projection and audited retry after partial failure.
+- [ ] Add remote-event occurrence identities and resolve legacy unjournaled or conflicting history without inventing execution evidence.
 
 - [x] Retain the audited base in a separate checkout and implement on `codex/controlos-stabilization`.
 - [x] Implement runtime browser pairing, guarded task-file writes, queue recovery/idempotency, repository writer ownership, isolated Git results and content-bound verification.

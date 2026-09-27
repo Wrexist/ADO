@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## Granskning av automationshistorik i återställda profiler
+
+Återställningspanelen kan nu lista och uttryckligen granska kvarvarande automationskvitton. Befintliga recept kräver `RECORD AUTOMATION HISTORY`; saknade recept kräver `ACKNOWLEDGE MISSING AUTOMATION` och återskapas inte. Åtgärden binds till aktuell körning, kvitto, definition, lås och filinnehåll. Inaktuellt underlag, ändrade/oläsbara filer och nyare eller tvetydig historik vägras. Körningar, resultat, godkännanden och lås lämnas oförändrade; övriga aktiveringsblockerare kvarstår.
+
+Kvittoavstämning och audithändelse sparas atomiskt i SQLite. JSON-historiken kan ha skrivits dessförinnan: om auditcommit misslyckas visas detta uttryckligen och kvittot behålls för en ny granskning. Felprovet bekräftar att ett omprov inte skapar dubbletta audithändelser eller skriver om redan matchande historik. [Kontrakt och begränsningar](docs/controlos/automation-persistence.md#explicit-restored-profile-review).
+
+Hela `npm run verify` passerade med typkontroll, lint, 382 tester i 83 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. 26 riktade tester passerade också. Hela browser-smoke passerade; båda nya bekräftelseflödena provades vid 1536/390 px med spärrad tvetydig historik och utan horisontell överströmning. Bilderna är granskade och använder uttryckligen demodata. Loggar: `controlos-recovery-receipts-focused.log`, `controlos-recovery-receipts-verify.log`, `controlos-recovery-receipts-smoke.log`; bilder: `smoke-shots/recovery-automation-*.png`.
+
+13/46 fullständiga scenarier är fortsatt lokalt godkända. R1–R4 är öppna. Detta är ingen verklig användarprofil, ny paketerad app, installer/uppdatering eller strömavbrottsacceptans. Gamla körningar utan kvitto och konflikter i historiken behöver separat hantering. Ingen verklig provider- eller pilotkörning, merge eller publicering genomfördes. Följande avsnitt är historiska kontrollpunkter.
+
 ## Beständig avstämning av accepterade automationskörningar
 
 En accepterad automationskörning sparar nu körningsrad, köhändelse och automationskvitto i samma SQLite-transaktion. Högst ett oavstämt kvitto per automation tillåts. Historiken i JSON skrivs från det kvittot och markeras därefter som avstämd. Vanlig serverstart reparerar kvarvarande historik utan att anropa dispatch. Ett fel efter commit kan därför hitta den redan accepterade körningen. Saknad automationsdefinition eller misslyckad reparation behåller kvittot och spärrar fler automationstarter.

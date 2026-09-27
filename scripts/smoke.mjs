@@ -88,6 +88,16 @@ try {
   await page.route('**/api/recovery/runs/*/content', (route) => route.fulfill({ json: { runId: 'DEMO-reference-0', checkedAt: '2026-09-27T12:00:00Z', status: 'matches_recorded', executionEnabled: false } }));
   let activationBlocked = true;
   let queuedCancelled = false;
+  const reviewedReceipts = new Set();
+  await page.route('**/api/recovery/automation-receipts', (route) => route.fulfill({ json: { receipts: ['existing', 'missing', 'ambiguous'].filter(id => !reviewedReceipts.has(id)).map(id => ({
+    runId: `DEMO-${id}`, automationId: `DEMO-automation-${id}`, automationName: id === 'missing' ? null : 'DEMO automation', repoId: 'DEMO-project', task: 'DEMO accepted task; execution status is historical', runStatus: 'queued', acceptedAt: '2026-09-27T12:00:00Z', retainedLocks: 1, definitionPresent: id !== 'missing', eligible: id !== 'ambiguous', reason: id === 'ambiguous' ? 'Existing automation history is newer or ambiguous.' : 'History-only review; execution and ownership remain unchanged.', digest: `DEMO-receipt-${id}`,
+  })) } }));
+  await page.route('**/api/recovery/runs/*/review-automation', (route) => {
+    const id = route.request().url().split('/').at(-2).replace('DEMO-', ''), body = route.request().postDataJSON();
+    if (body.digest !== `DEMO-receipt-${id}` || body.confirmation !== (id === 'missing' ? 'ACKNOWLEDGE MISSING AUTOMATION' : 'RECORD AUTOMATION HISTORY') || id === 'ambiguous') throw new Error('Automation history review was not bound to the eligible receipt');
+    reviewedReceipts.add(id);
+    return route.fulfill({ json: { reviewed: true, executionEnabled: false, locksReleased: false } });
+  });
   await page.route('**/api/recovery/queue', (route) => route.fulfill({ json: { jobs: [
     ...(!queuedCancelled ? [{ id: 'DEMO-queued', repoId: 'DEMO-project', task: 'DEMO unstarted job', eligible: true, digest: 'DEMO-reviewed-queue', reason: 'No process or workspace recorded.' }] : []),
     { id: 'DEMO-locked', repoId: 'DEMO-project', task: 'DEMO unresolved process', eligible: false, digest: 'DEMO-locked', reason: 'Preserve this writer lock for process review.' },
@@ -130,6 +140,24 @@ try {
     await page.getByRole('status').filter({ hasText: 'Queued job DEMO-queued cancelled' }).waitFor();
     await page.getByText('DEMO unresolved process', { exact: true }).waitFor();
     await page.screenshot({ path: join(out, `recovery-cancel-queue-${width}.png`), fullPage: true });
+    reviewedReceipts.clear();
+    await page.getByText('Review restored automation history', { exact: true }).click();
+    await page.getByRole('button', { name: 'Load automation receipts', exact: true }).click();
+    const receiptButtons = page.getByRole('button', { name: 'Review history receipt', exact: true });
+    await receiptButtons.first().waitFor();
+    if (await receiptButtons.count() !== 2) throw new Error('Ambiguous history was offered for overwrite');
+    for (const id of ['existing', 'missing']) {
+      await receiptButtons.first().click();
+      const confirmHistory = page.getByRole('button', { name: 'Confirm history review', exact: true });
+      if (await confirmHistory.isEnabled()) throw new Error('History review did not require typed confirmation');
+      const phrase = id === 'missing' ? 'ACKNOWLEDGE MISSING AUTOMATION' : 'RECORD AUTOMATION HISTORY';
+      await page.getByLabel(`Type ${phrase}`).fill(phrase);
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error(`History review overflows at ${width}px`);
+      await page.screenshot({ path: join(out, `recovery-automation-${id}-${width}.png`), fullPage: true });
+      await confirmHistory.click();
+      await page.getByRole('status').filter({ hasText: `Receipt for DEMO-${id} reviewed` }).waitFor();
+    }
+    if (await receiptButtons.count()) throw new Error('Ambiguous receipt became actionable');
     activationBlocked = true;
     await page.getByText('Resume manual operation', { exact: true }).click();
     await page.getByRole('button', { name: 'Review activation', exact: true }).click();
@@ -154,6 +182,8 @@ try {
   await page.unroute('**/api/recovery/activate');
   await page.unroute('**/api/recovery/queue');
   await page.unroute('**/api/recovery/runs/DEMO-queued/cancel-queued');
+  await page.unroute('**/api/recovery/automation-receipts');
+  await page.unroute('**/api/recovery/runs/*/review-automation');
   // Explicit planning fixture. Persistence and Git preservation have separate real API tests.
   const portfolioProjectId = '11111111-1111-4111-8111-111111111111';
   const portfolioRepositoryId = '22222222-2222-4222-8222-222222222222';

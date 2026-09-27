@@ -22,6 +22,7 @@ import { inspectRecoveryReferences } from './backup/references';
 import { compareRecoveredContent } from './backup/content';
 import { RecoveryActivation } from './backup/activation';
 import { RecoveryQueue } from './backup/queue';
+import { RecoveryAutomationReceipts } from './backup/automationReceipts';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
@@ -220,7 +221,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   registerSecurity(app, env);
   app.addHook('preHandler', async (req, reply) => {
-    if (recoveryReview && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !['/api/session', '/api/recovery/prepare', '/api/recovery/activate'].includes(req.url.split('?')[0]) && !/^\/api\/recovery\/runs\/[^/]+\/cancel-queued$/.test(req.url.split('?')[0])) {
+    if (recoveryReview && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !['/api/session', '/api/recovery/prepare', '/api/recovery/activate'].includes(req.url.split('?')[0]) && !/^\/api\/recovery\/runs\/[^/]+\/(cancel-queued|review-automation)$/.test(req.url.split('?')[0])) {
       if (req.url.split('?')[0] === '/api/app-open') return reply.send({ recorded: false, recovery: true });
       return reply.code(423).send({ error: recoveryMessage });
     }
@@ -1053,6 +1054,20 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   });
   const recoveryActivation = recoveryReview ? new RecoveryActivation(db, dirname(env.dbPath), registry.hostId) : null;
   const recoveryQueue = new RecoveryQueue(db, bus);
+  const recoveryAutomationReceipts = new RecoveryAutomationReceipts(db, bus, automations);
+  app.get('/api/recovery/automation-receipts', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!recoveryReview) return reply.code(409).send({ error: 'Automation receipt review requires recovery review mode' });
+    try { return { receipts: recoveryAutomationReceipts.list() }; }
+    catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
+  });
+  app.post('/api/recovery/runs/:id/review-automation', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!recoveryReview || recoveryActivation?.restartRequired || activationBusy || recoveryContentBusy) return reply.code(409).send({ error: 'Recovery history changes are unavailable during another review or pending restart' });
+    const body = (req.body ?? {}) as { digest?: unknown; confirmation?: unknown };
+    try { return recoveryAutomationReceipts.resolve((req.params as { id: string }).id, body.digest, body.confirmation); }
+    catch (error) { return reply.code(409).send({ error: (error as Error).message }); }
+  });
   app.get('/api/recovery/queue', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     if (!recoveryReview) return reply.code(409).send({ error: 'Queue review requires recovery review mode' });

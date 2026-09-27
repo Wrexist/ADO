@@ -4,8 +4,9 @@
  * data; the built-in TEMPLATES live in @ado/shared and are merged in the UI.
  */
 import { readJsonStore, writeJsonStore } from '../lib/jsonStore';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { AutomationInput, type Automation } from '@ado/shared';
+import { ConnectionFile } from '../connections/file';
 
 export class AutomationStore {
   private data: Record<string, Automation> = {};
@@ -40,6 +41,26 @@ export class AutomationStore {
 
   get(id: string): Automation | undefined {
     return this.data[id];
+  }
+
+  private recoverySnapshot() {
+    try {
+      const file = new ConnectionFile(this.filePath), rows = file.read();
+      const content = JSON.stringify(rows);
+      if (content !== JSON.stringify(this.data)) throw new Error('Changed automation definitions');
+      return { file, digest: createHash('sha256').update(content).digest('hex') };
+    } catch { throw new Error('Automation definitions changed or are unreadable. Preserve the file and reopen this recovery profile.'); }
+  }
+
+  recoveryDigest() { return this.recoverySnapshot().digest; }
+
+  /** Guarded recovery projection; a pending SQLite receipt remains until separately audited. */
+  recordRecoveredRun(id: string, runId: string, atTs: string) {
+    const { file } = this.recoverySnapshot(), a = this.data[id];
+    if (!a) throw new Error('Automation definition is missing');
+    if (a.lastRunId === runId && a.lastRunTs === atTs) return;
+    const next = { ...this.data, [id]: { ...a, lastRunId: runId, lastRunTs: atTs } };
+    file.write(next); this.data = next;
   }
 
   /** Create or update. Validates against the shared schema (throws on bad input). */

@@ -28,3 +28,17 @@ export interface RecoveryQueuedJob {
   digest: string;
   reason: string;
 }
+export interface RecoveryAutomationReceipt {
+  runId: string;
+  automationId: string;
+  automationName: string | null;
+  repoId: string;
+  task: string;
+  runStatus: string;
+  acceptedAt: string;
+  retainedLocks: number;
+  definitionPresent: boolean;
+  eligible: boolean;
+  reason: string;
+  digest: string;
+}
