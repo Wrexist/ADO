@@ -95,3 +95,16 @@ The native implementation follows Microsoft's [Job Objects](https://learn.micros
 and [QueryInformationJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject)
 contracts. These references describe API behavior; the fixture results provide
 the local execution evidence.
+
+The adapter does not lower the Windows host's priority: control-pipe handling,
+identity persistence and stop confirmation retain the inherited host priority.
+The worker also keeps the inherited priority. The Claude fixture reads its
+actual priority before resume and compares it with the caller. See Microsoft's
+[priority classes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setpriorityclass).
+
+The owner-crash fixture waits for the supervisor itself to exit before deleting
+its temporary working directory. The receipt can become readable after the job
+is empty but before the supervisor finishes its own cleanup. Windows may still
+hold that directory open in this interval. Asynchronous bounded cleanup retries
+preserve any original test error alongside a cleanup error; a valid agent-stop
+receipt alone is not used as proof that the supervisor has exited.

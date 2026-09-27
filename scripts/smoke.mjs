@@ -39,7 +39,11 @@ try {
   await page.getByLabel('Access key').fill('wrong'); await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: 'not accepted' }).waitFor();
   const errors = []; page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('console', (message) => {
+    if (message.type() !== 'error') return;
+    if (message.text().includes('409') && /\/api\/runs\/demo-stop\/(outcome|verify)$/.test(message.location().url)) return; // explicit stale-review fixtures below
+    errors.push(message.text());
+  });
   async function pair() {
     await page.getByLabel('Access key').fill(token); await page.getByRole('button', { name: 'Connect', exact: true }).click();
     await page.getByRole('button', { name: 'Disconnect browser' }).waitFor();
@@ -94,6 +98,10 @@ try {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/runs') await route.fulfill({ json: { runs: [runFixture] } });
     else if (path === '/api/runs/demo-stop') await route.fulfill({ json: { run: runFixture } });
+    else if (path === '/api/runs/demo-stop/outcome' || path === '/api/runs/demo-stop/verify') {
+      runFixture.verifyVerdict = null; runFixture.humanAction = null;
+      await route.fulfill({ status: 409, json: { error: 'DEMO: result changed; previous verification and acceptance cleared.' } });
+    }
     else if (path === '/api/runs/demo-stop/reconcile') {
       if (route.request().method() !== 'POST') throw new Error('Recovery must use POST');
       runFixture.processTermination = 'confirmed';
@@ -120,6 +128,14 @@ try {
         if (await page.getByRole('button', { name: 'Dispatch again', exact: true }).isDisabled()) throw new Error('Confirmed receipt did not update run controls');
       }
     }
+  }
+  for (const action of ['Accepted', 'Run npm verify']) {
+    Object.assign(runFixture, { status: 'done', workspacePath: 'DEMO working copy', verifyVerdict: 'pass', humanAction: null, processTermination: 'confirmed' });
+    await page.goto(base + '/agents?run=demo-stop'); await pair();
+    await page.getByText('Verification: pass', { exact: true }).waitFor();
+    await page.getByRole('button', { name: action, exact: true }).click();
+    await page.getByText('Verification: not independently verified', { exact: true }).waitFor();
+    await page.getByText('DEMO: result changed; previous verification and acceptance cleared.', { exact: true }).waitFor();
   }
   await desktop.addInitScript((accToken) => { window.__ACC_DESKTOP__ = { serverUrl: '', accToken }; }, token);
   await desktop.setViewportSize({ width: 1536, height: 1024 });

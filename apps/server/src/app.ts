@@ -31,7 +31,6 @@ import { HealthChecker } from './system/health';
 import { Runner } from './runner';
 import { PROVIDERS, ProviderSpawner } from './runner/providers';
 import { Verifier } from './runner/verification';
-import { workspaceEvidence } from './runner/workspace';
 import { type Spawner } from './runner/spawner';
 import { HeuristicParser } from './command/parser';
 import { ClaudeParser } from './command/claudeParser';
@@ -743,10 +742,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       return reply.code(400).send({ error: 'judge the run after it finishes — it is still in flight' });
     }
     if (parsed.data === 'accepted' && row.engineVersion === 1) {
-      const target = req.body as { headSha?: string; diffDigest?: string };
-      if (row.verifyVerdict !== 'pass' || !row.workspacePath || !row.baseSha || target.headSha !== row.headSha || target.diffDigest !== row.diffDigest) return reply.code(409).send({ error: 'Acceptance requires verification and the exact reviewed revision and diff' });
-      const current = await workspaceEvidence(row.workspacePath, row.baseSha);
-      if (current.headSha !== row.headSha || current.diffDigest !== row.diffDigest) return reply.code(409).send({ error: 'Result changed after verification; approval is stale' });
+      try { return { run: runRow(await verifier.accept(id, req.body as { headSha?: string; diffDigest?: string })) }; }
+      catch (error) { return reply.code(409).send({ error: redact((error as Error).message, [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))]) }); }
     }
     db.update(runs).set({ humanAction: parsed.data }).where(eq(runs.id, id)).run();
     return { run: runRow({ ...row, humanAction: parsed.data }) };

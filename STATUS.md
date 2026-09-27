@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: aktuell verifiering vid mänsklig acceptans
+
+Acceptans av versionerade körningar går nu genom verifieraren med aktuell innehållskontroll och villkorad databasuppdatering. Ett samtidigt korrigerat mänskligt beslut skrivs inte över. Ändrat eller oläsbart innehåll tar bort tidigare verifieringsgodkännande; även misslyckad förkontroll inför omverifiering ogiltigförklarar gammal acceptans. Körningsvyn hämtar om status efter nekad acceptans/verifiering så att en gammal grön etikett inte ligger kvar. Se [kontrakt och gränser](docs/controlos/acceptance-consistency.md).
+
+Claude-adaptern sänker inte längre Windows-processövervakarens prioritet. Windows-värd och arbetare behåller ärvd prioritet. Kraschfixturen väntar på övervakarens eget avslut innan arbetskatalogen tas bort; stoppkvittot gäller agentträdet och kan publiceras tidigare. Processfixturerna bevarar ursprungsfelet om även städningen misslyckas.
+
+Slutlig `npm run verify` passerade på Windows x64, Node 22.18.0 och npm 11.7.0: typkontroll, lint, 296 tester i 51 filer och byggning. `npm run smoke` passerade med märkta API-fixtures för nekad acceptans/omverifiering samt befintliga desktop-/mobilflöden. De 24 riktade process-/verifieringstesterna och de två återhämtningstesterna passerade också separat. Loggar: `controlos-approval-complete-verify.log`, `controlos-approval-smoke-recheck.log`, `controlos-approval-inherited-priority.log` och `controlos-approval-receipt-cleanup.log` (ignorerade). Webbens storleksvarning kvarstår.
+
+Tidiga helkörningar fallerade i processfixturer; en prövad sänkning av Windows-arbetarnas prioritet gav 13 testfel och togs bort. En senare helkörning hade 295 godkända tester och ett EBUSY-fel när kraschfixturens katalog togs bort. Den korrigerade fixturen passerar nu i fullsviten. Webbläsartestet hittade också den kvarhängande verifieringsstatus som rättats. Dessa tidigare fel finns kvar i `controlos-approval-*.log`; slutresultatet ovan ersätter inte deras historik.
+
+Ingen modell eller pilotagent startades. T20/T22/T43 har omprovats och källhasharna uppdaterats; övriga scenariostatusar är oförändrade. Policybundna operationsgodkännanden, full T06/T26 och hela R1–R4 återstår. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: konfiguration skild från verifierad anslutning
 
 Anslutningsstatus skiljer nu sparad nyckel från autentisering. GitHub har en manuell, läsande kontroll med tidsstämpel, tiosekundersgräns och nekade omdirigeringar. Utgångna/avvisade nycklar, otillgänglig kontroll och saknat verifieringsstöd visas separat. Nyckelbyte och omstart ogiltigförklarar resultatet; efter fem minuter blir det inaktuellt. Inställningskorten har också fått läsbar mobilbredd.

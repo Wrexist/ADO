@@ -60,6 +60,11 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   if (!detail) return <p className="mt-2 text-label text-text3">Loading…</p>;
 
   const inFlight = detail.status === 'running' || detail.status === 'queued';
+  const refreshFailedReview = async (error: Error) => {
+    setNote(error.message);
+    try { setDetail(await fetchRunDetail(detail.id)); onChanged(); }
+    catch { setErr('Could not refresh the result after review failed. Reload before reviewing again.'); }
+  };
 
   const kill = async () => {
     if (!confirmKill) {
@@ -100,7 +105,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
       setDetail({ ...detail, humanAction: updated.humanAction });
       onChanged(); // the row chip reflects the verdict
     } catch (e) {
-      setNote((e as Error).message);
+      await refreshFailedReview(e as Error);
     } finally {
       setBusy(false);
     }
@@ -123,7 +128,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         {detail.status === 'done' && detail.workspacePath && <Button size="sm" disabled={busy} onClick={() => {
           setBusy(true); setNote('Running repository verification...');
           void verifyRun(detail.id).then(() => fetchRunDetail(detail.id)).then((updated) => { setDetail(updated); setNote('Verification recorded. Review the result before accepting.'); })
-            .catch((error: Error) => setNote(error.message)).finally(() => setBusy(false));
+            .catch(refreshFailedReview).finally(() => setBusy(false));
         }}>Run npm verify</Button>}
         <p>Verification: {detail.verifyVerdict ?? 'not independently verified'}</p>
         {detail.status === 'failed' && detail.processTermination === 'unconfirmed' && <Button size="sm" disabled={busy} onClick={() => {

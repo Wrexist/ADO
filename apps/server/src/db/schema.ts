@@ -62,9 +62,8 @@ export const runs = sqliteTable(
     tokensIn: integer('tokens_in'),
     tokensOut: integer('tokens_out'),
     turns: integer('turns'),
-    // Self-learning feed: humanAction is written by POST /api/runs/:id/outcome (a human judging
-    // a finished run); verifyVerdict stays reserved for the (parked) analyzer — unwritten today.
-    verifyVerdict: text('verify_verdict'), // pass | fail | null — reserved, unwritten
+    // Human outcome and independent verification are separate; acceptance binds exact content.
+    verifyVerdict: text('verify_verdict'), // pass | fail | null
     humanAction: text('human_action'), // accepted | corrected | redone | null until judged
     exitCode: integer('exit_code'),
     note: text('note'), // e.g. "orphaned on boot", "opaque stream"

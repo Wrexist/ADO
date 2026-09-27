@@ -292,7 +292,9 @@
       "specification": "**Grind:** R1. **Krav:** REQ04, REQ16. **Status:** not_run.\n\n**Givet:** Tester har passerat på commit A och koden ändras till B.\n\n**När:** Godkännande eller färdigmarkering begärs.\n\n**Godkänt endast om:** Beviset betraktas som utdaterat. Nya kontroller eller explicit dokumenterat undantag krävs.\n\n**Gäller:** always.",
       "relatedEvidence": [
         "apps/server/src/runner/verification.test.ts",
-        "apps/server/src/runner/workspace.test.ts"
+        "apps/server/src/runner/workspace.test.ts",
+        "docs/controlos/acceptance-consistency.md",
+        "scripts/smoke.mjs"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },
@@ -416,10 +418,10 @@
       "acceptanceEvidence": {
         "date": "2026-09-27",
         "environment": "Windows x64, Node 22.18.0, npm 11.7.0, locally compiled .NET Framework process host",
-        "command": "npx vitest run apps/server/src/runner/nativeProcess.test.ts",
+        "command": "npm run verify",
         "result": "Passed: real runner and Codex adapter against a local protocol fixture. Two descendant levels ignore interruption; the adapter's grace period expires, all three assigned processes stop, and the writer lock is released only with empty-job confirmation. Companion host-loss scenario retains the lock.",
         "scope": "Windows agent Job Object host only. No POSIX, auxiliary-command, external-broker, OS-sandbox or real-model acceptance claim.",
-        "nativeArtifactSha256": "63f346da3091b76e1cb373028120a8d041e5a177d1281a3f81d7576930b81961",
+        "nativeArtifactSha256": "467dae76f64bee0e3f1771f1427dc8376ea409f87ed812dc113e7d0c48475b1e",
         "sourceSha256": {
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
@@ -455,21 +457,21 @@
       "acceptanceEvidence": {
         "date": "2026-09-27",
         "environment": "Windows x64, Node 22.18.0, npm 11.7.0",
-        "command": "npm run verify; npm run smoke; npx vitest run apps/server/src/lib/processOutput.test.ts apps/server/src/runner/outputFlood.test.ts apps/server/src/runner/codex.test.ts",
+        "command": "npm run verify; npm run smoke",
         "result": "Passed: real process fixtures drain over 1 MiB stderr, retain redacted bounded diagnostics with an explicit loss marker, and stop oversized stdout before the run timeout. Runner persists failure and releases its writer lock after native completion. Browser fixture shows the diagnostic loss marker at 1536/390 pixels.",
         "scope": "Local Windows Claude/Codex agent adapters using offline fixtures. No model call, auxiliary-command or POSIX acceptance claim. Secret handling across all other outputs remains T23 work.",
         "sourceSha256": {
           "apps/server/src/lib/processOutput.ts": "530e6e66a77f615d84e3cc09ab01c499a396fd7552233f5c4026bc6e38376e3c",
           "apps/server/src/lib/processOutput.test.ts": "b5e2331352735e4b364fc83b44f0d1bd9fcfe5b71f87f8fdf1ac4bc719f05b22",
           "apps/server/src/lib/redact.ts": "e81dee7a1ce9328c9985cbe10b50406e69b6d069854fc56ddd8d9c38c70c377a",
-          "apps/server/src/runner/outputFlood.test.ts": "aa909f44701ccefca47b7e0a7d1eed29f6ed006398e7c44abb65ca2b0b1911da",
+          "apps/server/src/runner/outputFlood.test.ts": "c97637e8167a356d1fd413bb019573a1ac2ae9f1a6e6e42f8298f3ae9ed4ad4e",
           "apps/server/src/runner/codex.test.ts": "50f8a3f42f1033ded56733a17a791fcd5c02dbb450afd1f5bef59c83d34270c5",
-          "apps/server/src/runner/spawner.ts": "a09b14c5c3ddea31954a076fa514af2017d0375b4fd5fc2d6f9bbefc5bbd482a",
+          "apps/server/src/runner/spawner.ts": "178a51ae136e1d9750a591b2a98f1bc15c6dc7b9a90827381c3248003da5c22b",
           "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
           "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
-          "scripts/smoke.mjs": "0a08b683f9d97dcbceddd9fe93806f12c95d9080be3b121e388ecdbf6f322ae3"
+          "scripts/smoke.mjs": "c4cbb7d4ed3f8e4c0254a11297779439676a1213c73ac21422eb90ba6607e554"
         }
       }
     },
@@ -517,7 +519,9 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R1. **Krav:** REQ16. **Status:** not_run.\n\n**Givet:** Användaren godkänner diffhash A.\n\n**När:** Agenten ändrar diffen eller en annan action begärs.\n\n**Godkänt endast om:** Godkännandet kan inte återanvändas. Servern avvisar operationen och ber om aktuellt specifikt beslut.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/runner/verification.test.ts"
+        "apps/server/src/runner/verification.test.ts",
+        "docs/controlos/acceptance-consistency.md",
+        "scripts/smoke.mjs"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },
@@ -668,11 +672,11 @@
       "acceptanceEvidence": {
         "date": "2026-09-27",
         "environment": "Windows, Node 22.18.0, npm 11.7.0",
-        "command": "npx vitest run apps/server/src/sse-recovery.test.ts",
+        "command": "npm run verify",
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "0dba74f943c998bbc012de3cf69ff2943d6e4ecd2250b65c3dae5aafeb31d40e",
+          "apps/server/src/app.ts": "92767d89e9b6cca4680f9e85d6fbdcecc0e22b8155876e5e07dbfb430b769f83",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }

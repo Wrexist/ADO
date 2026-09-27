@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
@@ -17,6 +18,7 @@ describe.skipIf(process.platform !== 'win32')('durable native stop recovery', ()
     const database = join(root, 'profile.sqlite');
     const receipts = join(root, 'process-receipts');
     const marker = join(root, 'pids.txt');
+    const hostMarker = join(root, 'host-pid.txt');
     const leaf = `require('node:fs').appendFileSync(${JSON.stringify(marker)},process.pid+'\\n'); setInterval(()=>{},1000); setTimeout(()=>process.exit(),20000);`;
     const agent = `require('node:child_process').spawn(process.execPath,['-e',${JSON.stringify(leaf)}],{stdio:'ignore'}); ${leaf}`;
     const code = `
@@ -25,10 +27,11 @@ describe.skipIf(process.platform !== 'win32')('durable native stop recovery', ()
       import { Runner } from ${JSON.stringify(new URL('./index.ts', import.meta.url).href)};
       import { spawnOwned } from ${JSON.stringify(new URL('../lib/ownedProcess.ts', import.meta.url).href)};
       import { createInterface } from 'node:readline';
-      import { existsSync, readFileSync } from 'node:fs';
+      import { existsSync, readFileSync, writeFileSync } from 'node:fs';
       const { db } = openDb(${JSON.stringify(database)});
       const spawner = { spawn(opts) {
         const proc = spawnOwned(process.execPath, ['-e', ${JSON.stringify(agent)}], opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
+        writeFileSync(${JSON.stringify(hostMarker)}, String(proc.child.pid));
         proc.child.stdin.end(); proc.child.stderr.resume();
         return { lines: createInterface({input:proc.child.stdout}), done:proc.done, kill:proc.kill, terminationConfirmed:proc.terminationConfirmed };
       }};
@@ -39,6 +42,7 @@ describe.skipIf(process.platform !== 'win32')('durable native stop recovery', ()
         if(existsSync(${JSON.stringify(marker)}) && readFileSync(${JSON.stringify(marker)},'utf8').trim().split(/\\s+/).length===2) process.exit(73);
       },20);
     `;
+    let failure: unknown;
     try {
       const crashed = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', code], { encoding: 'utf8', windowsHide: true, timeout: 15000 });
       expect(crashed.status, crashed.stderr).toBe(73);
@@ -57,9 +61,17 @@ describe.skipIf(process.platform !== 'win32')('durable native stop recovery', ()
         expect(db.select().from(executionLocks).all()).toHaveLength(0);
         expect(runner.reconcileRun(interrupted.id)).toBe(false);
         for (const pid of readFileSync(marker, 'utf8').trim().split(/\s+/).map(Number)) expect(() => process.kill(pid, 0)).toThrow();
+        // The receipt confirms agent termination before the supervisor's own
+        // finally block exits. Wait for that owner to release its working dir.
+        const hostPid = Number(readFileSync(hostMarker, 'utf8'));
+        expect(Number.isSafeInteger(hostPid) && hostPid > 0).toBe(true);
+        await expect.poll(() => { try { process.kill(hostPid, 0); return true; } catch { return false; } }, { timeout: 10000 }).toBe(false);
       } finally { await runner.stop(); sqlite.close(); }
-    } finally { rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
-  });
+    } catch (error) { failure = error; }
+    try { await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); }
+    catch (cleanup) { throw failure ? new AggregateError([failure, cleanup], 'Crash fixture and cleanup both failed') : cleanup; }
+    if (failure) throw failure;
+  }, 60000);
 
   it('does not signal an unrelated live process whose PID appears in a stale identity', async () => {
     const root = mkdtempSync(join(tmpdir(), 'controlos-stale-pid-'));

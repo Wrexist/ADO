@@ -31,3 +31,17 @@ Evidence:
 These are local offline process fixtures; no model calls or pilot jobs. This
 boundary applies to agent adapters. Review, installer and other auxiliary
 command runners need their own acceptance evidence.
+
+The real-process flood fixture now waits up to 60 seconds, within a 90-second
+test budget and before its 75-second runner timeout. The previous 12-second
+poll budget was shorter than the native host's 15-second startup deadline and
+failed repeatedly under host load. Data volume, memory bounds, exact failure
+reason, exit-code and termination assertions are unchanged. The longer budget
+does not change production process deadlines. Increasing that budget alone did
+not resolve the two observed failures: cleanup reported EBUSY and obscured the
+original result. Inspection also found the Windows supervisor was being lowered
+in priority. The adapter now leaves it at its inherited priority. A trial that
+lowered every Windows worker instead also failed multiple native tests under
+load and was removed. Worker and supervisor now retain inherited priorities;
+a real Claude process test checks the inherited worker priority. This does not establish that scheduling was
+the sole cause of the earlier failures.
