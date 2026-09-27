@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## T37: historiskt done är inte verifierat resultat
+
+API:t kräver nu verifieringsbevis för samma körning, Git-revision, innehållshash och omdöme innan ett oberoende verifieringsresultat visas. Ett äldre sparat pass/fail räcker inte. Historiska exekveringsresultat och mänskliga omdömen bevaras i databasen.
+
+Ett riktigt diskbaserat migrationsprov börjar med schema 0000–0004 och tre syntetiska äldre done-körningar, applicerar aktuella migrationer genom produktionsservern och kontrollerar autentiserade list-/detaljanrop över två starter. Körningarna förblir succeeded men verifieringen är null/okänd; inga tasks, godkännanden eller verifieringsbevis skapas. Provet misslyckades före rättningen och passerar efteråt. [Kontrakt och avgränsning](docs/controlos/legacy-verification.md), [versionsbundet underlag](docs/controlos/legacy-verification-evidence.json).
+
+`npm run verify` passerade: typkontroll, lint, 388 tester i 85 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Nio riktade migration-/verifierings-/godkännandetester passerade också. Loggar: `controlos-legacy-verification-verify.log` och `controlos-legacy-verification-focused.log`. Ingen ny UI-ändring eller paketerad Windows-artefakt ingår.
+
+15/46 scenarier är nu lokalt godkända. T37 gäller detta migrationsprov; full R1, avbruten migration, installeruppdatering och verklig profilåterställning är fortsatt öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## T38: förbrukade turns är inte uppgiftens framsteg
 
 Den breda `npm run smoke` passerade också: anslutning, desktop-runtime, dator-/mobilvyer, tema och uppgiftsgranskning. Logg: `controlos-turn-progress-smoke.log`. Vyerna använder uttryckligen demodata.

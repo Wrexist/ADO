@@ -118,3 +118,4 @@ One line per learning. The nightly analyzer (parked, p5) consumes this file; kee
 - 2026-09-27: JSON projection and SQLite audit are separate commits; a failed audit must retain the pending receipt and explain the partial result, with a fresh content-bound review before retry.
 - 2026-09-27: Fresh acceptance and historical replay need different ordering rules: equal wall-clock timestamps do not identify the same request. Both paths still need guarded file writes.
 - 2026-09-27: Timestamp plus percentage is not a unique status-event ID; rapid opaque-progress events collide. Use independent identities and test with a frozen clock rather than inserting sleeps.
+- 2026-09-27: A historical verify_verdict can predate independent verification. Preserve the stored history, but expose a verdict only with evidence for the same run, head SHA, content digest and verdict; exercise migrations through the production API.

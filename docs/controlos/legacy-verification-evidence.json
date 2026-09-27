@@ -1,0 +1,71 @@
+{
+  "date": "2026-09-27T21:49:39.119Z",
+  "baseRevision": "a5b3d19659769d46d132a3380528ea81988ef88b",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0"
+  },
+  "command": "npx vitest run apps/server/src/runner/legacyVerification.test.ts apps/server/src/runner/approvalApi.test.ts apps/server/src/runner/taskReviewApi.test.ts",
+  "result": "9 tests passed in 3 files; migration regression failed before the fix with legacy pass exposed as independent verification.",
+  "scenario": {
+    "initialSchema": "0000 through 0004",
+    "legacyRuns": 3,
+    "storedVerdicts": [
+      null,
+      "pass",
+      "fail"
+    ],
+    "productionBoots": 2,
+    "executionStatus": "succeeded",
+    "independentVerification": null,
+    "historicalRowsPreserved": true,
+    "inventedTasks": 0,
+    "inventedApprovals": 0,
+    "inventedVerificationEvidence": 0
+  },
+  "scope": "Synthetic disk-backed profile migrated through the production bootstrap, authenticated list/detail API and second boot. Null is the shared run-contract unknown verification value. No installer, native migration interruption or real user profile acceptance.",
+  "sourceSha256": {
+    "apps/server/src/app.ts": "9efb6988438ad56c559730e5799f8018b1a9af5ebef373512a7a153ebd461eea",
+    "apps/server/src/db/index.ts": "a28d9990993cc0db2d1d8fe2323f85cf3edcf6f8f13105bea517c470f8ae88bd",
+    "apps/server/src/db/schema.ts": "63000b9b63ecfa36010d487bb2f26f911848950d879607a438c2b70d6f4d3109",
+    "apps/server/src/runner/legacyVerification.test.ts": "c9a41ce7da2704f06b54b15005e98703ddf799a4ab7cb7caca322c635e62858c",
+    "packages/shared/src/runs.ts": "6028b7fb718f19f6092d2de8ff3d27ca04a0666f27e039d689f3556f0b606857",
+    "apps/web/src/views/RunHistory.tsx": "e665343bb6e5ab28a4bf24db1298fc7d8ba285176e69d2e8f4f6b0f29e858479",
+    "apps/server/drizzle/0000_init.sql": "62c058dbb394ba7bb6596cbc78d7f7b87c317e50e3c555e0df3488785b3a1fb1",
+    "apps/server/drizzle/0001_runs.sql": "a7c6b526b30ebb4321c81fbd873ceafa0be4a79b5ffd57fa0baae44f7121e61e",
+    "apps/server/drizzle/0002_drop_snapshots.sql": "954d03c378a2e70c4740b4574c228986ed8a3711663a466f58b6d397b7d989ba",
+    "apps/server/drizzle/0003_run_result_text.sql": "4fc70ee5a140fb5ba984101d326aaa653182a17da75e2bf383b4cc2eecd2911b",
+    "apps/server/drizzle/0004_run_workspace.sql": "ed08ff0e4b6f14b53d502c28b4ce5854a896a252fd3ff9d1f8815e177455bda4",
+    "apps/server/drizzle/0005_durable_execution.sql": "b7712a2c04504299ae05753670da6a2423c7f3b37113a5a941fa063ef154623e",
+    "apps/server/drizzle/0006_verification.sql": "fac746234598dc2eba24d219792c171dc676bdd4e19e93384a2a3415cb2f81a7",
+    "apps/server/drizzle/0007_run_provider.sql": "86e93e3328f765b20897b1ca61949bd340bba99d94b3479bdad478adb73c6570",
+    "apps/server/drizzle/0008_process_identity.sql": "9f553381a7ffdf58c5bea38ad309e22583d70a7622db06d93cf1f348074b016b",
+    "apps/server/drizzle/0009_operation_approvals.sql": "6d872beacdb880e8e6491f67f1450bec7e254bf820cb93d635133e84020e090e",
+    "apps/server/drizzle/0010_project_registry.sql": "d8a9bfa6eeb06024f9faa96834744697a86460223003f284702e24a2d551da5a",
+    "apps/server/drizzle/0011_planning.sql": "80357053d3a276aa3e775dc810161897c70ccdcc0a9845b7523beb106bfa0f24",
+    "apps/server/drizzle/0012_task_executions.sql": "4b5ed01e7db78d83cffa70d952ec569b87495a91bac97b15931f65c8588a18a4",
+    "apps/server/drizzle/0013_task_reviews.sql": "850646bb51cc28f3ecd30d22139116bc5a9fffc7acb6e0df4a10c0b7fc745886",
+    "apps/server/drizzle/0014_task_reopenings.sql": "3b52b18bcdddeb6213bcc620e87da2c18bfac60eeecf545cfc7b0dcdf42bc740",
+    "apps/server/drizzle/0015_verification_attempts.sql": "c12966c280d79c9c9923ce3855af361b9697ccae0c292656c2e9fc9e615c4474",
+    "apps/server/drizzle/0016_execution_capacity.sql": "648cf1bc4ba9988e4157043115f8b8c5d3d6a5eb47cc633fa90be2e79553b666",
+    "apps/server/drizzle/0017_run_source_identity.sql": "d2201ebe6f11abc7ec3474492673b4e5b4b2def0c3cb84def78b83a848f8f289",
+    "apps/server/drizzle/0018_workspace_provenance.sql": "88a981d9fcd38b5815e5b509511d675a69528ba669e6284686988e9515daad6c",
+    "apps/server/drizzle/0019_automation_dispatches.sql": "7f3dad623a0cfa3e3bbb62c22e07ee23fa295236e8b39b91862af2d8d991f75b",
+    "apps/server/drizzle/meta/_journal.json": "5e49c7ebdd4c7b24c8cab1ae87198e7dc99fb767e6edc88f57bf6a2076d06517"
+  },
+  "logSha256": {
+    "controlos-legacy-verification-before.log": "739a99b526c8bb5416687067325e852a662c7462e5e55c5e0ac551536e962f8f",
+    "controlos-legacy-verification-focused.log": "bfda43faa6c6290cd1a7932f33d616d768ea177b59af4edf5748fa55cdf8e415",
+    "controlos-legacy-verification-verify.log": "1f965c1f03349bb707c27e345d9a8f78395c8ab6b13f7d608157a931888f3412"
+  },
+  "validation": {
+    "command": "npm run verify",
+    "exitCode": 0,
+    "tests": 388,
+    "testFiles": 85,
+    "typecheck": "passed",
+    "lint": "passed",
+    "build": "passed"
+  }
+}

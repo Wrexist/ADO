@@ -4,7 +4,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { existsSync, statSync } from 'node:fs';
-import { desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte } from 'drizzle-orm';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
@@ -740,7 +740,11 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     branch: r.branch,
     headSha: r.headSha,
     diffDigest: r.diffDigest,
-    verifyVerdict: r.verifyVerdict,
+    // Historical summary fields are not independent verification evidence. Preserve
+    // the stored history, but expose a verdict only when bound evidence exists.
+    verifyVerdict: r.verifyVerdict && r.headSha && r.diffDigest && db.select({ id: verificationEvidence.id }).from(verificationEvidence)
+      .where(and(eq(verificationEvidence.runId, r.id), eq(verificationEvidence.headSha, r.headSha), eq(verificationEvidence.diffDigest, r.diffDigest), eq(verificationEvidence.verdict, r.verifyVerdict))).get()
+      ? r.verifyVerdict : null,
   });
   app.get('/api/runs', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;

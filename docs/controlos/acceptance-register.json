@@ -1098,8 +1098,21 @@
     {
       "id": "T37",
       "title": "Migration av gammalt done",
-      "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ21, REQ04. **Status:** not_run.\n\n**Givet:** Legacy runs har status done utan verifieringsbevis.\n\n**När:** Nytt schema införs i testkopian.\n\n**Godkänt endast om:** Historisk exekveringsframgång bevaras men task_verification blir unknown, inte automatiskt passed.\n\n**Gäller:** always."
+      "acceptanceStatus": "passed",
+      "specification": "**Grind:** R1. **Krav:** REQ21, REQ04. **Status:** passed (local Windows migration evidence).\n\n**Givet:** Legacy runs har status done utan verifieringsbevis.\n\n**När:** Nytt schema införs i testkopian.\n\n**Godkänt endast om:** Historisk exekveringsframgång bevaras men task_verification blir unknown, inte automatiskt passed.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/legacyVerification.test.ts",
+        "docs/controlos/legacy-verification.md",
+        "docs/controlos/legacy-verification-evidence.json"
+      ],
+      "acceptanceEvidence": {
+        "date": "2026-09-27T21:49:39.119Z",
+        "environment": "Windows x64 / Node 22.18.0",
+        "command": "npx vitest run apps/server/src/runner/legacyVerification.test.ts apps/server/src/runner/approvalApi.test.ts apps/server/src/runner/taskReviewApi.test.ts",
+        "result": "Historical done execution and human judgment survive pre-verifier schema migration and reopen unchanged. Independent verification remains null/unknown in list and detail APIs despite historical pass/fail summaries; no task, approval or verification evidence is invented.",
+        "scope": "Synthetic disk-backed profile migrated through the production bootstrap, authenticated list/detail API and second boot. Null is the shared run-contract unknown verification value. No installer, native migration interruption or real user profile acceptance.",
+        "artifactEvidence": "docs/controlos/legacy-verification-evidence.json"
+      }
     },
     {
       "id": "T38",
