@@ -56,7 +56,7 @@ export function OpsPage() {
           {/* header — copy single-shot; the count is derived */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-title font-semibold text-text1">Operations 👋</h1>
+              <h1 className="text-title font-semibold tracking-tight text-text1">Operations</h1>
               <p className="mt-1 text-body text-text2">
                 {allWell} {repoCount} projects active.
               </p>
@@ -78,7 +78,7 @@ export function OpsPage() {
           </div>
 
           {/* stat cards ×5 — all derived from the store */}
-          <div className="mt-6 grid grid-cols-5 gap-4">
+          <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-3 2xl:grid-cols-5">
             <StatCard
               label="Repositories"
               value={String(repoCount)}
@@ -131,16 +131,16 @@ export function OpsPage() {
           </div>
 
           {/* 5 / 4 / 3 column grid */}
-          <div className="mt-6 grid grid-cols-12 items-start gap-4">
-            <div className="col-span-5 flex flex-col gap-4">
+          <div className="mt-6 grid grid-cols-2 items-start gap-4 2xl:grid-cols-12">
+            <div className="col-span-2 flex min-w-0 flex-col gap-4 2xl:col-span-5">
               <ProjectsOverview />
               <BuildQueue />
             </div>
-            <div className="col-span-4 flex flex-col gap-4">
+            <div className="col-span-1 flex min-w-0 flex-col gap-4 2xl:col-span-4">
               <ActivityFeedB />
               <AgentRoster />
             </div>
-            <div className="col-span-3 flex flex-col gap-4">
+            <div className="col-span-1 flex min-w-0 flex-col gap-4 2xl:col-span-3">
               <AssistantPanel />
               <SystemMonitor />
               <QuickActions />

@@ -40,7 +40,7 @@ export function RightRail() {
   const suggest = (text: string) => setSeed((s) => ({ text, n: (s?.n ?? 0) + 1 }));
 
   return (
-    <aside className="flex w-[360px] shrink-0 flex-col gap-4 p-6 pl-0">
+    <aside className="hidden w-[320px] shrink-0 flex-col gap-4 py-8 pr-5 xl:flex">
       {/* AI Command Center — natural language → intent → action (Phase 4) */}
       <Card className="p-5">
         <h2 className="text-section font-semibold text-text1">AI Command Center</h2>

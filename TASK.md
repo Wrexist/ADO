@@ -4,6 +4,9 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Review OpenShip at a pinned source revision and implement neutral light/dark appearance, persistent theme choice, readable contrast and consistent detail-page navigation; see `docs/controlos/openship-design-review.md`.
+- [x] Preserve versioned queued jobs through normal shutdown and add explicit recovery-only cancellation with retained locks and transactional task/audit history.
+
 - [x] Retain the audited base in a separate checkout and implement on `codex/controlos-stabilization`.
 - [x] Implement runtime browser pairing, guarded task-file writes, queue recovery/idempotency, repository writer ownership, isolated Git results and content-bound verification.
 - [x] Add storage corruption checks, backup/restore validation, desktop OS credential encryption and safer process handling.

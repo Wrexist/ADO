@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## OpenShip-inspirerad design och beständig kö
+
+OpenShip har granskats på revision `fc60144ddb0312ff88502e6e660141238a616951`: faktisk dashboardbild, temaregler, navigation och beskriven arkitektur. ControlOS har nu en neutral ljus standardvy, sparat mörkt läge, tydligare typografi, fristående sidomenyer och kvarvarande navigation på undersidor. Smala datorfönster får kompakt sökning och färre Ops-kolumner så att projektidentiteter förblir läsbara. Inga externa komponenter, logotyper, beroenden eller deploymentfunktioner har kopierats. [Granskning och avgränsning](docs/controlos/openship-design-review.md).
+
+Versionerade köjobb bevaras nu vid normal avstängning. Återställning har ett separat granskningsflöde för att uttryckligen avbryta säkert registrerade, ännu inte startade jobb. Aktuell innehållsdigest och texten `CANCEL QUEUED JOB` krävs. Körningsrad, kopplad uppgift, uppgiftsrevision, byggstatus och revisionshändelse ändras atomiskt; gamla processer, verifieringar och lås får inte rensas genom flödet. Transaktionsfel rullar tillbaka allt och upprepad begäran skapar ingen dubblett. [Återställningskontrakt](docs/controlos/profile-recovery.md).
+
+`npm run verify` har passerat med typkontroll, lint, samtliga 365 tester i 78 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Utökad browser-smoke passerar vid 390/1024/1280/1536 px, inklusive sparat temaval, tangentbordsstyrning, läsbara projektidentiteter, parning, återställning och uppgiftsgranskning. Normal text och primärknappar klarar den automatiska kontrastkontrollen i båda paletterna. Bilderna har granskats och använder uttryckligen demodata. Webbchunkens varning kvarstår vid cirka 572 kB före gzip.
+
+Tidigare försök räknas inte som godkända: den första långa körningen blandade källrevisioner och hade tidsgränsfel samt ett föråldrat test som krävde att shutdown avbröt kön. En senare full körning passerade 364/365 tester; ett riktigt Windows-stopp hann inte inom testets korta standardpollning. Efter uttrycklig ti sekunders pollgräns passerade både riktat prov och samtliga 365 tester i den slutliga körningen. Testet med flera isolerade Git-jämförelser har nu en totalgräns på 120 sekunder. Produktskydd och verifierade postvillkor har behållits. Visuell kontroll hittade och korrigerade överströmmande toppmeny och ihoptryckta Ops-rader vid 1024 px; en särskild layoutregression täcker detta.
+
+13/46 fullständiga scenarier är fortsatt lokalt godkända; R1–R4-grindarna är öppna. Verklig användarprofil, paketerad omprovning av dessa ändringar, installer/uppdatering, sandbox, provider- och nyttopilot återstår. Ingen modell, pilotagent, merge eller publicering kördes. Loggar och bilder är ignorerade lokala artefakter: `controlos-openship-final-verify.log`, `controlos-openship-layout-smoke.log`, `controlos-openship-layout-typecheck.log`, `controlos-openship-layout-lint.log` och `smoke-shots/`. Följande avsnitt är historiska kontrollpunkter.
+
 ## R4: uttrycklig övergång till manuell drift
 
 Återställda profiler utan olösta blockerare kan nu granskas för manuell drift. En fem minuter giltig engångsbekräftelse binds till aktuella körningar, verifieringar, lås, referenser, innehållsjämförelser och profilens JSON-filer. Användaren måste skriva `ENABLE MANUAL OPERATION`; servern kontrollerar allt på nytt och vägrar ändrat underlag. Godkännandet sparas med filidentitets-/innehållskontroll, flush och rename. Den gamla sessionen förblir spärrad tills samma profil startas om, även om webbsidan laddas om under tiden.

@@ -50,8 +50,8 @@ export const tokens = {
     size: {
       pageTitle: 28, // 24–28 page title
       sectionTitle: 15,
-      body: 13,
-      label: 11, // labels / uppercase eyebrows
+      body: 14,
+      label: 12, // labels / uppercase eyebrows
       statValue: 28, // 26–28 semibold stat values, tabular-nums
     },
   },
@@ -78,3 +78,21 @@ export const tokens = {
 export type Tokens = typeof tokens;
 export type ColorToken = keyof typeof tokens.color;
 export type LanguageToken = keyof typeof tokens.language;
+
+/** ControlOS appearance: neutral surfaces, with color reserved for actions and status. */
+export const themes = {
+  light: {
+    bgApp: '#F7F8FA', bgPanel: '#FFFFFF', bgCard: '#FFFFFF', bgElevated: '#F0F1F4',
+    border: '#E2E4E9', borderHover: '#B9BEC8',
+    text1: '#191B20', text2: '#545B68', text3: '#626B79',
+    primary: '#6542CB', gradientFrom: '#7958D5', gradientTo: '#426DC9', onPrimary: '#FFFFFF',
+    success: '#167546', warning: '#95600A', info: '#176B9C', danger: '#C0343E',
+  },
+  dark: {
+    bgApp: '#141414', bgPanel: '#1B1B1B', bgCard: '#202020', bgElevated: '#2A2A2A',
+    border: '#383838', borderHover: '#565656',
+    text1: '#F5F5F5', text2: '#BBBBBB', text3: '#9A9A9A',
+    primary: '#B49BEF', gradientFrom: '#B49BEF', gradientTo: '#8EAFE9', onPrimary: '#201534',
+    success: '#7DCE9F', warning: '#EAC17A', info: '#8AC8E7', danger: '#F2959C',
+  },
+} as const;

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { TopBarA } from './TopBarA';
 import { StaleBanner } from './StaleBanner';
+import { SidebarA } from './SidebarA';
 
 /**
  * Standard chrome for a full-page sub-view (Repositories, Agents, Deployments, Activity,
@@ -23,7 +24,8 @@ export function PageShell({
     <div className="min-h-screen min-w-0 bg-app text-text1">
       <div className="hidden lg:block"><TopBarA /></div>
       <StaleBanner />
-      <main className="mx-auto max-w-[1100px] px-4 py-6 lg:px-8 lg:py-8">
+      <div className="flex items-start"><div className="hidden lg:block"><SidebarA /></div>
+      <main className="mx-auto min-w-0 w-full max-w-[1200px] px-4 py-6 lg:px-8 lg:py-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-title font-semibold text-text1">{title}</h1>
@@ -41,6 +43,7 @@ export function PageShell({
         </div>
         {children}
       </main>
+      </div>
     </div>
   );
 }

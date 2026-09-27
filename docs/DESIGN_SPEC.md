@@ -1,6 +1,8 @@
 # DESIGN_SPEC.md — 1:1 recreation of the reference images
 
-Save the two reference PNGs into the repo at `design/reference/view-a.png` (Command Center) and `design/reference/view-b.png` (Ops Dashboard). During Phase 1, Claude Code must keep them open side-by-side with its output — the gate is a visual match, not "inspired by".
+Current appearance direction (2026-09-27): the user's OpenShip reference supersedes the historical palette below. See [the source review and adaptation](controlos/openship-design-review.md). `themes` in `packages/shared/src/tokens.ts` defines the active light/dark palettes; the original `tokens.color` remains for historical chart/kit compatibility.
+
+Historical Phase 1 reference: `design/reference/view-a.png` (Command Center) and `design/reference/view-b.png` (Ops Dashboard). The remaining document records that earlier baseline.
 
 ## Design tokens (`packages/shared/tokens.ts` + Tailwind config)
 

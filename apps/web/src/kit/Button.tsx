@@ -12,7 +12,7 @@ export function Button({
   size?: 'sm' | 'md';
 }) {
   const variants: Record<string, string> = {
-    primary: 'bg-primary text-text1 hover:bg-primary/85',
+    primary: 'bg-primary text-on-primary hover:bg-primary/85',
     outline: 'border bg-card text-text1 hover:border-hover hover:bg-elevated',
     ghost: 'text-text2 hover:bg-elevated hover:text-text1',
   };

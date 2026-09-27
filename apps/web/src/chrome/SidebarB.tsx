@@ -59,7 +59,7 @@ const GROUPS: NavGroup[] = [
 function NavItem({ icon, label, active, to }: NavEntry) {
   const cls = cx(
     'flex w-full items-center gap-2.5 rounded-tile px-3 py-[7px] text-body transition-colors duration-150 ease-soft',
-    active ? 'bg-primary/15 font-medium text-text1' : 'text-text2 hover:bg-elevated hover:text-text1',
+    active ? 'bg-elevated font-medium text-text1' : 'text-text2 hover:bg-elevated hover:text-text1',
   );
   const inner = (
     <>
@@ -68,7 +68,7 @@ function NavItem({ icon, label, active, to }: NavEntry) {
     </>
   );
   return to ? (
-    <Link to={to} className={cls}>{inner}</Link>
+    <Link to={to} aria-current={active ? 'page' : undefined} className={cls}>{inner}</Link>
   ) : (
     <button type="button" className={cls}>{inner}</button>
   );
@@ -98,8 +98,8 @@ export function SidebarB() {
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => !isPlanned(it.to)) }));
   const planned = GROUPS.flatMap((g) => g.items).filter((it) => isPlanned(it.to));
   return (
-    <aside className="flex w-[200px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
-      <nav className="flex flex-1 flex-col gap-0.5">
+    <aside className="sticky top-4 m-3 flex max-h-[calc(100vh-2rem)] w-[200px] shrink-0 flex-col overflow-y-auto rounded-card border bg-panel p-3">
+      <nav aria-label="Operations navigation" className="flex flex-1 flex-col gap-0.5">
         {groups.map((group, gi) => (
           <div key={group.eyebrow ?? gi} className="flex flex-col gap-0.5">
             {group.eyebrow ? (

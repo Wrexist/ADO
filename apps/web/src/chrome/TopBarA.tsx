@@ -4,6 +4,7 @@ import { usePalette } from '../lib/palette';
 import { ConnectionBadge } from './ConnectionBadge';
 import { LiveRunsChip } from './LiveRunsChip';
 import { ViewSwitcher } from './ViewSwitcher';
+import { ThemeToggle } from './ThemeToggle';
 
 /**
  * View A top bar — logo + title block, centered ⌘K search, actions, avatar.
@@ -30,25 +31,26 @@ export function TopBarA() {
       <div className="flex shrink-0 items-center gap-3">
         <span
           aria-hidden
-          className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-gradient-from via-primary to-gradient-to"
+          className="h-8 w-8 shrink-0 rounded-full bg-text1"
           style={{ maskImage: 'radial-gradient(circle at center, transparent 32%, black 34%)', WebkitMaskImage: 'radial-gradient(circle at center, transparent 32%, black 34%)' }}
         />
         <div className="leading-tight">
-          <p className="whitespace-nowrap text-body font-semibold text-text1">AI Control Center</p>
-          <p className="whitespace-nowrap text-label text-text3">Command everything. Build anything.</p>
+          <p className="whitespace-nowrap text-section font-semibold tracking-tight text-text1">ControlOS</p>
+          <p className="whitespace-nowrap text-label text-text3">Your development workspace</p>
         </div>
       </div>
 
       {/* centered search — opens the command palette (⌘K) */}
-      <div className="mx-auto w-full max-w-[560px]">
+      <div className="mx-auto min-w-0 flex-1 max-w-[560px]">
         <button
           type="button"
+          aria-label="Search repositories, projects, agents"
           onClick={() => openPalette(true)}
-          className="relative flex h-9 w-full items-center rounded-full border bg-panel pl-10 pr-16 text-left text-body text-text3 transition-colors duration-150 ease-soft hover:border-hover"
+          className="relative flex h-11 w-full min-w-11 items-center rounded-tile border bg-panel pl-10 pr-3 text-left text-body text-text3 transition-colors duration-150 ease-soft hover:border-hover xl:pr-16"
         >
           <Icon name="search" size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text3" />
-          Search repositories, projects, agents…
-          <kbd className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-0.5 rounded border bg-elevated px-1.5 py-0.5 text-[10px] text-text3">
+          <span className="hidden truncate xl:inline">Search repositories, projects, agents…</span>
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded border bg-elevated px-1.5 py-0.5 text-[10px] text-text3 xl:flex">
             ⌘ K
           </kbd>
         </button>
@@ -59,6 +61,7 @@ export function TopBarA() {
         <LiveRunsChip />
         <ViewSwitcher />
         <ConnectionBadge />
+        <ThemeToggle />
         <TopBarButton icon="plus" label="Add project" to="/repositories?add=1" />
         <TopBarButton icon="bell" label="Notifications" to="/activity" />
         <Link
@@ -66,7 +69,7 @@ export function TopBarA() {
           aria-label="Account settings"
           className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary transition-colors duration-150 ease-soft hover:bg-primary/30"
         >
-          IM
+          <Icon name="settings" size={16} />
         </Link>
       </div>
     </header>

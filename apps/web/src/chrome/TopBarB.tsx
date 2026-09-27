@@ -4,6 +4,7 @@ import { usePalette } from '../lib/palette';
 import { ConnectionBadge } from './ConnectionBadge';
 import { LiveRunsChip } from './LiveRunsChip';
 import { ViewSwitcher } from './ViewSwitcher';
+import { ThemeToggle } from './ThemeToggle';
 
 /**
  * View B top bar — "AI CONTROL / DASHBOARD" logo block left; search pill,
@@ -33,7 +34,7 @@ export function TopBarB() {
         </span>
         <div className="leading-tight">
           <p className="whitespace-nowrap text-body font-semibold tracking-wide text-text1">
-            AI CONTROL
+            ControlOS
           </p>
           <p className="whitespace-nowrap text-label uppercase tracking-[0.18em] text-text3">
             Dashboard
@@ -46,14 +47,16 @@ export function TopBarB() {
         <LiveRunsChip />
         <ViewSwitcher />
         <ConnectionBadge />
+        <ThemeToggle />
         <button
           type="button"
+          aria-label="Search repositories, projects, agents"
           onClick={() => openPalette(true)}
-          className="relative flex h-9 w-[240px] items-center rounded-full border bg-panel pl-9 pr-12 text-left text-body text-text3 transition-colors duration-150 ease-soft hover:border-hover"
+          className="relative flex h-11 w-11 items-center rounded-tile border bg-panel text-left text-body text-text3 transition-colors duration-150 ease-soft hover:border-hover xl:w-[240px] xl:pl-9 xl:pr-12"
         >
           <Icon name="search" size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text3" />
-          Search anything…
-          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border bg-elevated px-1.5 py-0.5 text-[10px] text-text3">
+          <span className="hidden xl:inline">Search anything…</span>
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border bg-elevated px-1.5 py-0.5 text-[10px] text-text3 xl:block">
             ⌘K
           </kbd>
         </button>
@@ -70,7 +73,7 @@ export function TopBarB() {
           aria-label="Account settings"
           className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary transition-colors duration-150 ease-soft hover:bg-primary/30"
         >
-          IM
+          <Icon name="settings" size={16} />
         </Link>
       </div>
     </header>

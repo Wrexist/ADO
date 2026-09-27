@@ -38,7 +38,7 @@ const SORTS = [
 ] as const;
 type SortId = (typeof SORTS)[number]['id'];
 type Layout = 'grid' | 'comfortable' | 'list';
-const GRID_COLS: Record<Layout, string> = { grid: 'grid-cols-3', comfortable: 'grid-cols-2', list: 'grid-cols-1' };
+const GRID_COLS: Record<Layout, string> = { grid: 'grid-cols-2 2xl:grid-cols-3', comfortable: 'grid-cols-2', list: 'grid-cols-1' };
 const LAYOUTS: Array<{ icon: IconName; mode: Layout }> = [
   { icon: 'grid', mode: 'grid' },
   { icon: 'list', mode: 'list' },
@@ -68,11 +68,11 @@ export function MainColumn() {
   const visible = (category ? repos.filter((r) => r.category === category) : repos).slice(0, 6);
 
   return (
-    <main className="min-w-[640px] flex-1 p-6">
+    <main className="min-w-0 flex-1 px-5 py-8">
       {/* header row — copy is a single-shot draft (convention 6) */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-title font-semibold text-text1">Welcome back 👋</h1>
+          <h1 className="text-title font-semibold tracking-tight text-text1">Workspace overview</h1>
           <p className="mt-1 text-body text-text2">
             Here's what's happening with your projects today.
           </p>

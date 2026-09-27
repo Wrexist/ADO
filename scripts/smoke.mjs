@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 import { smokePlanning } from './smoke-planning.mjs';
 import { smokeTaskExecution } from './smoke-task-execution.mjs';
 import { smokeTaskReview } from './smoke-task-review.mjs';
+import { smokeAppearance } from './smoke-appearance.mjs';
 
 const out = resolve(process.argv[2] ?? 'smoke-shots'); await mkdir(out, { recursive: true });
 const token = randomBytes(24).toString('hex');
@@ -55,10 +56,19 @@ try {
     await page.waitForTimeout(700);
   }
   await pair();
+  // Appearance is local preference only; both palettes keep real connection state visible.
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click();
+  await page.waitForTimeout(250);
+  if (await page.locator('html').getAttribute('data-theme') !== 'dark') throw new Error('Dark appearance was not applied');
+  await page.screenshot({ path: join(out, 'command-dark.png'), fullPage: true });
+  await page.reload(); await pair();
+  if (await page.locator('html').getAttribute('data-theme') !== 'dark') throw new Error('Appearance did not survive reload');
+  await page.getByRole('button', { name: 'Switch to light theme' }).click();
   for (const route of ['/command', '/ops', '/agents', '/settings']) {
     await page.goto(base + route); await pair();
     await page.screenshot({ path: join(out, `${route.slice(1)}.png`), fullPage: true });
   }
+  await smokeAppearance(page, base, pair, out);
   await page.getByRole('button', { name: 'Disconnect browser' }).click();
   await page.getByRole('heading', { name: 'Connect to ControlOS' }).waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -77,6 +87,17 @@ try {
   } }));
   await page.route('**/api/recovery/runs/*/content', (route) => route.fulfill({ json: { runId: 'DEMO-reference-0', checkedAt: '2026-09-27T12:00:00Z', status: 'matches_recorded', executionEnabled: false } }));
   let activationBlocked = true;
+  let queuedCancelled = false;
+  await page.route('**/api/recovery/queue', (route) => route.fulfill({ json: { jobs: [
+    ...(!queuedCancelled ? [{ id: 'DEMO-queued', repoId: 'DEMO-project', task: 'DEMO unstarted job', eligible: true, digest: 'DEMO-reviewed-queue', reason: 'No process or workspace recorded.' }] : []),
+    { id: 'DEMO-locked', repoId: 'DEMO-project', task: 'DEMO unresolved process', eligible: false, digest: 'DEMO-locked', reason: 'Preserve this writer lock for process review.' },
+  ] } }));
+  await page.route('**/api/recovery/runs/DEMO-queued/cancel-queued', (route) => {
+    const body = route.request().postDataJSON();
+    if (body.digest !== 'DEMO-reviewed-queue' || body.confirmation !== 'CANCEL QUEUED JOB') throw new Error('Cancellation was not bound to the displayed job review');
+    queuedCancelled = true;
+    return route.fulfill({ json: { cancelled: true, locksReleased: false } });
+  });
   await page.route('**/api/recovery/prepare', (route) => route.fulfill({ json: { blockers: activationBlocked ? ['Retained writer locks require confirmed process termination. Activation cannot release them.'] : [], token: activationBlocked ? null : 'DEMO-idle-review', references: 0, comparedResults: 0 } }));
   await page.route('**/api/recovery/activate', (route) => {
     const body = route.request().postDataJSON();
@@ -96,6 +117,19 @@ try {
     await page.getByText('Matches the saved revision and fingerprint at inspection time. This is not a new verification or approval.', { exact: true }).waitFor();
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Recovery banner overflow');
     await page.screenshot({ path: join(out, `recovery-review-${width}.png`), fullPage: true });
+    queuedCancelled = false;
+    await page.getByText('Review restored queued jobs', { exact: true }).click();
+    await page.getByRole('button', { name: 'Load queued jobs', exact: true }).click();
+    const cancelReview = page.getByRole('button', { name: 'Review cancellation', exact: true });
+    await cancelReview.waitFor(); if (await cancelReview.count() !== 1) throw new Error('Uncertain queued record was offered for cancellation');
+    await cancelReview.click();
+    const confirmCancel = page.getByRole('button', { name: 'Confirm queued-job cancellation', exact: true });
+    if (await confirmCancel.isEnabled()) throw new Error('Queued cancellation did not require typed confirmation');
+    await page.getByLabel('Type CANCEL QUEUED JOB').fill('CANCEL QUEUED JOB');
+    await confirmCancel.click();
+    await page.getByRole('status').filter({ hasText: 'Queued job DEMO-queued cancelled' }).waitFor();
+    await page.getByText('DEMO unresolved process', { exact: true }).waitFor();
+    await page.screenshot({ path: join(out, `recovery-cancel-queue-${width}.png`), fullPage: true });
     activationBlocked = true;
     await page.getByText('Resume manual operation', { exact: true }).click();
     await page.getByRole('button', { name: 'Review activation', exact: true }).click();
@@ -118,6 +152,8 @@ try {
   await page.unroute('**/api/recovery/runs/*/content');
   await page.unroute('**/api/recovery/prepare');
   await page.unroute('**/api/recovery/activate');
+  await page.unroute('**/api/recovery/queue');
+  await page.unroute('**/api/recovery/runs/DEMO-queued/cancel-queued');
   // Explicit planning fixture. Persistence and Git preservation have separate real API tests.
   const portfolioProjectId = '11111111-1111-4111-8111-111111111111';
   const portfolioRepositoryId = '22222222-2222-4222-8222-222222222222';
@@ -395,7 +431,7 @@ try {
   }
   await desktop.addInitScript((accToken) => { window.__ACC_DESKTOP__ = { serverUrl: '', accToken }; }, token);
   await desktop.setViewportSize({ width: 1536, height: 1024 });
-  await desktop.goto(base); await desktop.getByRole('heading', { name: 'Welcome back' }).waitFor({ timeout: 10000 });
+  await desktop.goto(base); await desktop.getByRole('heading', { name: 'Workspace overview' }).waitFor({ timeout: 10000 });
   await smokePlanning(browser, base, token, out);
   await smokeTaskExecution(browser, base, token, out);
   await smokeTaskReview(browser, base, token, out);

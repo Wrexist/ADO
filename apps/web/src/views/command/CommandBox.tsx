@@ -94,7 +94,7 @@ export function CommandBox({
           onClick={() => void submit()}
           disabled={busy}
           aria-label="Run command"
-          className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-text1 transition-colors duration-150 ease-soft hover:bg-primary/85 disabled:opacity-50"
+          className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-on-primary transition-colors duration-150 ease-soft hover:bg-primary/85 disabled:opacity-50"
         >
           <Icon name="send" size={13} />
         </button>

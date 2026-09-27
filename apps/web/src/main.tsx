@@ -30,6 +30,7 @@ import { ErrorBoundary } from './chrome/ErrorBoundary';
 import { PairingGate } from './chrome/PairingGate';
 import { MobileNav } from './chrome/MobileNav';
 import './index.css';
+import './lib/theme';
 
 // Connect to the event bus (SSE) — the only data source views render from.
 

@@ -62,7 +62,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
 function NavItem({ icon, label, count, active, to }: NavEntry) {
   const cls = cx(
     'flex w-full items-center gap-2.5 rounded-tile px-3 py-2 text-body transition-colors duration-150 ease-soft',
-    active ? 'bg-primary/15 font-medium text-text1' : 'text-text2 hover:bg-elevated hover:text-text1',
+    active ? 'bg-elevated font-medium text-text1' : 'text-text2 hover:bg-elevated hover:text-text1',
   );
   const inner = (
     <>
@@ -72,7 +72,7 @@ function NavItem({ icon, label, count, active, to }: NavEntry) {
     </>
   );
   return to ? (
-    <Link to={to} className={cls}>{inner}</Link>
+    <Link to={to} aria-current={active ? 'page' : undefined} className={cls}>{inner}</Link>
   ) : (
     <button type="button" className={cls}>{inner}</button>
   );
@@ -118,8 +118,9 @@ export function SidebarA() {
   }));
   const planned = raw.flatMap((g) => g.items).filter((it) => isPlanned(it.to));
   return (
-    <aside className="flex w-[224px] shrink-0 flex-col border-r bg-panel px-3 pb-4 pt-3">
-      <nav className="flex flex-1 flex-col gap-0.5">
+    <aside className="sticky top-4 m-3 flex max-h-[calc(100vh-2rem)] w-[216px] shrink-0 flex-col overflow-y-auto rounded-card border bg-panel p-3">
+      <Link to="/projects" className="mb-3 flex min-h-11 items-center justify-center gap-2 rounded-tile bg-primary px-3 text-body font-medium text-on-primary"><Icon name="plus" size={16} />Open projects</Link>
+      <nav aria-label="Workspace navigation" className="flex flex-1 flex-col gap-0.5">
         {groups.map((group, gi) => (
           <div key={group.eyebrow ?? gi} className="flex flex-col gap-0.5">
             {group.eyebrow ? (
@@ -141,11 +142,11 @@ export function SidebarA() {
         className="mt-6 flex w-full items-center gap-2.5 rounded-tile border bg-card px-3 py-2.5 text-left transition-colors duration-150 ease-soft hover:border-hover"
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary">
-          IM
+          <Icon name="settings" size={16} />
         </span>
         <span className="min-w-0 flex-1 leading-tight">
-          <span className="block truncate text-body font-medium text-text1">Isac Molin</span>
-          <span className="block text-label text-text3">Admin</span>
+          <span className="block truncate text-body font-medium text-text1">Workspace settings</span>
+          <span className="block text-label text-text3">Connections & preferences</span>
         </span>
         <Icon name="chevronDown" size={14} className="text-text3" />
       </Link>

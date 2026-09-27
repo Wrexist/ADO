@@ -2,9 +2,9 @@ import type { Config } from 'tailwindcss';
 // Relative import on purpose: tokens.ts is pure data (zero imports), so the PostCSS/jiti
 // config loader stays dependency-free while the hex values live in exactly ONE place
 // (packages/shared/src/tokens.ts — CLAUDE.md convention 3, audit L1).
-import { tokens } from '../../packages/shared/src/tokens';
+import { tokens, themes } from '../../packages/shared/src/tokens';
 
-const c = tokens.color;
+const c = Object.fromEntries(Object.keys(themes.light).map((name) => [name, `rgb(var(--controlos-${name}) / <alpha-value>)`])) as Record<keyof typeof themes.light, string>;
 
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -19,6 +19,7 @@ const config: Config = {
         text2: c.text2,
         text3: c.text3,
         primary: c.primary,
+        'on-primary': c.onPrimary,
         'gradient-from': c.gradientFrom,
         'gradient-to': c.gradientTo,
         success: c.success,
