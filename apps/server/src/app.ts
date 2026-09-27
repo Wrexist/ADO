@@ -19,6 +19,7 @@ import { registerSecurity, sseAuthorized, tokenMatches } from './security';
 import { ConnectionsStore, type SecretCodec } from './connections/store';
 import { readRecoveryState, recoveryMessage } from './backup/recovery';
 import { inspectRecoveryReferences } from './backup/references';
+import { compareRecoveredContent } from './backup/content';
 import { PromptStore } from './prompts/store';
 import { ProjectDirsStore } from './projects/store';
 import { ProjectSettingsStore } from './projects/settings';
@@ -1040,6 +1041,17 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!requireToken(req, reply)) return undefined;
     if (!recovery) return reply.code(409).send({ error: 'Reference review requires a restored profile in recovery review mode' });
     return inspectRecoveryReferences(db, registry.hostId);
+  });
+  let recoveryContentBusy = false;
+  app.get('/api/recovery/runs/:id/content', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    if (!recovery) return reply.code(409).send({ error: 'Content review requires a restored profile' });
+    if (recoveryContentBusy) return reply.code(409).send({ error: 'Another content comparison is in progress' });
+    const run = db.select().from(runs).where(eq(runs.id, (req.params as { id: string }).id)).get();
+    if (!run) return reply.code(404).send({ error: 'Run not found' });
+    recoveryContentBusy = true;
+    try { return await compareRecoveredContent(run); }
+    finally { recoveryContentBusy = false; }
   });
   app.post('/api/runs/:id/verify/stop', async (req, reply) => {
     try { verifier.cancel((req.params as { id: string }).id); return { requested: true }; }

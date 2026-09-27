@@ -14,3 +14,9 @@ export interface RecoveryReferenceReport {
   contentVerified: false;
   executionEnabled: false;
 }
+export interface RecoveryContentReport {
+  runId: string;
+  checkedAt: string;
+  status: 'matches_recorded' | 'differs_from_recorded' | 'unavailable' | 'not_recorded';
+  executionEnabled: false;
+}

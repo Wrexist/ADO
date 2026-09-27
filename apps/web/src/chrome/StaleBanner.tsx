@@ -1,7 +1,7 @@
 import { useBus } from '../store/bus';
 import { useEffect, useState } from 'react';
 import { ACC_TOKEN, SERVER_URL } from '../lib/config';
-import type { RecoveryReferenceReport, RecoveryReferenceStatus } from '@ado/shared';
+import type { RecoveryReferenceReport, RecoveryReferenceStatus, RecoveryContentReport } from '@ado/shared';
 
 const referenceLabels: Record<RecoveryReferenceStatus, string> = {
   identity_matches: 'Identity matches; content not checked', missing: 'Missing directory or Git metadata',
@@ -10,11 +10,13 @@ const referenceLabels: Record<RecoveryReferenceStatus, string> = {
 };
 
 function RecoveryReferences() {
+  const [content, setContent] = useState<Record<string, RecoveryContentReport['status']>>({});
+  const [comparing, setComparing] = useState(false);
   const [report, setReport] = useState<RecoveryReferenceReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function inspect() {
-    setBusy(true); setError(null); setReport(null);
+    setBusy(true); setError(null); setReport(null); setContent({});
     try {
       const response = await fetch(`${SERVER_URL}/api/recovery/references`, { headers: { 'x-acc-token': ACC_TOKEN } });
       if (!response.ok) throw new Error('Reference review unavailable. The profile remains paused.');
@@ -22,6 +24,22 @@ function RecoveryReferences() {
     } catch { setError('Reference review unavailable. The profile remains paused.'); }
     finally { setBusy(false); }
   }
+  async function compare(id: string) {
+    setComparing(true);
+    try {
+      const response = await fetch(`${SERVER_URL}/api/recovery/runs/${encodeURIComponent(id)}/content`, { headers: { 'x-acc-token': ACC_TOKEN } });
+      if (!response.ok) throw new Error('Comparison unavailable');
+      const result = await response.json() as RecoveryContentReport;
+      setContent((current) => ({ ...current, [id]: result.status }));
+    } catch { setContent((current) => ({ ...current, [id]: 'unavailable' })); }
+    finally { setComparing(false); }
+  }
+  const contentLabels: Record<RecoveryContentReport['status'], string> = {
+    matches_recorded: 'Matches the saved revision and fingerprint at inspection time. This is not a new verification or approval.',
+    differs_from_recorded: 'Does not match the saved revision or fingerprint. Review content and Git attribute settings.',
+    unavailable: 'Comparison unavailable. No content approval was inferred.',
+    not_recorded: 'No complete saved fingerprint or workspace identity. Content remains unverified.',
+  };
   return <div className="mt-2">
     <button type="button" disabled={busy} className="rounded border border-current px-3 py-1 disabled:opacity-50" onClick={() => void inspect()}>{busy ? 'Inspecting references…' : 'Inspect restored references'}</button>
     {error && <p role="alert" className="mt-2">{error}</p>}
@@ -30,7 +48,9 @@ function RecoveryReferences() {
       <p>Observed {report.checkedAt}. File content, remote repositories and process termination are not verified. Execution remains paused.</p>
       <details className="mt-2"><summary className="cursor-pointer">Local references ({report.references.length})</summary>
         {report.references.length === 0 ? <p>No local references were recorded. This does not prove local work was backed up.</p> : <ul className="mt-2 max-h-80 space-y-2 overflow-y-auto">
-          {report.references.map((reference) => <li key={`${reference.kind}:${reference.id}`} className="break-all"><strong>{referenceLabels[reference.status]}</strong><br />{reference.kind} · {reference.id}<br />{reference.path ?? 'No path recorded'}</li>)}
+          {report.references.map((reference) => <li key={`${reference.kind}:${reference.id}`} className="break-all"><strong>{referenceLabels[reference.status]}</strong><br />{reference.kind} · {reference.id}<br />{reference.path ?? 'No path recorded'}
+            {reference.kind === 'run_workspace' && <div className="mt-1"><button type="button" className="rounded border border-current px-2 py-1 disabled:opacity-50" disabled={comparing} onClick={() => void compare(reference.id)}>Compare saved result</button>{content[reference.id] && <p>{contentLabels[content[reference.id]]}</p>}</div>}
+          </li>)}
         </ul>}
       </details>
     </div>}

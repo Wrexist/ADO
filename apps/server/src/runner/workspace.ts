@@ -6,9 +6,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { commonGitIdentity } from '../projects/checkoutIdentity';
 
 const exec = promisify(execFile);
-async function git(cwd: string, args: string[], raw = false, isolated = false): Promise<string> {
+async function git(cwd: string, args: string[], raw = false, isolated = false, readView?: string): Promise<string> {
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith('GIT_')));
   env.GIT_OPTIONAL_LOCKS = '0';
+  if (readView) { env.GIT_NO_LAZY_FETCH = '1'; args = ['--git-dir', readView, '--work-tree', cwd, '-c', 'core.fsmonitor=false', '-c', 'protocol.allow=never', ...args]; }
   if (isolated) { env.GIT_CONFIG_NOSYSTEM = '1'; env.GIT_CONFIG_GLOBAL = process.platform === 'win32' ? 'NUL' : '/dev/null'; }
   const { stdout } = await exec('git', args, { cwd, env, windowsHide: true, timeout: 60_000, maxBuffer: 8 * 1024 * 1024 });
   return raw ? stdout : stdout.trim();
@@ -39,13 +40,13 @@ export async function prepareWorkspace(root: string, cwd: string, expectedBaseSh
 export function assertWorkspaceIdentity(cwd: string, expected?: string | null) {
   if (expected && commonGitIdentity(cwd) !== expected) throw new Error('Workspace Git identity changed; recorded provenance no longer matches');
 }
-export async function workspaceEvidence(cwd: string, baseSha: string, expectedIdentity?: string | null) {
+export async function workspaceEvidence(cwd: string, baseSha: string, expectedIdentity?: string | null, readView?: string) {
   assertWorkspaceIdentity(cwd, expectedIdentity);
-  const headSha = await git(cwd, ['rev-parse', 'HEAD']);
-  const diff = await git(cwd, ['diff', '--no-ext-diff', '--no-textconv', '--binary', baseSha, '--'], true);
-  const status = await git(cwd, ['status', '--porcelain']);
+  const headSha = await git(cwd, ['rev-parse', 'HEAD'], false, Boolean(readView), readView);
+  const diff = await git(cwd, ['diff', '--no-ext-diff', '--no-textconv', '--binary', baseSha, '--'], true, Boolean(readView), readView);
+  const status = await git(cwd, ['status', '--porcelain'], false, Boolean(readView), readView);
   const hash = createHash('sha256').update(diff).update('\n').update(status);
-  const untracked = await git(cwd, ['ls-files', '--others', '--exclude-standard', '-z'], true);
+  const untracked = await git(cwd, ['ls-files', '--others', '--exclude-standard', '-z'], true, Boolean(readView), readView);
   for (const name of untracked.split('\0').filter(Boolean).sort()) {
     const file = join(cwd, name); const stat = lstatSync(file);
     if (!stat.isFile() || stat.size > 8 * 1024 * 1024) throw new Error('Cannot fingerprint a linked or oversized untracked result; review the working copy directly.');

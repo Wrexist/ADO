@@ -1,5 +1,17 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R4: passiv jämförelse av återställt resultatinnehåll
+
+Återställningsrapporten kan nu jämföra en körnings sparade Git-revision och innehållshash med den kvarvarande arbetskopian. Matchning, avvikelse, otillgänglig jämförelse och saknat historiskt underlag visas separat. API:t kräver återställningsläge och autentisering och kör högst en jämförelse åt gången. Inga verifieringsposter, godkännanden, körningsrader eller lås ändras.
+
+Jämförelsen använder en temporär Git-läsvy med kopierat index, observerad HEAD, lokal objektreferens och en begränsad lista icke-exekverbara inställningar. Projektets filter, fsmonitor, hooks, remotes och globala konfiguration följer inte med. Extern diff/textconv och nätverksprotokoll spärras; submoduler kräver separat granskning. Provet använder riktiga filter-/fsmonitor-/extern-diff-markörer som inte får köras, binära filer och ett ospårat filnamn med inledande blanksteg. Index, konfiguration och körningsrader bevaras. [Kontrakt och begränsningar](docs/controlos/profile-recovery.md).
+
+`npm run verify` passerade med typkontroll, lint, 361 tester i 76 filer och byggning på Windows x64 / Node 22.18.0 / npm 11.7.0. Detta är en innehållsobservation enligt befintligt hashkontrakt, inte en ny verifiering av projektet eller en atomisk filsystemsbild. Ignorerade filer ingår inte; konfigurationsberoende skillnader kan kräva manuell granskning. Paketerad desktop har inte provats på nytt med just denna tilläggsfunktion.
+
+13 av 46 fullständiga scenarier är fortsatt lokalt godkända. Fulla R1–R4-grindar är öppna. Stödd återaktivering, verklig användarprofil och installer/uppdatering återstår. Ingen modell, pilotagent, merge eller publicering kördes. Följande avsnitt är historiska kontrollpunkter.
+
+Hela browser-smoke passerade med uttryckliga jämförelsefixturer vid 1536/390 px. Mobilbilden har granskats. Loggar: `controlos-recovery-content-focused.log`, `controlos-recovery-content-typecheck.log`, `controlos-recovery-content-verify.log` och `controlos-recovery-content-smoke.log` (ignorerade). Webbchunkens varning kvarstår vid cirka 563 kB före gzip.
+
 ## R4: referensgranskning och återställd paketerad app
 
 Granskningsläget kan nu kontrollera registrerade arbetskopior, körningsresultatens sökvägar och verifieringsarbetskopior. Rapporten skiljer matchande filidentitet från saknade, utbytta, främmande eller otillräckligt dokumenterade referenser. Den kör inga Git-kommandon eller agenter och ändrar inga referenser eller lås. Filinnehåll och processavslut är uttryckligen overifierade; rapporten aktiverar inte profilen. Återställd aktivitet märks som historik, inte som bevis på levande processer.
