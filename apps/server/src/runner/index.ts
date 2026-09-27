@@ -93,6 +93,7 @@ export class Runner {
     private log: (msg: string) => void = () => {},
   ) {
     this.opts = { ...DEFAULTS, ...opts };
+    this.log = (message) => log(redact(message, this.opts.secrets?.()));
   }
 
   /**
@@ -406,9 +407,10 @@ export class Runner {
     }, this.opts.timeoutMs);
     timeout.unref();
 
+    const secrets = this.opts.secrets?.();
     const normalized = async function* (): AsyncIterable<AgentUpdate> {
       if (handle.updates) { yield* handle.updates; return; }
-      for await (const line of handle.lines) yield* parseStreamLine(line);
+      for await (const line of handle.lines) yield* parseStreamLine(line, secrets);
     };
     const consume = async () => {
       for await (const u of normalized()) {
@@ -422,11 +424,12 @@ export class Runner {
             this.record(runId, 'status', 'Agent started');
             upsertAgent('running', null);
           } else if (u.kind === 'tool') {
-            statusLine = `Using ${u.name}…`;
-            this.record(runId, 'tool', u.name);
+            const name = redact(u.name, this.opts.secrets?.()).slice(0, 80);
+            statusLine = `Using ${name}…`;
+            this.record(runId, 'tool', name);
             upsertAgent('running', null);
           } else if (u.kind === 'progress') {
-            statusLine = redact(u.text, this.opts.secrets?.());
+            statusLine = redact(u.text, this.opts.secrets?.()).slice(0, 80);
             this.record(runId, 'progress', u.text);
             upsertAgent('running', null);
           } else if (u.kind === 'done') {
@@ -434,7 +437,7 @@ export class Runner {
             tokensIn = u.tokensIn;
             tokensOut = u.tokensOut;
             turns = u.turns;
-            resultText = u.resultText;
+            resultText = u.resultText ? redact(u.resultText, this.opts.secrets?.()).slice(0, 4000) : null;
           }
         }
       }

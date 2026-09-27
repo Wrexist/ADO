@@ -14,6 +14,7 @@ import { randomUUID } from 'node:crypto';
 import type { Incident, IncidentSource } from '@ado/shared';
 import type { Bus } from '../bus';
 import type { IncidentDiagnoser } from './diagnoser';
+import { redact } from '../lib/redact';
 
 export interface ReportInput {
   source: IncidentSource;
@@ -35,7 +36,8 @@ export class IncidentReporter {
     private log: (msg: string) => void = () => {},
     /** Injectable clock so the throttle is deterministic in tests. */
     private now: () => number = () => Date.now(),
-  ) {}
+    private secrets: () => Array<string | undefined> = () => [],
+  ) { this.log = (message) => log(redact(message, this.secrets())); }
 
   /**
    * Capture a failure. Returns the Incident, or null if it was throttled (a repeat within the
@@ -44,6 +46,10 @@ export class IncidentReporter {
    */
   report(input: ReportInput): Incident | null {
     try {
+      const secrets = this.secrets();
+      input = { ...input, kind: redact(input.kind, secrets), message: redact(input.message, secrets),
+        stack: input.stack ? redact(input.stack, secrets) : undefined,
+        context: input.context ? redact(input.context, secrets) : undefined };
       const now = this.now();
       const fp = `${input.source}|${input.kind}|${firstLine(input.message)}`;
       const last = this.lastByFingerprint.get(fp);
@@ -87,12 +93,17 @@ export class IncidentReporter {
   private async diagnoseAndPublish(incident: Incident): Promise<void> {
     try {
       const diagnosis = await this.diagnoser.diagnose(incident);
+      const secrets = this.secrets();
+      const safeDiagnosis = { ...diagnosis,
+        summary: redact(diagnosis.summary, secrets), rootCause: redact(diagnosis.rootCause, secrets),
+        suggestedFix: redact(diagnosis.suggestedFix, secrets), prevention: redact(diagnosis.prevention, secrets),
+      };
       this.bus.publish({
         id: `incident-dx:${incident.id}`,
         type: 'incident.diagnosed',
         ts: new Date(this.now()).toISOString(),
         source: { kind: 'app', ref: incident.id },
-        payload: { incidentId: incident.id, diagnosis },
+        payload: { incidentId: incident.id, diagnosis: safeDiagnosis },
       });
     } catch (e) {
       // A failed diagnosis leaves the incident 'open' (honest) — never crash the reporter.

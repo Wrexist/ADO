@@ -48,6 +48,7 @@ import { ReviewRunner } from './review/runner';
 import { Notifier } from './notify/notifier';
 import { IncidentDiagnoser } from './incidents/diagnoser';
 import { IncidentReporter } from './incidents/reporter';
+import { redact } from './lib/redact';
 import { AutoReviewStore } from './autoreview/store';
 import { ClaudeReviewer } from './autoreview/reviewer';
 import { AutoReviewEngine } from './autoreview/engine';
@@ -149,7 +150,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
           serializers: {
             req: (req: FastifyRequest) => ({
               method: req.method,
-              url: (req.url ?? '').replace(/([?&]token=)[^&]*/i, '$1[redacted]'),
+              url: redact(req.url ?? '', [env.accToken]),
               remoteAddress: req.ip,
             }),
           },
@@ -297,13 +298,17 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // and stream both through the bus. The diagnoser reserves the top model for this debugging
   // task (convention 5) and self-falls-back to a heuristic with no key. Process-level fault
   // hooks (unhandledRejection/uncaughtException) are wired to `incidents` in index.ts.
-  const diagnoser = new IncidentDiagnoser(() => connections.resolve('anthropic'), fetch, (msg) => app.log.info(msg));
-  const incidents = new IncidentReporter(bus, diagnoser, (msg) => app.log.warn(msg));
+  const diagnoser = new IncidentDiagnoser(() => connections.resolve('anthropic'), fetch,
+    (msg) => app.log.info(redact(msg, [env.accToken, ...connections.statusAll().map((connection) => connections.resolve(connection.id))])));
+  const incidents = new IncidentReporter(bus, diagnoser, (msg) => app.log.warn(msg), undefined,
+    () => [env.accToken, ...connections.statusAll().map((connection) => connections.resolve(connection.id))]);
 
   // Any unexpected server fault (a route that threw, not a deliberate 4xx) becomes an incident,
   // then still returns a clean JSON error to the client — the app degrades, it doesn't break.
   app.setErrorHandler((error: FastifyError, req, reply) => {
     const status = error.statusCode ?? 500;
+    const secrets = [env.accToken, ...connections.statusAll().map((connection) => connections.resolve(connection.id))];
+    const message = redact(error.message, secrets);
     if (status >= 500) {
       incidents.report({
         source: 'server',
@@ -313,9 +318,9 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         // Redact the SSE token that can ride the query string; POST tokens live in headers.
         context: `${req.method} ${(req.url ?? '').replace(/([?&]token=)[^&]*/i, '$1[redacted]')}`,
       });
-      req.log.error(error);
+      req.log.error({ err: { type: redact(error.name, secrets), message, stack: error.stack ? redact(error.stack, secrets) : undefined } });
     }
-    reply.code(status).send({ error: error.message });
+    reply.code(status).send({ error: message });
   });
 
   // Custom prompt library — the user's own entries (built-ins ship in @ado/shared).

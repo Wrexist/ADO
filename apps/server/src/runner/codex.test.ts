@@ -7,7 +7,7 @@ import type { AgentUpdate } from './adapter';
 
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); });
-function fixture(mode: 'success' | 'approval' | 'api' | 'invalid' | 'stop' | 'oversized' | 'stderr') {
+function fixture(mode: 'success' | 'approval' | 'api' | 'invalid' | 'stop' | 'oversized' | 'stderr' | 'canary' | 'provider-error') {
   const cwd = mkdtempSync(join(tmpdir(), 'ado-codex-protocol-')); dirs.push(cwd);
   const file = join(cwd, 'fake.cjs');
   writeFileSync(file, `
@@ -17,7 +17,8 @@ const output = (m) => process.stdout.write(JSON.stringify(m) + '\\n');
 const input = readline.createInterface({ input: process.stdin });
 input.on('close', () => process.exit(0));
 function finish() {
-  output({method:'item/completed', params:{threadId:'thread',item:{type:'agentMessage',text:'fixture completed'}}});
+  const text = mode==='canary' ? ('x'.repeat(70)+'canary-private-value').padEnd(3990,'x')+'canary-private-value' : 'fixture completed';
+  output({method:'item/completed', params:{threadId:'thread',item:{type:'agentMessage',text}}});
   output({method:'thread/tokenUsage/updated', params:{threadId:'thread',tokenUsage:{total:{inputTokens:12,outputTokens:7}}}});
   output({method:'turn/completed',params:{threadId:'thread',turn:{id:'turn',status:'completed'}}});
 }
@@ -34,6 +35,7 @@ input.on('line', (line) => {
     output({id:m.id,result:{turn:{id:'turn'}}});
     output({method:'turn/started',params:{threadId:'thread',turn:{id:'turn'}}});
     if (mode === 'invalid') { process.stdout.write('invalid json\\n'); return; }
+    if (mode === 'provider-error') { output({id:3,error:{message:'provider canary-private-value'}}); return; }
     if (mode === 'oversized') { process.stdout.write('x'.repeat(5*1024*1024)); return; }
     if (mode === 'stderr') for(let i=0;i<10000;i++) process.stderr.write('canary-private-value '+ 'x'.repeat(100)+'\\n');
     if (mode === 'stop') return;
@@ -55,6 +57,15 @@ input.on('line', (line) => {
 }
 
 describe('Codex app-server boundary (offline protocol fixture)', () => {
+  it.each(['canary', 'provider-error'] as const)('redacts %s before publishing or shortening provider text', async (mode) => {
+    const handle = fixture(mode); const updates: AgentUpdate[] = [];
+    for await (const update of handle.updates!) updates.push(update);
+    const code = await handle.done;
+    expect(code === 0).toBe(mode === 'canary');
+    const exposed = JSON.stringify({ updates, diagnostics: handle.diagnostics!() });
+    expect(exposed).not.toContain('canary-private');
+    expect(exposed).toContain('[redacted]');
+  });
   it.each(['success', 'approval', 'stderr'] as const)('completes %s with normalized evidence and denies approval', async (mode) => {
     const handle = fixture(mode); const updates: AgentUpdate[] = [];
     for await (const update of handle.updates!) updates.push(update);

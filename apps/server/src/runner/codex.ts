@@ -11,11 +11,11 @@ import type { Spawner, SpawnOpts, SpawnHandle } from './spawner';
 
 export const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const count = (value: unknown): number | null => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
-export function codexUpdate(method: string, params: Record<string, unknown>): AgentUpdate[] {
+export function codexUpdate(method: string, params: Record<string, unknown>, secrets: Array<string | undefined> = []): AgentUpdate[] {
   const item = object(params.item);
   if (method === 'turn/started') return [{ kind: 'started' }];
   if (method === 'item/started' && ['commandExecution', 'fileChange', 'mcpToolCall'].includes(String(item.type))) return [{ kind: 'tool', name: String(item.type) }];
-  if (method === 'item/completed' && item.type === 'agentMessage' && typeof item.text === 'string') return [{ kind: 'progress', text: item.text.slice(0, 80) }];
+  if (method === 'item/completed' && item.type === 'agentMessage' && typeof item.text === 'string') return [{ kind: 'progress', text: redact(item.text, secrets).slice(0, 80) }];
   return [];
 }
 
@@ -78,9 +78,9 @@ export class CodexSpawner implements Spawner {
             if (params.threadId && params.threadId !== threadId) continue;
             const item = object(params.item);
             if (message.method === 'turn/started') { const id = object(params.turn).id; if (typeof id === 'string') turnId = id; }
-            if (message.method === 'item/completed' && item.type === 'agentMessage' && typeof item.text === 'string') resultText = item.text.slice(0, 4000);
+            if (message.method === 'item/completed' && item.type === 'agentMessage' && typeof item.text === 'string') resultText = redact(item.text, opts.secrets).slice(0, 4000);
             if (message.method === 'thread/tokenUsage/updated') { const usage = object(object(params.tokenUsage).total); tokensIn = count(usage.inputTokens); tokensOut = count(usage.outputTokens); }
-            for (const update of codexUpdate(message.method, params)) { if (update.kind === 'tool' && ++tools > opts.turnCap) kill(); yield update; }
+            for (const update of codexUpdate(message.method, params, opts.secrets)) { if (update.kind === 'tool' && ++tools > opts.turnCap) kill(); yield update; }
             if (message.method === 'turn/completed') {
               completed = true;
               yield { kind: 'done', ok: object(params.turn).status === 'completed' && !stopped, tokensIn, tokensOut, turns: null, resultText };

@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-27
 
+## R1: maskering före förkortning och i felrapporter
+
+Agenternas progress/resultat maskeras nu före förkortning; verktygsnamn och körmotorns loggar skyddas också. Kända hemligheter maskeras även i standardkodade URL-/JSON-former. Incidenter maskeras före diagnos och lagring, diagnossvar före publicering och oväntade HTTP-fel före svar/loggning.
+
+`npm run verify` passerade på Windows x64, Node 22.18.0 och npm 11.7.0 med 287 tester i 48 filer, typkontroll, lint och byggning. Därefter passerade två tillagda Codex-canaryfall tillsammans med hela adapterns nio tester. Sju riktade tester för maskering och felrapporter passerade också. Loggar: `controlos-redaction-verify.log`, `controlos-redaction-final-targeted.log`, `controlos-redaction-codex.log` (ignorerade). Ingen modell/API kördes; ingen UI ändrades i denna etapp.
+
+T23 är fortsatt ej fullständigt godkänd: samtliga export-, rapport- och integrationsytor behöver genomgående acceptans. Se [evidens och begränsningar](docs/controlos/redaction-evidence.md). R1–R4 är fortfarande öppna. Följande avsnitt är historiska kontrollpunkter.
+
 ## R1: begränsad agentutdata och synlig diagnostikförlust
 
 Claude/Codex dränerar nu stdout med begränsade rader och köer. Överskriden gräns stoppar processen med tydlig felorsak; skrivlåset väntar fortfarande på processutfallet. Stderr redigeras per begränsad rad innan den behålls, och bortkastad utdata ger en synlig förlustmarkering. Se [gränser och evidens](docs/controlos/process-output.md).

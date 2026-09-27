@@ -8,6 +8,8 @@
  * never crashes and never invents progress, whatever GitHub^H^HClaude ships next.
  */
 
+import { redact } from '../lib/redact';
+
 export type AgentUpdate =
   | { kind: 'started' }
   | { kind: 'tool'; name: string }
@@ -29,7 +31,7 @@ interface Line {
 }
 
 /** Parse one JSONL line into zero or more normalized updates. Never throws. */
-export function parseStreamLine(raw: string): AgentUpdate[] {
+export function parseStreamLine(raw: string, secrets: Array<string | undefined> = []): AgentUpdate[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
 
@@ -52,9 +54,9 @@ export function parseStreamLine(raw: string): AgentUpdate[] {
       for (const block of content) {
         if (!block || typeof block !== 'object') continue;
         if (block.type === 'tool_use' && typeof block.name === 'string') {
-          out.push({ kind: 'tool', name: block.name });
+          out.push({ kind: 'tool', name: redact(block.name, secrets).slice(0, 80) });
         } else if (block.type === 'text' && typeof block.text === 'string') {
-          const firstLine = block.text.split('\n').find((l) => l.trim())?.slice(0, 80);
+          const firstLine = redact(block.text, secrets).split('\n').find((l) => l.trim())?.slice(0, 80);
           if (firstLine) out.push({ kind: 'progress', text: firstLine });
         }
       }
@@ -74,7 +76,7 @@ export function parseStreamLine(raw: string): AgentUpdate[] {
           turns: typeof obj.num_turns === 'number' ? obj.num_turns : null,
           // The agent's final message — consumers parse it for verified-outcome markers
           // (e.g. TestFlight). Absent/non-string → null, never a guess.
-          resultText: typeof obj.result === 'string' ? obj.result.slice(0, RESULT_TEXT_CAP) : null,
+          resultText: typeof obj.result === 'string' ? redact(obj.result, secrets).slice(0, RESULT_TEXT_CAP) : null,
         },
       ];
 

@@ -15,6 +15,7 @@
  */
 import { z } from 'zod';
 import { Diagnosis, type Diagnosis as DiagnosisT, type Incident, DiagnosisSeverity } from '@ado/shared';
+import { redact } from '../lib/redact';
 
 export type FetchFn = typeof fetch;
 
@@ -104,7 +105,7 @@ export class IncidentDiagnoser {
       if (!checked.success) throw new Error('diagnosis failed schema validation');
       return checked.data;
     } catch (e) {
-      this.log(`incident diagnoser fell back to heuristic: ${(e as Error).message}`);
+      this.log(redact(`incident diagnoser fell back to heuristic: ${(e as Error).message}`, [key]));
       return heuristicDiagnosis(incident);
     }
   }

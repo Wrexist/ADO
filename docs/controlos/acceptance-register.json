@@ -423,8 +423,8 @@
         "sourceSha256": {
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
-          "apps/server/src/runner/codex.ts": "263716a4cc5603ef13232eef414d932d81e9b37600477e785240800a69667794",
-          "apps/server/src/runner/index.ts": "aefc94bcfddda9b6060665dd9ca6b3344305ae6f7e67ee17e4d182127b592abc",
+          "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
+          "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
           "apps/server/src/runner/nativeProcess.test.ts": "9fc947d45377a5cfc96d106a21e85994930a14457c4adb2791d3aa2b3f63e209"
         }
       }
@@ -461,12 +461,12 @@
         "sourceSha256": {
           "apps/server/src/lib/processOutput.ts": "530e6e66a77f615d84e3cc09ab01c499a396fd7552233f5c4026bc6e38376e3c",
           "apps/server/src/lib/processOutput.test.ts": "b5e2331352735e4b364fc83b44f0d1bd9fcfe5b71f87f8fdf1ac4bc719f05b22",
-          "apps/server/src/lib/redact.ts": "99ebf3cec194a8f696b4a21c40498381c51760e04ad4dcf65c9a294ec02ebc2f",
+          "apps/server/src/lib/redact.ts": "e81dee7a1ce9328c9985cbe10b50406e69b6d069854fc56ddd8d9c38c70c377a",
           "apps/server/src/runner/outputFlood.test.ts": "aa909f44701ccefca47b7e0a7d1eed29f6ed006398e7c44abb65ca2b0b1911da",
-          "apps/server/src/runner/codex.test.ts": "c87763c41d08059c696d23c158e4236c327028a9fd80d576b4200fd95dcf9382",
+          "apps/server/src/runner/codex.test.ts": "50f8a3f42f1033ded56733a17a791fcd5c02dbb450afd1f5bef59c83d34270c5",
           "apps/server/src/runner/spawner.ts": "a09b14c5c3ddea31954a076fa514af2017d0375b4fd5fc2d6f9bbefc5bbd482a",
-          "apps/server/src/runner/codex.ts": "263716a4cc5603ef13232eef414d932d81e9b37600477e785240800a69667794",
-          "apps/server/src/runner/index.ts": "aefc94bcfddda9b6060665dd9ca6b3344305ae6f7e67ee17e4d182127b592abc",
+          "apps/server/src/runner/codex.ts": "995a30e229cc28fcc804dbea414c927fcd3278bb8e7f8d68f68bef40110ba0d1",
+          "apps/server/src/runner/index.ts": "74b87f638adf788ffaeea64d9dcda786dcd49449f6a7d04f3c48e49d1dbfe057",
           "apps/server/src/lib/ownedProcess.ts": "8d630f2eecc8381e71cdfb8827f73d76b26f79316c96a304ba0f07d80031f999",
           "apps/server/native/JobHost.cs": "d0567aaffffab2dd9ce6091b02b7fb0de02378003848b73e9b86db202558672d",
           "scripts/smoke.mjs": "f63618df52c09c2be2c92196908e5cebb468158b43ba3fe428ee38149675147c"
@@ -479,7 +479,11 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R1. **Krav:** REQ14, REQ15. **Status:** not_run.\n\n**Givet:** Canarytoken finns i stdout, stderr, URL och providerfel.\n\n**När:** Loggar, UI, export och felrapport skapas.\n\n**Godkänt endast om:** Canary saknas i alla exporterade ytor. Rådata lagras inte som oavsiktlig fallback.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/lib/redact.test.ts"
+        "apps/server/src/lib/redact.test.ts",
+        "apps/server/src/runner/redaction.test.ts",
+        "apps/server/src/runner/codex.test.ts",
+        "apps/server/src/incidents/redaction.test.ts",
+        "docs/controlos/redaction-evidence.md"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },
@@ -659,7 +663,7 @@
         "result": "Passed: real loopback HTTP reconnect after event compaction returns the exact authoritative snapshot and cursor. Malformed cursors reset; a contiguous retained gap replays normally.",
         "scope": "Local server scenario only; no remote-device, browser-layout or cross-platform acceptance claim.",
         "sourceSha256": {
-          "apps/server/src/app.ts": "7ad7ef5bff5ba064c9f79a5ff02fab349ca25f67b8a8cee8160fb742797f108c",
+          "apps/server/src/app.ts": "09259a34d20b594cd5107a0775a3ab3306104b16ede1e411dfd87b5f98cd825c",
           "apps/server/src/bus.ts": "d7de8581f02e68f4538b675cf2f3b1a6dee973e2fe870489d8b16d2fe16af8b4",
           "apps/server/src/sse-recovery.test.ts": "86ae213a6db9915b54197c62e317ed5dcec7a3447cf3a101a99d5d03fbc92413"
         }
