@@ -1,0 +1,30 @@
+{
+  "date": "2026-09-28T01:50:21.527Z",
+  "baseRevision": "5721e6055cc6c4fb272651e55bfb7b5aa2d74fbf",
+  "environment": {
+    "platform": "win32",
+    "node": "v22.18.0",
+    "chromium": "153.0.8010.12"
+  },
+  "checks": [
+    "seeded prior health rendered operational",
+    "real credential save HTTP invalidates health over SSE",
+    "configured unverified credential does not preserve operational health",
+    "browser reload preserves unknown state",
+    "real credential removal HTTP invalidates prior health over SSE",
+    "light/dark desktop rendering without page errors"
+  ],
+  "sourceSha256": {
+    "scripts/probe-health-invalidation.mts": "d5eca4a81b29e1b44fb80d05c19fbc8a1888ecf7f03b568bcad20493be60730f",
+    "apps/server/src/system/health.ts": "a116c43ef6c24d0eb4760a1f0db490539d7ebc64c9538fea571b4989d73de424",
+    "apps/server/src/system/healthCredentials.test.ts": "66350ff0e3c8086f5cf6e55ddf08fa3c0f4dde7d18abc1252d02fc21754d020e",
+    "apps/server/src/app.ts": "f652a2997a6ac7d720c913b0da76b15351a995de459ae8c1d6ec6427d8555fca",
+    "packages/shared/src/state.ts": "e80ac0939cf093aa0d32fba376696dfeff20edd6cc91f08625fb7c5fa18bc1c8",
+    "apps/web/src/lib/selectors.ts": "26790830c33c2d8fe1f89584ebfebf8e1366c870c3622969abb8dbd3d139eb8b"
+  },
+  "screenshotSha256": {
+    "smoke-shots/health-invalidation-light.png": "6a5876c1243c5f21fd01853f2247c79441550f4c00484c018bce4dbbe0bf0e93",
+    "smoke-shots/health-invalidation-dark.png": "36de45b0df15f9b017cbdb212017230c846f6dc5660800fdf391ba41c7bdee82"
+  },
+  "scope": "Synthetic prior health, real isolated disk profile, credential API, SSE and built renderer. No provider request, actual expired credential, GitHub lifecycle, mobile health view or full T25 certification."
+}

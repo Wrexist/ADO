@@ -47,7 +47,7 @@ describe('HealthChecker (Prompt 2.4)', () => {
     const health = bus.snapshot().state.health;
     expect(health.server?.state).toBe('operational');
     expect(health.runner?.state).toBe('operational'); // in-process runner — reported, not left unknown
-    expect(health.anthropic).toBeUndefined(); // never faked without a key
+    expect(health.anthropic?.state).toBe('unknown'); // explicitly clears replayed old checks
     sqlite.close();
   });
 

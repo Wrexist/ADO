@@ -114,7 +114,7 @@ export function monitorSeries(s: BusState) {
  * known yet (no health checks and no builds) — the honest "no data" state.
  */
 export function systemHealthPct(s: BusState): number | null {
-  const checks = Object.values(s.health);
+  const checks = Object.values(s.health).filter(check => check.state !== 'unknown');
   const builds = Object.values(s.builds);
   if (checks.length === 0 && builds.length === 0) return null;
 
@@ -123,7 +123,7 @@ export function systemHealthPct(s: BusState): number | null {
     const st = s.health[service]?.state;
     if (st === 'degraded') pct -= 10;
     else if (st === 'down') pct -= 25;
-    else if (st === undefined) pct -= 5;
+    else if (st === undefined || st === 'unknown') pct -= 5;
   }
   if (builds.length > 0) {
     const failed = builds.filter((b) => b.state === 'failed').length;

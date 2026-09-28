@@ -43,7 +43,7 @@ import { GitHubSync } from './integrations/github/sync';
 import { OctokitClient } from './integrations/github/client';
 import type { GitHubClient } from './integrations/github/types';
 import { Sysmon } from './system/sysmon';
-import { HealthChecker } from './system/health';
+import { HealthChecker, invalidateHealth } from './system/health';
 import { Runner } from './runner';
 import { PROVIDERS, ProviderSpawner } from './runner/providers';
 import { Verifier } from './runner/verification';
@@ -1232,6 +1232,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       return reply.code(400).send({ error: (err as Error).message });
     }
     if (id === 'github') startGithub(); // connect live
+    if (id === 'anthropic') { if (health) health.credentialsChanged(); else invalidateHealth(bus, 'anthropic'); }
     return { status: connections.status(id) };
   });
   app.delete('/api/connections/:id', async (req, reply) => {
@@ -1240,6 +1241,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     try { connections.remove(id); }
     catch (error) { return reply.code(400).send({ error: (error as Error).message }); }
     if (id === 'github') startGithub();
+    if (id === 'anthropic') { if (health) health.credentialsChanged(); else invalidateHealth(bus, 'anthropic'); }
     return { status: connections.status(id) };
   });
 

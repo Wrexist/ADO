@@ -8,11 +8,21 @@
  */
 import type { Bus } from '../bus';
 import type { HealthService, ServiceState } from '@ado/shared';
+import { randomUUID } from 'node:crypto';
 
 const INTERVAL_MS = 60_000;
 
+/** Invalidation is a real event, so persisted/replayed green state is cleared too. */
+export function invalidateHealth(bus: Bus, service: HealthService): void {
+  bus.publish({ id: `health:${service}:${randomUUID()}`, type: 'health.checked', ts: new Date().toISOString(),
+    source: { kind: 'health', ref: service }, payload: { service, state: 'unknown' } });
+}
+
 export class HealthChecker {
   private timer: NodeJS.Timeout | null = null;
+  private generation = 0;
+  private stopped = true;
+  private pending: AbortController | null = null;
 
   constructor(
     private bus: Bus,
@@ -25,7 +35,7 @@ export class HealthChecker {
 
   private emit(service: HealthService, state: ServiceState): void {
     this.bus.publish({
-      id: `health:${service}:${Date.now()}`,
+      id: `health:${service}:${randomUUID()}`,
       type: 'health.checked',
       ts: new Date().toISOString(),
       source: { kind: 'health', ref: service },
@@ -34,17 +44,34 @@ export class HealthChecker {
   }
 
   private async checkAnthropic(): Promise<void> {
+    const generation = ++this.generation;
+    this.pending?.abort();
+    const controller = new AbortController(); this.pending = controller;
     const key = this.getAnthropicKey();
-    if (!key) return; // no key → leave unknown (honest "No data")
+    if (!key) { this.pending = null; invalidateHealth(this.bus, 'anthropic'); return; }
+    const publish = (state: ServiceState) => {
+      if (this.stopped || generation !== this.generation) return;
+      // Also cover externally changed fallback values, not only Settings mutations.
+      if (this.getAnthropicKey() !== key) invalidateHealth(this.bus, 'anthropic');
+      else this.emit('anthropic', state);
+    };
     try {
       const res = await fetch('https://api.anthropic.com/v1/models', {
         headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-        signal: AbortSignal.timeout(5000), // a hung endpoint must not pile up 60s requests
+        redirect: 'error',
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]),
       });
-      this.emit('anthropic', res.ok ? 'operational' : 'degraded');
+      await res.body?.cancel();
+      publish(res.ok ? 'operational' : 'degraded');
     } catch {
-      this.emit('anthropic', 'down');
-    }
+      publish('down');
+    } finally { if (this.pending === controller) this.pending = null; }
+  }
+
+  /** Call after a successful credential write, including re-saving identical bytes. */
+  credentialsChanged(): void {
+    this.generation++; this.pending?.abort(); this.pending = null;
+    invalidateHealth(this.bus, 'anthropic');
   }
 
   private tick(): void {
@@ -54,11 +81,16 @@ export class HealthChecker {
   }
 
   start(): void {
+    if (!this.stopped) return;
+    this.stopped = false;
+    this.credentialsChanged();
     this.tick();
     this.timer = setInterval(() => this.tick(), INTERVAL_MS);
   }
 
   stop(): void {
+    this.stopped = true; this.generation++; this.pending?.abort(); this.pending = null;
     if (this.timer) clearInterval(this.timer);
+    this.timer = null;
   }
 }

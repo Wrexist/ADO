@@ -39,7 +39,7 @@ export type AgentKind = z.infer<typeof AgentKind>;
 export const HealthService = z.enum(['github', 'anthropic', 'server', 'runner']);
 export type HealthService = z.infer<typeof HealthService>;
 
-export const ServiceState = z.enum(['operational', 'degraded', 'down']);
+export const ServiceState = z.enum(['operational', 'degraded', 'down', 'unknown']);
 export type ServiceState = z.infer<typeof ServiceState>;
 
 /** UI tone tokens — aligned with the design tokens + kit; validated, not a free string. */

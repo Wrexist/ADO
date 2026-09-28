@@ -1069,9 +1069,12 @@
         "apps/server/src/setup/connectionStatus.test.ts",
         "apps/server/src/setup/setup.test.ts",
         "apps/server/src/setup/probe.ts",
-        "apps/web/src/pages/SetupPage.tsx"
+        "apps/web/src/pages/SetupPage.tsx",
+        "apps/server/src/system/healthCredentials.test.ts",
+        "scripts/probe-health-invalidation.mts",
+        "docs/controlos/health-invalidation-evidence.json"
       ],
-      "coverageNote": "Settings and Setup distinguish configuration from authentication, invalidate expired/restarted checks and avoid automatic provider verification. API/provider responses and browser states use explicit fixtures; actual expired-credential acceptance remains unproven."
+      "coverageNote": "Settings and Setup distinguish configuration from authentication and invalidate expired/restarted checks. Anthropic health now clears persisted success on credential mutations/startup, refuses old asynchronous results after replacement/stop and treats explicit unknown as missing evidence. Tests cover A-to-B-to-A races; the built desktop renderer receives real HTTP credential save/removal invalidation over SSE and preserves unknown after reload. Prior health/provider responses are synthetic fixtures. Actual expired-credential acceptance and the GitHub sync lifecycle remain unproven."
     },
     {
       "id": "T26",

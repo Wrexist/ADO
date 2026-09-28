@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Invalidate Anthropic health on credential save/removal and startup; prevent old polls from publishing after replacement or stop. Persist explicit unknown health and exclude it from positive evidence. Cover asynchronous races, API mutation and built HTTP/SSE rendering; actual expired-provider/GitHub lifecycle/full T25 remain open.
+
 - [x] Exercise result review in the built desktop/mobile renderer over real HTTP: changed binary content, separate operation refusal, stale-verdict removal, fresh one-time acceptance and durable replay refusal. Improve review/error focus and mobile wrapping. Seeded completed runs are explicit fixtures; full T26/task/provider acceptance remains open.
 
 - [x] Reject unrelated result/task approval fields and malformed bodies at TestFlight dispatch before runner/history effects; prove a real result approval remains usable only for its intended acceptance. Full T26 and deployment approval workflow remain open.

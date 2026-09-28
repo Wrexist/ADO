@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Anthropic-status följer aktuell nyckel
+
+Tidigare kunde gammal grön hälsostatus ligga kvar efter borttagen nyckel, eller återpubliceras av ett sent svar för en utbytt nyckel. Nyckeländringar och uppstart ger nu ett beständigt `unknown`-event. Kontroller har generationsnummer och avbryts vid byte/stopp; även A→B→A och omsparade identiska byte spärrar det gamla svaret. Okänd status visas som “No data” och räknas som saknat underlag i sammanställningen. Inga nya provideranrop startas av nyckeländringen.
+
+`npm run verify` passerade typkontroll, lint, 444 tester i 100 filer och byggning. De nio riktade testerna, ett nytt riktigt credential-HTTP/SSE-prov genom byggd desktopwebb och hela `npm run smoke` passerade. Webbläsarprovet visar att byte/borttagning rensar grön status och att omladdning bevarar “No data”, med syntetisk tidigare hälsa och utan provideranrop. Färska Command/Ops-bilder använder DEMO-data. Vites storleksvarning kvarstår vid cirka 619 kB JavaScript före gzip.
+
+Underlag: `docs/controlos/health-invalidation.md` och `health-invalidation-evidence.json`. Lokala loggar: `controlos-health-credentials-focused.log`, `controlos-health-credentials-verify.log`, `controlos-health-invalidation-ui.log`, `controlos-health-probe-lint.log` och `controlos-health-credentials-smoke.log`. GitHub-synkens separata livscykel och verifiering med verkligt utgången credential återstår. T25 och full R1–R4-acceptans är fortsatt öppna; 18/46 lokalt godkända scenarier.
+
 ## Resultatgranskning genom byggd webb och riktigt HTTP-flöde
 
 Ett nytt isolerat prov kör riktig `npm run verify`, förbereder en separat granskning och ändrar sedan en binär fil med inledande blanksteg i namnet. Bekräftelsen avvisas, tidigare grön verifiering försvinner och fokus flyttas till felet. Återställda identiska byte kräver fortfarande ny verifiering och nytt beslut. Ett färskt beslut konsumeras exakt en gång; både återkallade och förbrukade beslut avvisas efter serveromstart mot samma diskprofil. Anrop för annan åtgärd eller TestFlight-start får inga nya jobb eller deployhistorik.
