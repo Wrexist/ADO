@@ -1088,7 +1088,7 @@
         "apps/server/src/runner/taskReviewApi.test.ts",
         "docs/controlos/task-criteria.md"
       ],
-      "coverageNote": "Exact current-result ledger coverage now includes result.accept and task.accept with criterion decisions. Other operation paths and the full scenario remain unaccepted."
+      "coverageNote": "Exact current-result ledger coverage includes result.accept and task.accept with criterion decisions. TestFlight dispatch rejects unrelated approval fields through a strict request contract; a current real result approval cannot dispatch or change deploy history, remains unconsumed, and still accepts only its intended result once. See approvalApi.test.ts and testflight/testflight.test.ts. This is boundary regression evidence; other operation paths and the full scenario remain unaccepted."
     },
     {
       "id": "T27",

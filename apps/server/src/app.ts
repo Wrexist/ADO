@@ -78,7 +78,7 @@ import { probeIos } from './testflight/autofill';
 import { testflightRunDone } from './testflight/watch';
 import { stopProcesses } from './lib/processControl';
 import {
-  DeployVersion,
+  TestFlightDispatchRequest,
   Intent,
   ProjectSettingsPatch,
   formatVersion,
@@ -1384,16 +1384,15 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     if (!requireToken(req, reply)) return undefined;
     const profile = testflight.get((req.params as { id: string }).id);
     if (!profile) return reply.code(404).send({ error: 'unknown template' });
-    const body = (req.body ?? {}) as { marketingVersion?: string; buildNumber?: string; model?: string };
-    const version = DeployVersion.safeParse({ marketingVersion: body.marketingVersion, buildNumber: body.buildNumber });
+    const version = TestFlightDispatchRequest.safeParse(req.body);
     if (!version.success) {
-      return reply.code(400).send({ error: version.error.issues[0]?.message ?? 'a valid version and build number are required' });
+      return reply.code(400).send({ error: 'A separate TestFlight request with a valid version, build number and optional model is required; result or task approvals cannot authorize deployment.' });
     }
     try {
       const { runId } = runner.dispatch({
         repoId: profile.repoId,
         task: renderTestFlightTask(profile, version.data),
-        model: body.model ?? profile.model,
+        model: version.data.model ?? profile.model,
       });
       testflight.markDeployed(profile.id, runId, formatVersion(version.data), new Date().toISOString());
       return { runId, version: formatVersion(version.data) };

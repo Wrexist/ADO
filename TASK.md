@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Reject unrelated result/task approval fields and malformed bodies at TestFlight dispatch before runner/history effects; prove a real result approval remains usable only for its intended acceptance. Full T26 and deployment approval workflow remain open.
+
 - [x] Replace migration-writing post-launch probes with strict read-only inspection; prove refusal of incomplete/damaged schemas without repairing them. Build an isolated current Windows artifact and verify native upgrades from 0008/0019 through 0023, preserved planning/history/credentials and restored-profile reopen/refusal. Full T35 interruption/disk-full, installer/update and real-profile acceptance remain open.
 
 - [x] Integrate context source preview, immutable package save, review/revocation and exact package selection into task-run review; keep selected invalid context blocking rather than silently dropping it. Prove bounded authenticated discovery, pagination ties, lost-response retries, changed Git HEAD refusal and built desktop/mobile rendering. Full B12/T10/T11 instruction, handoff and provider/sandbox acceptance remain open.

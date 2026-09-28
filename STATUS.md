@@ -1,5 +1,11 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Separat kontrakt för TestFlight-start
+
+TestFlight-starten validerar nu hela anropet och avvisar främmande godkännandefält, okända fält och ogiltiga modellvärden före dispatch. Ett riktigt resultatgodkännande prövades genom API:t: deployförsöket avvisades utan runner-anrop eller ändrad historik, godkännandet förblev oförbrukat och kunde sedan användas exakt en gång för sin avsedda resultatacceptans. Befintliga giltiga deployanrop fungerar fortsatt med den lokala testadaptern.
+
+`npm run verify` passerade typkontroll, lint, 439 tester i 99 filer och byggning; de 20 riktade testerna passerade också. Loggar: `controlos-dispatch-review-focused.log` och `controlos-dispatch-review-verify.log`. Ingen live-provider, Apple-uppladdning eller ny deploygodkännandemekanism ingår. Vites storleksvarning kvarstår (webb-JavaScript cirka 619 kB före gzip). T26 och fulla R1–R4-grindar är fortsatt öppna; 18/46 lokalt godkända scenarier. Underlag: `docs/controlos/acceptance-consistency.md`.
+
 ## Native profilkontroll utan efterföljande migration
 
 Det tidigare paketerade migrationsprovet kunde självt slutföra migrationer under efterkontrollen. Det är ersatt med en skrivskyddad jämförelse av migrationsjournal, tabeller, index, triggers, integritet och främmande nycklar mot en separat minnesdatabas. Ett negativt kontrollfall visar att en gammal profil vägras utan att ändras. Återställningsskyddets extra schema kontrolleras uttryckligen.

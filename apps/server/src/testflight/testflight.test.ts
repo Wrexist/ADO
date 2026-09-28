@@ -252,6 +252,29 @@ describe('testflight endpoints', () => {
     expect((await srv.app.inject({ method: 'POST', url: '/api/testflight/profiles', headers: AUTH, payload: { repoId: 'bloom', name: 'x', scheme: '', bundleId: 'b' } })).statusCode).toBe(400);
   });
 
+  it('rejects unrelated approvals and malformed dispatch bodies without creating runs or changing deployment history', async () => {
+    const snapshot = async () => ({
+      profiles: (await srv.app.inject({ url: '/api/testflight/profiles', headers: AUTH })).json(),
+      runs: (await srv.app.inject({ url: '/api/runs', headers: AUTH })).json(),
+    });
+    const before = await snapshot();
+    const version = { marketingVersion: '1.5.0', buildNumber: '59' };
+    for (const payload of [
+      { ...version, approvalId: 'unrelated-review' },
+      { ...version, operation: 'result.accept' },
+      { ...version, operation: 'task.accept' },
+      { ...version, headSha: 'a'.repeat(40), diffDigest: 'b'.repeat(64) },
+      { ...version, policyVersion: 'old-policy' },
+      { ...version, model: 42 }, { ...version, model: ' ' },
+      { ...version, model: 'x'.repeat(61) }, [version],
+    ]) {
+      const res = await srv.app.inject({ method: 'POST', url: `/api/testflight/profiles/${profileId}/deploy`, headers: AUTH, payload });
+      expect(res.statusCode, res.body).toBe(400);
+      expect(res.json().error).toContain('separate TestFlight request');
+      expect(await snapshot()).toEqual(before);
+    }
+  });
+
   it('deploy validates the per-deploy version, dispatches a real run, and records it', async () => {
     const bad = await srv.app.inject({ method: 'POST', url: `/api/testflight/profiles/${profileId}/deploy`, headers: AUTH, payload: { marketingVersion: 'not-a-version', buildNumber: '59' } });
     expect(bad.statusCode).toBe(400);

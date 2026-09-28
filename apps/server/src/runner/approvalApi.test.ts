@@ -4,7 +4,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { buildServer, type AccServer } from '../app';
 import { openDb } from '../db';
 import { runs, operationApprovals } from '../db/schema';
@@ -59,6 +59,18 @@ it('requires an authenticated, current, operation-specific review and records it
     expect((await post('verify', {})).statusCode).toBe(200);
     expect((await post('outcome', superseded)).statusCode).toBe(409);
     const current = await prepare();
+    const template = await app.inject({ method: 'POST', url: '/api/testflight/profiles', headers: auth, payload: { repoId: 'review-repo', name: 'Review isolation fixture', scheme: 'Fixture', bundleId: 'test.fixture' } });
+    expect(template.statusCode, template.body).toBe(200);
+    const profile = template.json().profile;
+    const dispatch = vi.spyOn(server.runner, 'dispatch');
+    try {
+      const reused = await app.inject({ method: 'POST', url: `/api/testflight/profiles/${profile.id}/deploy`, headers: auth, payload: { marketingVersion: '1.0', buildNumber: '1', ...current } });
+      expect(reused.statusCode, reused.body).toBe(400);
+      expect(reused.json().error).toContain('approvals cannot authorize deployment');
+      expect(dispatch).not.toHaveBeenCalled();
+      expect((await app.inject({ url: '/api/testflight/profiles', headers: auth })).json().profiles).toEqual([profile]);
+      expect(database.db.select().from(operationApprovals).where(eq(operationApprovals.id, current.approvalId)).get()).toMatchObject({ consumedTs: null, revokedTs: null });
+    } finally { dispatch.mockRestore(); }
     expect((await post('outcome', current)).statusCode).toBe(200);
     expect((await post('outcome', current)).statusCode).toBe(409);
     const final = await detail();

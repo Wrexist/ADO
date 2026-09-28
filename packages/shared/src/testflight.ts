@@ -56,6 +56,11 @@ export const DeployVersion = z.object({
 });
 export type DeployVersion = z.infer<typeof DeployVersion>;
 
+/** Dispatch is a separate owner action; unrelated approval fields must not be ignored. */
+export const TestFlightDispatchRequest = DeployVersion.extend({
+  model: z.string().trim().min(1).max(60).optional(),
+}).strict();
+
 /** One Xcode project's auto-fill facts — a multi-app monorepo yields several of these. */
 export const IosAppFacts = z.object({
   /** Repo-relative project path — the picker label ("ios/Bloom.xcodeproj"). */

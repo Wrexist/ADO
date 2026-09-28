@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: Validate the complete body at an action boundary instead of projecting known fields: otherwise unrelated approval fields can be silently ignored while another action executes. Prove rejection before dispatch and preserve the original approval for its intended operation.
+
 - 2026-09-28: Persist a selected context package with its exact review version in the task execution. Rebuild provider input from immutable sources at start, recheck revocation/secrets, and avoid copying source text into ordinary activity records. Revocation cannot retract bytes already delivered.
 
 - 2026-09-28: Preserve UTF-8 BOM when storing text with its raw blob hash. Keep historical context approval separate from live freshness, and retain a content-free revocation path when newly registered secrets prevent reading an old package.
