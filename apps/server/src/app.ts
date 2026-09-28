@@ -474,6 +474,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     github?.stop();
     github = null;
     if (env.demo) return;
+    invalidateHealth(bus, 'github');
     const token = connections.resolve('github');
     const client = deps.githubClient ?? (token ? new OctokitClient(token) : null);
     if (!client) return;

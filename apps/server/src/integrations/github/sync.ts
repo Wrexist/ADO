@@ -11,6 +11,7 @@
 import type { Bus } from '../../bus';
 import { categoryFromLanguage, ciFromRun, toLanguage } from './map';
 import type { GitHubClient, GhRepo } from './types';
+import { randomUUID } from 'node:crypto';
 
 const BASE_INTERVAL_MS = 60_000;
 const MAX_INTERVAL_MS = 10 * 60_000;
@@ -19,6 +20,8 @@ export class GitHubSync {
   private timer: NodeJS.Timeout | null = null;
   private interval = BASE_INTERVAL_MS;
   private stopped = false;
+  private started = false;
+  private pending: Promise<number> | null = null;
 
   constructor(
     private bus: Bus,
@@ -28,14 +31,25 @@ export class GitHubSync {
   ) {}
 
   /** One full sync pass. Returns the number of repos enriched. */
-  async sync(): Promise<number> {
+  sync(): Promise<number> {
+    if (this.stopped) return Promise.resolve(0);
+    if (this.pending) return this.pending;
+    const job = this.syncPass();
+    this.pending = job;
+    void job.finally(() => { if (this.pending === job) this.pending = null; }).catch(() => {});
+    return job;
+  }
+
+  private async syncPass(): Promise<number> {
     const now = () => new Date().toISOString();
     const repos = await this.client.listRepos();
+    if (this.stopped) return 0;
     this.observe?.(repos, now());
     let enriched = 0;
     let degraded = false;
 
     for (const gh of repos) {
+      if (this.stopped) return enriched;
       const fullName = `${gh.owner}/${gh.name}`.toLowerCase();
       const matched = Object.values(this.bus.snapshot().state.repos).find((r) => r.githubFullName === fullName && r.localPath);
       const id = matched?.id ?? `github-${Buffer.from(fullName).toString('base64url')}`;
@@ -68,6 +82,7 @@ export class GitHubSync {
         this.client.openPrCount(gh.owner, gh.name).catch(() => { degraded = true; return undefined; }),
         this.client.latestRun(gh.owner, gh.name, gh.defaultBranch || undefined).catch(() => { degraded = true; return null; }),
       ]);
+      if (this.stopped) return enriched;
 
       const patch: Record<string, unknown> = {
         stars: gh.stargazers,
@@ -117,6 +132,7 @@ export class GitHubSync {
 
       // Releases → deployments (idempotent by release id).
       const releases = await this.client.listReleases(gh.owner, gh.name).catch(() => { degraded = true; return []; });
+      if (this.stopped) return enriched;
       for (const rel of releases) {
         this.bus.publish({
           id: `gh-release:${id}:${rel.id}`,
@@ -142,8 +158,9 @@ export class GitHubSync {
   }
 
   private emitHealth(state: 'operational' | 'degraded' | 'down'): void {
+    if (this.stopped) return;
     this.bus.publish({
-      id: `health:github:${Date.now()}`,
+      id: `health:github:${randomUUID()}`,
       type: 'health.checked',
       ts: new Date().toISOString(),
       source: { kind: 'health', ref: 'github' },
@@ -153,13 +170,17 @@ export class GitHubSync {
 
   /** Poll with backoff: reset to 60s on success, double to 10m on failure. */
   start(): void {
+    if (this.started || this.stopped) return;
+    this.started = true;
     const tick = async () => {
       if (this.stopped) return;
       try {
         const n = await this.sync();
+        if (this.stopped) return;
         this.interval = BASE_INTERVAL_MS;
         this.log(`github: enriched ${n} repo(s)`);
       } catch (err) {
+        if (this.stopped) return;
         this.interval = Math.min(this.interval * 2, MAX_INTERVAL_MS);
         this.emitHealth('degraded');
         this.log(`github: sync failed (${(err as Error).message}); backing off to ${this.interval / 1000}s`);
@@ -172,5 +193,6 @@ export class GitHubSync {
   stop(): void {
     this.stopped = true;
     if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
   }
 }

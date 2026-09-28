@@ -1072,9 +1072,11 @@
         "apps/web/src/pages/SetupPage.tsx",
         "apps/server/src/system/healthCredentials.test.ts",
         "scripts/probe-health-invalidation.mts",
-        "docs/controlos/health-invalidation-evidence.json"
+        "docs/controlos/health-invalidation-evidence.json",
+        "apps/server/src/integrations/github/lifecycle.test.ts",
+        "docs/controlos/github-sync-lifecycle.md"
       ],
-      "coverageNote": "Settings and Setup distinguish configuration from authentication and invalidate expired/restarted checks. Anthropic health now clears persisted success on credential mutations/startup, refuses old asynchronous results after replacement/stop and treats explicit unknown as missing evidence. Tests cover A-to-B-to-A races; the built desktop renderer receives real HTTP credential save/removal invalidation over SSE and preserves unknown after reload. Prior health/provider responses are synthetic fixtures. Actual expired-credential acceptance and the GitHub sync lifecycle remain unproven."
+      "coverageNote": "Settings and Setup distinguish configuration from authentication and invalidate expired/restarted checks. Anthropic health clears persisted success on credential mutations/startup and refuses old asynchronous results; explicit unknown is missing evidence. Built desktop HTTP/SSE coverage verifies mutation/reload. GitHub replacement/removal now clears health and stopped-client repo, enrichment, release and failure responses cannot publish new observations/events/health. Real SQLite replay and credential API tests use controlled provider promises; prior health/provider responses are synthetic. Actual expired-credential acceptance remains unproven."
     },
     {
       "id": "T26",

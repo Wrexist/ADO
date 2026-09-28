@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: Stopping a poller must suppress effects after every awaited provider boundary, including observations and automation-triggering build events. Prevent duplicate start loops and share a pending sync; retain prior history without letting a replaced client refresh it.
+
 - 2026-09-28: Removing a credential must invalidate persisted health, not merely skip the next poll. Bind asynchronous results to a generation so key replacement, including A-to-B-to-A, and shutdown cannot republish stale success; unknown is missing evidence in aggregates too.
 
 - 2026-09-28: A rejected confirmation can unmount the focused control. Move focus to the error and clear stale verification state; on mobile, scroll the new review with header clearance so both its binding and confirmation remain visible.

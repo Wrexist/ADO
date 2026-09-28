@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## GitHub-synk efter nyckelbyte och stopp
+
+Sena svar från en stoppad GitHub-synk kan inte längre publicera nya repoobservationer, CI-/bygghändelser, releaseaktivitet eller hälsostatus. Kontroll sker efter varje asynkron providergräns. Nyckelbyte/borttagning rensar tidigare grön status före eventuell ny klientstart. Samtidiga synkanrop delar en pågående hämtning och upprepade starter skapar inte dubbla pollningsloopar. Nätverksanrop som redan skickats kan avslutas, men deras sena effekter spärras; tidigare historik bevaras.
+
+`npm run verify` passerade typkontroll, lint, 451 tester i 101 filer och byggning. Riktade tester samt den fulla sviten täcker kontrollerade sena repo-/CI-/releasesvar, sena fel, SQLite-replay, nyckelbyte via autentiserat API och borttagen sista nyckel. Inga riktiga GitHub-anrop eller ändringar i pilotprojekt gjordes. Loggar: `controlos-github-lifecycle-focused.log` och `controlos-github-lifecycle-verify.log`. Underlag: `docs/controlos/github-sync-lifecycle.md`.
+
+Verkligt utgångna credentials och okänt utfall vid fjärrskrivningar är inte verifierade av dessa lokala providerfixturer. T25/T18 och full R1–R4-acceptans återstår; fortsatt 18/46 lokalt godkända scenarier.
+
 ## Anthropic-status följer aktuell nyckel
 
 Tidigare kunde gammal grön hälsostatus ligga kvar efter borttagen nyckel, eller återpubliceras av ett sent svar för en utbytt nyckel. Nyckeländringar och uppstart ger nu ett beständigt `unknown`-event. Kontroller har generationsnummer och avbryts vid byte/stopp; även A→B→A och omsparade identiska byte spärrar det gamla svaret. Okänd status visas som “No data” och räknas som saknat underlag i sammanställningen. Inga nya provideranrop startas av nyckeländringen.
