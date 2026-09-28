@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, lt, or } from 'drizzle-orm';
 import { ContextPackageCreate, ContextPackagePayload, ContextPackageReviewRequest, ContextSourcePreview } from '@ado/shared';
 import type { Db } from '../db';
 import { contextPackages, contextPackageReviews, planningTasks } from '../db/schema';
@@ -18,6 +18,14 @@ export class ContextPackages {
     return row;
   }
   get(id: string) { return this.read(id, true); }
+  list(taskId: string, cursor?: string) {
+    return this.db.transaction(() => {
+      const before = cursor ? this.row(cursor) : null;
+      if (before && before.taskId !== taskId) throw new Error('Context list cursor belongs to another task');
+      const rows = this.db.select().from(contextPackages).where(and(eq(contextPackages.taskId, taskId), before ? or(lt(contextPackages.createdTs, before.createdTs), and(eq(contextPackages.createdTs, before.createdTs), lt(contextPackages.id, before.id))) : undefined)).orderBy(desc(contextPackages.createdTs), desc(contextPackages.id)).limit(51).all();
+      return { packages: rows.slice(0, 50).map(row => ({ ...this.status(row.id), taskVersion: row.taskVersion, checkoutId: row.checkoutId, baseSha: row.baseSha, createdTs: row.createdTs })), nextCursor: rows.length > 50 ? rows[49].id : null };
+    });
+  }
   status(id: string) {
     const pkg = this.read(id, false);
     return { packageId: pkg.id, digest: pkg.digest, reviewVersion: pkg.reviewVersion, decision: pkg.review?.decision ?? null, reviewedAt: pkg.review?.recordedTs ?? null, freshness: 'not_checked' as const };

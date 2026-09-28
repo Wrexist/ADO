@@ -56,8 +56,10 @@ try {
   const planningBefore = await api('/api/planning');
   const portfolio = await api('/api/portfolio');
   await open('/projects');
+  await page.getByText('Repositories & identity', { exact: true }).first().waitFor();
+  for (const disclosure of await page.getByText('Repositories & identity', { exact: true }).all()) await activate(disclosure);
   for (const p of portfolio.projects) await page.getByText(`Project ID: ${p.id}`, { exact: true }).waitFor();
-  await activate(page.getByRole('link', { name: 'Explore projects and relations in Universe', exact: false }));
+  await activate(page.getByRole('navigation', { name: 'Project tools' }).getByRole('link', { name: 'Universe', exact: true }));
   await page.getByText('6 of 6 records shown', { exact: true }).waitFor();
   const snapshot = UniverseSnapshot.parse(await api('/api/universe'));
   assert.deepEqual(snapshot.nodes.filter(n => n.kind === 'project').map(n => n.projectId).sort(), portfolio.projects.map((p: { id: string }) => p.id).sort());

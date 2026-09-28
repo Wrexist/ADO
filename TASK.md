@@ -4,7 +4,9 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
-- [x] Revisit OpenShip's actual dashboard source and screenshot; refine Projects with search/status filtering, grid/list layout, deliberate creation/import, readable disclosures and draft-preserving reload. Check desktop/mobile, keyboard, both themes and unchanged project data. Existing context-package UI work remains preserved and unfinished; no R1–R4 acceptance change.
+- [x] Integrate context source preview, immutable package save, review/revocation and exact package selection into task-run review; keep selected invalid context blocking rather than silently dropping it. Prove bounded authenticated discovery, pagination ties, lost-response retries, changed Git HEAD refusal and built desktop/mobile rendering. Full B12/T10/T11 instruction, handoff and provider/sandbox acceptance remain open.
+
+- [x] Revisit OpenShip's actual dashboard source and screenshot; refine Projects with search/status filtering, grid/list layout, deliberate creation/import, readable disclosures and draft-preserving reload. Check desktop/mobile, keyboard, both themes and unchanged project data. Context-package work is tracked separately; no R1–R4 acceptance change.
 
 - [x] Bind optional approved context packages to task execution by exact digest/review version, recheck before provider input and enforce the combined serialized byte budget. Verify source delivery through an isolated local adapter, revoked queue recovery and legacy migration; review UI and full provider/sandbox acceptance remain open.
 

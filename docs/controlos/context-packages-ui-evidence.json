@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-28T01:09:49.827Z",
+  "date": "2026-09-28T01:06:15.500Z",
   "baseRevision": "e6946fb31bf7166a473569c42dcfad150453ff3d",
   "environment": {
     "platform": "win32",
@@ -8,31 +8,28 @@
     "chromium": "153.0.8010.12"
   },
   "checks": [
-    "empty and no-match states",
-    "same project identities as Projects",
-    "all four node and relation kinds",
-    "duplicate project names disambiguated by identity",
-    "Tab/Enter reaches every record and relation endpoints",
-    "focus moves to selected detail",
-    "cross-project navigation survives filters",
-    "1536/768/390 px in light and dark without horizontal overflow",
-    "200 percent CSS zoom with reduced motion (not native browser zoom)",
-    "long save error retains draft without overflow",
-    "narrow-layout create and remove with keyboard activation",
-    "linked resource removal refused",
-    "failed refresh retains snapshot and disables mutation; retry recovers",
-    "planning unchanged and no agent run",
-    "no page errors"
+    "real Git preview and immutable save",
+    "lost save response retry creates one package",
+    "literal external HTML renders as text",
+    "Enter in review reason never dispatches",
+    "lost approval response retry creates one review",
+    "revocation blocks selected package without silently dropping it",
+    "explicit selection of exact digest and review version in captured dispatch",
+    "dispatch retry retains idempotency key and entire payload",
+    "package discovery after browser reload",
+    "content-read failure keeps selection blocked and metadata allows real revocation",
+    "changed Git HEAD refuses approval and retains reason",
+    "1536/390 px light/dark without horizontal overflow",
+    "no page errors or real runs"
   ],
   "sourceSha256": {
-    "scripts/probe-universe.mts": "2ef7126c89da5c971ed4c0b329205fbecb15bd6441775f4fe201cb0a736dacfd",
-    "apps/web/src/pages/UniversePage.tsx": "11c4a09bada6d2d3298872382b255dd53a73b0d3300438febbe8f10efdd24cbf",
-    "apps/web/src/lib/universe.ts": "7d2e49f09ffeb95ed7fcb1a4d1c16e0cf076d4ea43da9d49afdbeeb3237eaa64",
-    "apps/server/src/projects/universe.ts": "017714ec223cbf23c343f5e2fcafd73d9af0296e2b4bbc345892e3c81096b754",
-    "apps/server/src/projects/universe.test.ts": "a39125f6ac9f5216b4302c07406a4505fb4d756dfa681322eace1d7f77c500d9",
+    "scripts/probe-context-packages.mts": "20a224e430098028d3e29dafe75cbe402ab413517ebc6a2af80d3459cac80d61",
+    "apps/web/src/pages/ContextPackagePanel.tsx": "b2bf8da0c212f40da45de19e835bc1f83412d8ad74e25a62d0385d08074546d8",
+    "apps/web/src/pages/PlanningPage.tsx": "ea251c3cf32ab9022b35f68309272ccdc1a1687e71109678d2932d75fde2634e",
+    "apps/web/src/lib/context.ts": "491e8a889478f599b2bba47a9c9860759a1d4e1b047cbf3acf32905121347cbc",
+    "apps/server/src/projects/contextPackages.ts": "3a7811fe86be98282e61a06c2d888ca9f4da7fc3b2abc893bbdd71031a4a6d35",
     "apps/server/src/app.ts": "245c0ae41d99fcdd8b0ffbee683486badf278bbd530352927733dc6de94038d6",
-    "packages/shared/src/universe.ts": "1a1b673c091de0062e8b0333bebe7c78a96030598d4b495461cee99869763f32",
-    "apps/server/drizzle/0021_universe.sql": "52f01904998d08170b56807a5b8471ea996ba6f67d9f991ba7558af9d18ba5e4"
+    "packages/shared/src/context.ts": "9b682140762d276cb536227e78eb9ee98630a25c542954260a3fe51b5e679c7d"
   },
   "assetSha256": {
     "apps/web/dist/assets/index-BgNX6Ejb.js": "637ee043a915176cef1f18efc47c6cd9855988623ce05eab27b072bc4240b631",
@@ -81,13 +78,10 @@
     "apps/web/dist/assets/inter-vietnamese-600-normal-Cc8MFFhd.woff2": "1aeb94ae9db052a4a2fe6f3046f928cff1fdbd7abdf870a9a01c13cae6faeba5"
   },
   "screenshotSha256": {
-    "smoke-shots/universe-1536-light.png": "b585dcb999e1943ea3318a9847763f9917a262503a6b3dd60235fcad8c5b0ab0",
-    "smoke-shots/universe-1536-dark.png": "02ac7336626954cf47c7b2a9f2287c5bb5ebb9b37627802455defb97e4723cc7",
-    "smoke-shots/universe-768-light.png": "9b1d2cb3be855ef4e9ee9bd83b3a7a0515890b0b8fb3cd520a5171fdbaf64018",
-    "smoke-shots/universe-768-dark.png": "b68348770f305ad97fa83381f19aacd5baa2774229f24946a415e00f6cc389f9",
-    "smoke-shots/universe-390-light.png": "73abf7a9284543d42b8493d695aca1fa5145a5d6bba6220f326f219863d6dc98",
-    "smoke-shots/universe-390-dark.png": "c9e31fa2b4ec6ac7a68226333ff32031af4204e2ff76c2b589c9dec5e352cf00",
-    "smoke-shots/universe-200-css-zoom.png": "8962e6c2241e322de98cb02114789a8e659f7f5a806b646e234eaf556c73ae4b"
+    "smoke-shots/context-packages-1536-light.png": "27b01b9d1b4e85e8e79c422398ad394634da1ea12ae820e5fd905d79f0605a9f",
+    "smoke-shots/context-packages-1536-dark.png": "d3a0f3a227e4c8badf08b14440cf5232ad100d914e4215fa4afcd23ecaf06c3e",
+    "smoke-shots/context-packages-390-light.png": "b3745e4ce688ef32b95173e3d064c63513baa2e17ea341d80ae44dd3fdb7ce0a",
+    "smoke-shots/context-packages-390-dark.png": "73d3bddd4dde2c55380196331d5c4b40262e030af3da20cf08760f10cb16d379"
   },
-  "scope": "Isolated synthetic portfolio through production APIs and the built renderer. List-first Universe; no spatial graph, assistive-technology user study, native installer migration or real pilot acceptance."
+  "scope": "Isolated synthetic Git/profile using production context APIs and built renderer. Dispatch and one content-read refusal intercepted as explicit UI fixtures; no provider/sandbox/pilot acceptance. Full T10/T11 remain open."
 }

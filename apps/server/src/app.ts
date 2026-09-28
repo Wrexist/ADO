@@ -727,6 +727,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       return contextPackages.save(taskId, request, preview);
     } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
   });
+  app.get('/api/planning/tasks/:id/context/packages', async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    reply.header('cache-control', 'no-store');
+    const cursor = (req.query as { cursor?: unknown }).cursor;
+    if (cursor !== undefined && (typeof cursor !== 'string' || !/^[a-f0-9-]{36}$/.test(cursor))) return reply.code(400).send({ error: 'Invalid context list cursor' });
+    return planningMutation(reply, () => contextPackages.list((req.params as { id: string }).id, cursor as string | undefined));
+  });
   for (const statusOnly of [false, true]) app.get(`/api/context/packages/:id${statusOnly ? '/status' : ''}`, async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     reply.header('cache-control', 'no-store');

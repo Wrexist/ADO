@@ -1,12 +1,20 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Granskning och val av kontextpaket i körvyn
+
+Körgranskningen innehåller nu förhandsvisning av versionsbundna källfiler, sparade paket, motiverat godkännande/återkallning och ett separat val inför start. Valet skickar exakt paket-ID, digest och granskningsversion. Ett återkallat eller oläsbart valt paket spärrar start utan att tyst tas bort. Användaren kan uttryckligen välja bort referenskontexten. Enter i granskningsfältet startar ingen körning.
+
+`npm run verify` passerade med 437 tester i 98 filer. Det byggda UI-provet använde riktiga Git-/kontext-API:er och en separat diskprofil vid 1536/390 px i båda teman: tappade spar-/granskningssvar gav inga dubbla poster, återkallning spärrade valet och ändrad HEAD vägrade godkännande med bevarad motivering. Körbegäran fångades som en uttrycklig UI-fixtur; ingen provider startades. Slutlig typkontroll/lint och webbläsarprov täcker även fokusjustering och nollställning av tidigare beslutsutkast vid nya paket. Underlag: `docs/controlos/context-packages-ui.md` och `context-packages-ui-evidence.json`.
+
+Instruktionsroller, handoffs, full stale-memory-behandling samt live provider-/sandboxacceptans återstår. B12/T10/T11 och fulla R1–R4-grindar är fortsatt öppna, med 18/46 lokalt godkända scenarier.
+
 ## OpenShip-inspirerad projektöversikt
 
 Projektregistret har fått sökning, statusfilter, kort-/listvy och tydligare tomlägen. Skapande och import öppnas uttryckligen; tekniska identiteter och observationer ligger i expanderbara detaljer. Omladdning bevarar osparade ändringar och deras ursprungliga versionskontroll. Desktopnavigationen har färre dubbla länkar, lugnare sektionsrubriker och större klickytor.
 
 OpenShips källkod, licens och referensbild granskades på revision `89036eb45165c488d49ced99c76852eabc48d566`. Ingen upstream-kod, grafik eller nya beroenden kopierades. `npm run verify` passerade med 436 tester i 98 filer. Efter en tillgänglighetsrättning av statusfiltrets etikett passerade den byggda webbläsarsmoken, inklusive 375/390/768/1536 px, 844×390 liggande, båda teman, reducerad rörelse vid 375 px och kontroll att filter/layout inte ändrar projektdata. Underlag: `docs/controlos/openship-design-review.md`; bilder i `smoke-shots/` använder DEMO-data.
 
-Detta är en gränssnittsförbättring. Pågående kontextpaket-UI är bevarat separat och ännu inte färdigintegrerat. Fortsatt 18/46 lokalt godkända scenarier; ingen full R1–R4-grind är godkänd.
+Detta är en gränssnittsförbättring. Den separata kontextpaket-UI-etappen redovisas ovan. Fortsatt 18/46 lokalt godkända scenarier; ingen full R1–R4-grind är godkänd.
 
 ## Valda kontextpaket binds till task-körningen
 

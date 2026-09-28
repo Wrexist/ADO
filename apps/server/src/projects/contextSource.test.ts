@@ -91,6 +91,12 @@ it('binds the production preview API to current task and checkout identities wit
     const create = { ...body, id: randomUUID(), files: [{ path: 'bom.md' }] }, packagesRoute = `/api/planning/tasks/${task.id}/context/packages`;
     const saved = await post(packagesRoute, create); expect(saved.statusCode, saved.body).toBe(200);
     const pkg = saved.json(); expect(pkg.reviewVersion).toBe(0);
+    expect((await server.app.inject({ url: packagesRoute, headers: { host: headers.host } })).statusCode).toBe(401);
+    const listed = await server.app.inject({ url: packagesRoute, headers });
+    expect(listed.headers['cache-control']).toBe('no-store');
+    expect(listed.json()).toMatchObject({ packages: [{ packageId: pkg.id, reviewVersion: 0 }], nextCursor: null });
+    expect(listed.body).not.toContain('bom.md');
+    expect((await server.app.inject({ url: `${packagesRoute}?cursor=invalid`, headers })).statusCode).toBe(400);
     expect((await post(packagesRoute, create)).json()).toEqual(pkg);
     expect((await post(packagesRoute, { ...create, files: [{ path: 'notes.md' }] })).statusCode).toBe(409);
     const reviewRoute = `/api/context/packages/${pkg.id}/review`;

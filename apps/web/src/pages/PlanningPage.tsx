@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { PlanningMilestone, PlanningSnapshot, PlanningTask, PortfolioSnapshot } from '@ado/shared';
+import type { ContextExecutionBinding, PlanningMilestone, PlanningSnapshot, PlanningTask, PortfolioSnapshot } from '@ado/shared';
 import { PageShell } from '../chrome/PageShell';
 import { Button, Card } from '../kit';
 import { fetchPortfolio } from '../lib/portfolio';
 import { fetchPlanning, planningRequest } from '../lib/planning';
 import { TaskCriterionReview } from './TaskCriterionReview';
 import { TaskReopeningPanel } from './TaskReopeningPanel';
+import { ContextPackagePanel } from './ContextPackagePanel';
 
 const field = 'mt-1 w-full min-w-0 rounded-tile border bg-card px-3 py-2 text-body text-text1';
 const emptyTask = { projectId: '', repositoryId: '', milestoneId: '', title: '', outcome: '', scope: '', outOfScope: '', acceptance: '', dependsOn: [] as string[], priority: 0, status: 'draft', sourceRefs: '' };
@@ -33,7 +34,7 @@ export function PlanningPage() {
   const [filter, setFilter] = useState('');
   const [criterionReview, setCriterionReview] = useState<{ taskId: string; runId: string } | null>(null);
   const [reopening, setReopening] = useState<{ task: PlanningTask; runId: string } | null>(null);
-  const [runReview, setRunReview] = useState<{ task: PlanningTask; checkoutId: string; provider: string; submission: { version: number; checkoutId: string; baseSha: string; provider: string; idempotencyKey: string } | null } | null>(null);
+  const [runReview, setRunReview] = useState<{ task: PlanningTask; checkoutId: string; provider: string; contextPackage?: ContextExecutionBinding; contextReady?: boolean; submission: { version: number; checkoutId: string; baseSha: string; provider: string; idempotencyKey: string; contextPackage?: ContextExecutionBinding } | null } | null>(null);
   const taskTitle = useRef<HTMLInputElement>(null), promotionTitle = useRef<HTMLInputElement>(null), milestoneTitle = useRef<HTMLInputElement>(null);
   const runReviewTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (runReview) runReviewTitle.current?.focus(); }, [runReview?.task.id]);
@@ -68,23 +69,32 @@ export function PlanningPage() {
       {reopening && <TaskReopeningPanel key={`${reopening.runId}:${reopening.task.version}`} task={reopening.task} runId={reopening.runId} onClose={() => setReopening(null)} onComplete={async (next) => { await load(); setReopening(null); if (next.status === 'draft') editTask(next); setMessage('Revision request recorded. Review and save the current task before starting another run.'); }} />}
       {criterionReview && data?.tasks.find((t) => t.id === criterionReview.taskId && t.status === 'awaiting_review') && <TaskCriterionReview key={criterionReview.runId} task={data.tasks.find((t) => t.id === criterionReview.taskId)!} runId={criterionReview.runId} onChanged={load} onClose={() => setCriterionReview(null)} />}
       {runReview && <Card role="region" aria-label="Review task run" className="min-w-0 break-words p-4">
-        <h2 ref={runReviewTitle} tabIndex={-1} className="text-title font-semibold">Review task run</h2>
+        <h2 ref={runReviewTitle} tabIndex={-1} className="scroll-mt-48 text-title font-semibold">Review task run</h2>
         <p className="mt-2 text-body">{runReview.task.title} · task version {runReview.task.version}</p>
         <p className="mt-2 whitespace-pre-wrap text-body">{runReview.task.outcome}</p>
         <p className="mt-2 text-body text-text2">Trusted local execution in a separate Git repository from the reviewed commit. Uncommitted source changes are excluded and preserved. This is not an OS sandbox. A successful process leaves the task awaiting review.</p>
-        <form className="mt-3 space-y-3" onSubmit={(event) => {
+        <form id="task-run-form" className="mt-3 space-y-3" onSubmit={(event) => {
           event.preventDefault();
+          if (busy || runReview.contextReady === false) return;
           const checkout = portfolio?.checkouts.find((c) => c.id === runReview.checkoutId);
           if (!checkout?.headSha) return;
-          const submission = runReview.submission ?? { version: runReview.task.version, checkoutId: checkout.id, baseSha: checkout.headSha, provider: runReview.provider, idempotencyKey: crypto.randomUUID() };
+          const submission = runReview.submission ?? { version: runReview.task.version, checkoutId: checkout.id, baseSha: checkout.headSha, provider: runReview.provider, idempotencyKey: crypto.randomUUID(), ...(runReview.contextPackage ? { contextPackage: runReview.contextPackage } : {}) };
           setRunReview({ ...runReview, submission });
           void act(async () => { await planningRequest(`/tasks/${runReview.task.id}/dispatch`, 'POST', submission); setRunReview(null); }, 'Run accepted. Task acceptance requires separate criterion review.');
         }}>
-          <label className="block text-body">Run checkout<select aria-label="Run checkout" required disabled={Boolean(runReview.submission)} className={field} value={runReview.checkoutId} onChange={(e) => setRunReview({ ...runReview, checkoutId: e.target.value })}><option value="">Select a committed working copy</option>{portfolio?.checkouts.filter((c) => c.repositoryId === runReview.task.repositoryId && c.headSha).map((c) => <option key={c.id} value={c.id}>{c.canonicalPath} · {c.headSha!.slice(0, 12)}</option>)}</select></label>
+          <label className="block text-body">Run checkout<select aria-label="Run checkout" required disabled={Boolean(runReview.submission)} className={field} value={runReview.checkoutId} onChange={(e) => setRunReview({ ...runReview, checkoutId: e.target.value, contextPackage: undefined, contextReady: true })}><option value="">Select a committed working copy</option>{portfolio?.checkouts.filter((c) => c.repositoryId === runReview.task.repositoryId && c.headSha).map((c) => <option key={c.id} value={c.id}>{c.canonicalPath} · {c.headSha!.slice(0, 12)}</option>)}</select></label>
           <p className="break-all text-label text-text2">Reviewed base: {runReview.submission?.baseSha ?? portfolio?.checkouts.find((c) => c.id === runReview.checkoutId)?.headSha ?? 'Select a checkout'}</p>
           <label className="block text-body">Run provider<select aria-label="Run provider" required disabled={Boolean(runReview.submission)} className={field} value={runReview.provider} onChange={(e) => setRunReview({ ...runReview, provider: e.target.value })}><option value="">Choose provider</option><option value="claude">Claude</option><option value="codex">Codex (experimental, ChatGPT login)</option></select></label>
-          <div className="flex flex-wrap gap-2"><Button type="submit" disabled={busy}>{runReview.submission ? 'Retry same run request' : 'Start reviewed run'}</Button><Button variant="outline" disabled={busy} onClick={() => setRunReview(null)}>Cancel run review</Button></div>
         </form>
+        {portfolio?.checkouts.find(c => c.id === runReview.checkoutId)?.headSha && <ContextPackagePanel
+          key={`${runReview.task.id}:${runReview.task.version}:${runReview.checkoutId}:${portfolio.checkouts.find(c => c.id === runReview.checkoutId)!.headSha}`}
+          task={runReview.task} checkoutId={runReview.checkoutId} baseSha={portfolio.checkouts.find(c => c.id === runReview.checkoutId)!.headSha!}
+          selected={runReview.contextPackage} disabled={busy || Boolean(runReview.submission)}
+          onSelect={binding => setRunReview(current => current && ({ ...current, contextPackage: binding, contextReady: !binding }))}
+          onReady={ready => setRunReview(current => !current || current.contextReady === ready ? current : { ...current, contextReady: ready })}
+        />}
+        {runReview.contextPackage && runReview.contextReady === false && <p role="status" className="my-3 text-body text-text2">The selected package is not ready. Reload and review it, or explicitly choose no reference package.</p>}
+        <div className="mt-3 flex flex-wrap gap-2"><Button type="submit" form="task-run-form" disabled={busy || runReview.contextReady === false}>{runReview.submission ? 'Retry same run request' : 'Start reviewed run'}</Button><Button variant="outline" disabled={busy} onClick={() => setRunReview(null)}>Cancel run review</Button></div>
       </Card>}
       <Card className="p-4">
         <h2 className="text-title font-semibold">Inbox</h2>

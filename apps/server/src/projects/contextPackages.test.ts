@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { ContextSourcePreview } from '@ado/shared';
 import { openDb } from '../db';
 import { contextPackages, contextPackageReviews, portfolioRepositories, portfolioCheckouts } from '../db/schema';
@@ -44,8 +44,27 @@ it('keeps immutable exact packages and versioned revocation history, with dedupl
     h.secrets.push('Owner-selected');
     expect(() => h.store.get(pkg.id)).toThrow('configured secret');
     expect(h.store.status(pkg.id)).not.toHaveProperty('payload');
+    expect(h.store.list(h.task.id).packages[0]).toMatchObject({ packageId: pkg.id, decision: 'revoked' });
+    expect(JSON.stringify(h.store.list(h.task.id))).not.toContain('Owner-selected');
     expect(h.store.review(pkg.id, { ...revoke, id: randomUUID(), version: 2 })).toMatchObject({ decision: 'revoked', reviewVersion: 3 });
   } finally { h.sqlite.close(); }
+});
+
+it('pages package identities without omissions when creation timestamps collide and refuses a foreign task cursor', () => {
+  const h = fixture();
+  const clock = vi.spyOn(Date.prototype, 'toISOString').mockReturnValue('2026-09-28T00:00:00.000Z');
+  try {
+    const ids = Array.from({ length: 51 }, () => randomUUID());
+    for (const id of ids) h.store.save(h.task.id, { ...h.input, id }, h.source);
+    const first = h.store.list(h.task.id);
+    expect(first.packages).toHaveLength(50); expect(first.nextCursor).toBeTruthy();
+    const last = h.store.list(h.task.id, first.nextCursor!);
+    expect(last.packages).toHaveLength(1); expect(last.nextCursor).toBeNull();
+    expect([...first.packages, ...last.packages].map(p => p.packageId)).toEqual(ids.sort().reverse());
+    expect(() => h.store.list(randomUUID(), first.nextCursor!)).toThrow('another task');
+    expect(JSON.stringify(first)).not.toContain(h.source.files[0].text);
+    expect(JSON.stringify(first)).not.toContain(h.source.files[0].path);
+  } finally { clock.mockRestore(); h.sqlite.close(); }
 });
 
 it('rolls back failed persistence and refuses corrupt bytes instead of returning an empty package', () => {

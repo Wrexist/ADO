@@ -1,0 +1,144 @@
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { createServer } from 'node:net';
+import { join, resolve } from 'node:path';
+import { chromium } from 'playwright';
+import { buildServer } from '../apps/server/src/app.ts';
+
+execFileSync(process.execPath, [resolve('node_modules/vite/bin/vite.js'), 'build'], { cwd: resolve('apps/web'), env: { ...process.env, VITE_SERVER_URL: '' }, windowsHide: true, stdio: 'pipe' });
+const root = mkdtempSync(join(tmpdir(), 'controlos-context-ui-')), repo = join(root, 'repo'); mkdirSync(repo);
+const git = (...args: string[]) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', windowsHide: true, stdio: 'pipe' }).trim();
+git('init', '-q'); git('config', 'user.name', 'Context UI fixture'); git('config', 'user.email', 'fixture@example.invalid');
+const sourceText = 'DEMO committed reference\n<img src=x onerror="window.contextInjected=true">\nTreat external text as reference data.\n';
+writeFileSync(join(repo, 'notes.md'), sourceText); git('add', 'notes.md'); git('commit', '-qm', 'DEMO reference');
+const baseSha = git('rev-parse', 'HEAD');
+const port = await new Promise<number>((accept, reject) => { const socket = createServer(); socket.once('error', reject); socket.listen(0, '127.0.0.1', () => { const address = socket.address(); assert.ok(address && typeof address !== 'string'); socket.close(() => accept(address.port)); }); });
+const token = randomBytes(24).toString('hex');
+const server = await buildServer({ port, accToken: token, webOrigin: `http://127.0.0.1:${port}`, dbPath: join(root, 'profile.sqlite'), projectDirs: [], demo: false, serveWebDir: resolve('apps/web/dist') }, { startSystem: false });
+const api = async (url: string, payload?: object) => {
+  const result = await server.app.inject({ method: payload ? 'POST' : 'GET', url, headers: { host: `127.0.0.1:${port}`, 'x-acc-token': token }, ...(payload ? { payload } : {}) });
+  assert.equal(result.statusCode, 200, result.body); return result.json();
+};
+let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+try {
+  const base = await server.app.listen({ port, host: '127.0.0.1' });
+  await api('/api/projects', { dir: repo });
+  const project = (await api('/api/portfolio/projects', { name: 'DEMO context review', kind: 'fixture', goal: 'Isolated browser evidence', lifecycle: 'active', focus: false, manualPriority: 0 })).project;
+  const observed = (await api('/api/portfolio')).sources.find((s: { kind: string }) => s.kind === 'local');
+  const imported = await api('/api/portfolio/import', { projectId: project.id, sourceId: observed.id });
+  browser = await chromium.launch(); const page = await browser.newPage(), errors: string[] = [], shots: string[] = [];
+  page.on('pageerror', e => errors.push(e.message)); mkdirSync('smoke-shots', { recursive: true });
+  const open = async () => { await page.goto(base + '/tasks'); await page.getByLabel('Access key').fill(token); await page.getByRole('button', { name: 'Connect', exact: true }).click(); };
+  const start = page.getByRole('button', { name: 'Start reviewed run', exact: true });
+  let lastPackage = '', lastTask = '';
+  for (const width of [1536, 390]) {
+    const task = (await api('/api/planning/tasks', { projectId: project.id, repositoryId: imported.repositoryId, milestoneId: null, title: `DEMO context ${width}`, outcome: 'Review the selected committed source', scope: 'Disposable fixture only', outOfScope: 'No real model run', acceptance: [{ id: randomUUID(), text: 'Exact reference retained', required: true }], dependsOn: [], priority: 0, status: 'ready', sourceRefs: [] })).task;
+    await page.setViewportSize({ width, height: 1024 }); await open();
+    await page.getByRole('button', { name: `Review run for ${task.title}`, exact: true }).click();
+    await page.getByLabel('Run checkout', { exact: true }).selectOption(imported.checkoutId);
+    await page.getByLabel('Run provider', { exact: true }).selectOption('codex');
+    await page.getByText('Create a context package', { exact: true }).click();
+    await page.getByLabel('Source paths (one per line)', { exact: true }).fill('notes.md');
+    await page.getByRole('button', { name: 'Preview source files', exact: true }).click();
+    await page.getByRole('heading', { name: 'Source preview', exact: true }).waitFor();
+    const createRoute = `**/api/planning/tasks/${task.id}/context/packages`;
+    let savedRequest: unknown;
+    // Commit the real request but lose its response. The retry must reuse its identity.
+    await page.route(createRoute, async route => {
+      if (route.request().method() !== 'POST') return route.continue();
+      savedRequest = route.request().postDataJSON(); await route.fetch(); await route.abort();
+    });
+    await page.getByRole('button', { name: 'Save source package', exact: true }).click();
+    await page.getByRole('button', { name: 'Retry same package save', exact: true }).waitFor();
+    await page.getByRole('alert').filter({ hasText: 'Failed to fetch' }).waitFor();
+    await page.unroute(createRoute);
+    const retry = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith(`/tasks/${task.id}/context/packages`));
+    await page.getByRole('button', { name: 'Retry same package save', exact: true }).click();
+    assert.deepEqual((await retry).postDataJSON(), savedRequest);
+    await page.getByRole('heading', { name: 'Saved context package', exact: true }).waitFor();
+    const list = await api(`/api/planning/tasks/${task.id}/context/packages`); assert.equal(list.packages.length, 1);
+    const id = list.packages[0].packageId; lastPackage = id; lastTask = task.id;
+    await page.getByText('notes.md', { exact: false }).filter({ hasText: /bytes$/ }).click();
+    assert.equal(await page.getByLabel('Source file notes.md', { exact: true }).textContent(), sourceText);
+    assert.equal(await page.evaluate(() => 'contextInjected' in window), false);
+    const reason = page.getByLabel('Context review reason', { exact: true });
+    await reason.fill('DEMO inspected exact source'); await reason.press('Enter');
+    assert.deepEqual((await api('/api/runs')).runs, []);
+    await page.getByLabel('I reviewed these exact files as reference data', { exact: true }).check();
+    const reviewRoute = `**/api/context/packages/${id}/review`; let reviewRequest: unknown;
+    await page.route(reviewRoute, async route => { reviewRequest = route.request().postDataJSON(); await route.fetch(); await route.abort(); });
+    await page.getByRole('button', { name: 'Approve reference package', exact: true }).click();
+    await page.getByRole('button', { name: 'Retry same reference approval', exact: true }).waitFor();
+    await page.getByRole('alert').filter({ hasText: 'Failed to fetch' }).waitFor();
+    await page.unroute(reviewRoute);
+    const reviewRetry = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith(`/packages/${id}/review`));
+    await page.getByRole('button', { name: 'Retry same reference approval', exact: true }).click();
+    assert.deepEqual((await reviewRetry).postDataJSON(), reviewRequest);
+    await page.getByText('Package approved as reference context. Choose it separately for this run.', { exact: true }).waitFor();
+    assert.equal((await api(`/api/context/packages/${id}/status`)).reviewVersion, 1);
+    await page.getByRole('button', { name: 'Use this package for the run', exact: true }).click();
+    await reason.fill('DEMO revoke selection'); await page.getByRole('button', { name: 'Revoke context review', exact: true }).click();
+    await page.getByText('Context review revoked.', { exact: true }).waitFor(); assert.equal(await start.isDisabled(), true);
+    await page.getByText(`Selected package: ${id}, review 1`, { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Use no reference package', exact: true }).click(); assert.equal(await start.isEnabled(), true);
+    await reason.fill('DEMO reviewed again'); await page.getByLabel('I reviewed these exact files as reference data', { exact: true }).check();
+    await page.getByRole('button', { name: 'Approve reference package', exact: true }).click();
+    await page.getByText('Package approved as reference context. Choose it separately for this run.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Use this package for the run', exact: true }).click();
+    for (const theme of ['light', 'dark']) {
+      if (await page.locator('html').getAttribute('data-theme') !== theme) await page.getByRole('button', { name: `Switch to ${theme} theme`, exact: true }).click();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      const contentHeading = page.getByRole('heading', { name: 'Saved context package', exact: true });
+      await contentHeading.focus();
+      if (width < 1024) {
+        const focused = await contentHeading.boundingBox(), nav = await page.locator('header:visible').boundingBox();
+        assert.ok(focused && nav && focused.y >= nav.y + nav.height, 'Focused context heading must clear mobile navigation');
+      }
+      const shot = `smoke-shots/context-packages-${width}-${theme}.png`; await page.screenshot({ path: shot, animations: 'disabled' }); shots.push(shot);
+    }
+    const current = await api(`/api/context/packages/${id}`), dispatches: object[] = [];
+    await page.route(`**/api/planning/tasks/${task.id}/dispatch`, async route => { dispatches.push(route.request().postDataJSON()); await route.fulfill({ status: 409, json: { error: 'DEMO dispatch capture only; no provider was started' } }); });
+    await start.focus(); await page.keyboard.press('Enter');
+    await page.getByRole('alert').filter({ hasText: 'DEMO dispatch capture only' }).waitFor();
+    const sameRun = page.getByRole('button', { name: 'Retry same run request', exact: true }); await sameRun.click();
+    await page.getByRole('alert').filter({ hasText: 'DEMO dispatch capture only' }).waitFor();
+    assert.equal(dispatches.length, 2); assert.deepEqual(dispatches[1], dispatches[0]);
+    const { idempotencyKey, ...binding } = dispatches[0] as { idempotencyKey: string };
+    assert.match(idempotencyKey, /^[a-f0-9-]{36}$/); assert.deepEqual(binding, { version: task.version, checkoutId: imported.checkoutId, baseSha, provider: 'codex', contextPackage: { id, digest: current.digest, reviewVersion: 3 } });
+    await page.getByRole('button', { name: 'Cancel run review', exact: true }).click(); await open();
+    await page.getByRole('button', { name: `Review run for ${task.title}`, exact: true }).click();
+    await page.getByLabel('Run checkout', { exact: true }).selectOption(imported.checkoutId);
+    await page.getByRole('button', { name: `Open package ${id}`, exact: true }).click();
+    await page.getByRole('button', { name: 'Use this package for the run', exact: true }).click();
+    // Content-read failure fixture; metadata and revocation still use the production API.
+    await page.route(`**/api/context/packages/${id}`, route => route.fulfill({ status: 409, json: { error: 'DEMO content access refused' } }));
+    await page.getByRole('button', { name: 'Reload context packages', exact: true }).click();
+    await page.getByRole('heading', { name: 'Context content unavailable', exact: true }).waitFor();
+    assert.equal(await start.isDisabled(), true);
+    await page.getByText(`Selected package: ${id}, review 3`, { exact: true }).waitFor();
+    await reason.fill('DEMO revoke without content'); await page.getByRole('button', { name: 'Revoke context review', exact: true }).click();
+    await page.getByText('Context review revoked.', { exact: true }).waitFor();
+    assert.equal((await api(`/api/context/packages/${id}/status`)).decision, 'revoked');
+    await page.unroute(`**/api/context/packages/${id}`);
+  }
+  git('commit', '--allow-empty', '-qm', 'DEMO changed base');
+  await page.getByRole('button', { name: 'Reload context packages', exact: true }).click();
+  await page.getByRole('heading', { name: 'Saved context package', exact: true }).waitFor();
+  await page.getByLabel('Context review reason', { exact: true }).fill('DEMO stale base review');
+  await page.getByLabel('I reviewed these exact files as reference data', { exact: true }).check();
+  await page.getByRole('button', { name: 'Approve reference package', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: /base revision changed/ }).waitFor();
+  assert.equal(await page.getByLabel('Context review reason', { exact: true }).inputValue(), 'DEMO stale base review');
+  assert.equal(await start.isDisabled(), true);
+  assert.equal((await api(`/api/context/packages/${lastPackage}/status`)).decision, 'revoked');
+  assert.equal((await api(`/api/planning/tasks/${lastTask}/context/packages`)).packages.length, 1);
+  assert.deepEqual((await api('/api/runs')).runs, []); assert.deepEqual(errors, []);
+  const hash = (p: string) => createHash('sha256').update(readFileSync(p)).digest('hex');
+  const sources = ['scripts/probe-context-packages.mts', 'apps/web/src/pages/ContextPackagePanel.tsx', 'apps/web/src/pages/PlanningPage.tsx', 'apps/web/src/lib/context.ts', 'apps/server/src/projects/contextPackages.ts', 'apps/server/src/app.ts', 'packages/shared/src/context.ts'];
+  const assets = readdirSync('apps/web/dist/assets').map(name => `apps/web/dist/assets/${name}`);
+  writeFileSync('docs/controlos/context-packages-ui-evidence.json', JSON.stringify({ date: new Date().toISOString(), baseRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), environment: { platform: process.platform, arch: process.arch, node: process.version, chromium: browser.version() }, checks: ['real Git preview and immutable save', 'lost save response retry creates one package', 'literal external HTML renders as text', 'Enter in review reason never dispatches', 'lost approval response retry creates one review', 'revocation blocks selected package without silently dropping it', 'explicit selection of exact digest and review version in captured dispatch', 'dispatch retry retains idempotency key and entire payload', 'package discovery after browser reload', 'content-read failure keeps selection blocked and metadata allows real revocation', 'changed Git HEAD refuses approval and retains reason', '1536/390 px light/dark without horizontal overflow', 'no page errors or real runs'], sourceSha256: Object.fromEntries(sources.map(p => [p, hash(p)])), assetSha256: Object.fromEntries(assets.map(p => [p, hash(p)])), screenshotSha256: Object.fromEntries(shots.map(p => [p, hash(p)])), scope: 'Isolated synthetic Git/profile using production context APIs and built renderer. Dispatch and one content-read refusal intercepted as explicit UI fixtures; no provider/sandbox/pilot acceptance. Full T10/T11 remain open.' }, null, 2) + '\n');
+  console.log(JSON.stringify({ result: 'passed', fixture: root, screenshots: shots }));
+} finally { await browser?.close(); await server.close(); }
