@@ -15,8 +15,8 @@ export class OctokitClient implements GitHubClient {
   private octokit: Octokit;
   private cache = new Map<string, CacheEntry>();
 
-  constructor(token: string) {
-    this.octokit = new Octokit({ auth: token });
+  constructor(token: string, fetchImpl: typeof fetch = fetch) {
+    this.octokit = new Octokit({ auth: token, request: { fetch: fetchImpl } });
   }
 
   /** Run a call with the cached ETag; a 304 (resolved or thrown) returns cached data. */
@@ -99,10 +99,13 @@ export class OctokitClient implements GitHubClient {
     try {
       const runs = await this.octokit.checks.listForRef({ owner, repo: name, ref: pr.head.sha, per_page: 50 });
       const all = runs.data.check_runs ?? [];
-      if (all.length > 0) {
-        if (all.some((r) => r.status !== 'completed')) checks = 'pending';
-        else if (all.some((r) => r.conclusion === 'failure' || r.conclusion === 'timed_out' || r.conclusion === 'cancelled')) checks = 'failing';
-        else checks = 'passing';
+      if (all.length > 0 && all.every(r => r.head_sha === pr.head.sha && Number.isSafeInteger(r.id) && r.id > 0) && new Set(all.map(r => r.id)).size === all.length) {
+        // A partial page is not proof that every check passed. Unknown terminal
+        // conclusions must not fall through to green either. This summarizes
+        // observed checks, not branch protection or merge permission.
+        if (all.some((r) => r.status === 'completed' && ['failure', 'timed_out', 'cancelled', 'action_required', 'startup_failure'].includes(r.conclusion ?? ''))) checks = 'failing';
+        else if (all.some((r) => ['queued', 'in_progress', 'waiting', 'requested', 'pending'].includes(r.status))) checks = 'pending';
+        else if (runs.data.total_count === all.length && all.every((r) => r.status === 'completed' && r.conclusion === 'success')) checks = 'passing';
       }
     } catch {
       /* no checks scope / none configured → unknown */

@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## PR-checks kräver komplett framgångsunderlag
+
+GitHub-adaptern kunde tidigare visa grön PR-checkstatus för en ofullständig första sida eller okända slutresultat. Grön status kräver nu komplett antal svar, unika check-ID:n, samma revision som den hämtade PR:n och uttryckligt lyckade checks. Saknade, neutrala, överhoppade och okända slutsatser ger okänd status. Kända pågående eller felaktiga checks ger fortsatt pending/failing. Detta är en sammanfattning av hämtade check runs, inte verifierade branch-protection-regler eller mergebehörighet.
+
+`npm run verify` passerade typkontroll, lint, 466 tester i 102 filer och byggning. Adaptertesterna använder riktig Octokit med kontrollerad HTTP-transport. Loggar: `controlos-pr-checks-focused.log` och `controlos-pr-checks-verify.log`. Underlag och API-källa: `docs/controlos/github-check-evidence.md`.
+
+T18-kartläggningen visar att den inbyggda adaptern bara läser GitHub. Agenternas externa skrivningar saknar fortfarande nödvändig journal och avstämning av okänt utfall. T18 och full R1–R4-acceptans förblir öppna; fortsatt 18/46 lokalt godkända scenarier. Ingen fjärrskrivning, providerkörning eller pilotändring gjordes.
+
 ## Verifierad anslutning kan inte återupplivas av klockändring
 
 Anslutningskontroller använder nu både väggklocka och monoton förfluten tid. Kontrollen blir föråldrad exakt efter fem minuter, vid observerad bakåtrörelse eller ogiltig tid. En redan föråldrad kontroll kan inte bli grön igen genom klockändring; ett nytt providersvar krävs. Ogiltig tidsstämpel vid svar får inte skapa en verifierad post.

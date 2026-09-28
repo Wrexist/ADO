@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: A successful first page of checks is not evidence that all checks passed. Require complete counts, unique identities, the reviewed revision and explicit successful conclusions; keep observed check summaries separate from branch-protection or merge authorization.
+
 - 2026-09-28: Expiring authentication evidence needs monotonic elapsed time as well as a display timestamp. Latch observed expiration or clock rollback so moving time back cannot revive a stale successful check; only a fresh verification may renew it.
 
 - 2026-09-28: Stopping a poller must suppress effects after every awaited provider boundary, including observations and automation-triggering build events. Prevent duplicate start loops and share a pending sync; retain prior history without letting a replaced client refresh it.
