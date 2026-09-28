@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
+import type { ContextExecutionBinding } from '@ado/shared';
 import { buildServer, type AccServer } from '../app';
 import type { Spawner } from './spawner';
 
@@ -34,7 +35,7 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     const input = { projectId: project.id, repositoryId: imported.repositoryId, milestoneId: null, title: 'Offline task', outcome: 'Fixture result', scope: 'Only isolated fixture files', outOfScope: 'Publishing', acceptance: [{ id: randomUUID(), text: 'Independent check required', required: true }], dependsOn: [], priority: 1, status: 'ready', sourceRefs: [] };
     const task = (await post('/api/planning/tasks', input)).json().task;
     const route = `/api/planning/tasks/${task.id}/dispatch`;
-    const request = { version: task.version, checkoutId: imported.checkoutId, baseSha, provider: 'codex', idempotencyKey: randomUUID() };
+    const request = { version: task.version, checkoutId: imported.checkoutId, baseSha, provider: 'codex', idempotencyKey: randomUUID(), contextPackage: undefined as ContextExecutionBinding | undefined };
     expect((await app.inject({ method: 'POST', url: route, headers: host, payload: request })).statusCode).toBe(401);
     expect((await post(route, { ...request, task: 'Client replacement prompt' })).statusCode).toBe(400);
     const edited = await app.inject({ method: 'PUT', url: `/api/planning/tasks/${task.id}`, headers: auth, payload: { ...input, version: task.version, title: 'Exact revised task' } });
@@ -42,6 +43,11 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     expect((await post(route, request)).statusCode).toBe(409);
     expect((await get('/api/runs')).runs).toEqual([]);
     request.version = edited.json().task.version;
+    const packageResponse = await post(`/api/planning/tasks/${task.id}/context/packages`, { id: randomUUID(), version: request.version, checkoutId: request.checkoutId, baseSha, files: [{ path: 'original.txt' }] });
+    expect(packageResponse.statusCode, packageResponse.body).toBe(200);
+    const pkg = packageResponse.json();
+    expect((await post(`/api/context/packages/${pkg.id}/review`, { id: randomUUID(), version: 0, digest: pkg.digest, decision: 'approved_for_context', reason: 'Review the exact fixture reference' })).statusCode).toBe(200);
+    request.contextPackage = { id: pkg.id, digest: pkg.digest, reviewVersion: 1 };
     await post(`/api/projects/${source.id.slice(6)}/settings`, { feature: 'agents', enabled: false });
     expect((await post(route, request)).statusCode).toBe(409);
     expect(launched).toHaveLength(0);
@@ -50,6 +56,7 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     const deadline = Date.now() + 30000;
     while (!launched.length && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
     expect(launched).toHaveLength(1); expect(launched[0].cwd).not.toBe(repo); expect(launched[0].prompt).toContain('Exact revised task');
+    expect(launched[0].prompt).toContain('REFERENCE SOURCE PACKAGE'); expect(launched[0].prompt).toContain('Preserved'); expect(launched[0].prompt).toContain(pkg.digest);
     const activeTask = (await get('/api/planning')).tasks[0]; expect(activeTask.status).toBe('active');
     expect((await post(`/api/planning/tasks/${task.id}/reopen`, { runId, version: activeTask.version, reason: 'Must not reopen an active process', idempotencyKey: randomUUID() })).statusCode).toBe(409);
     expect((await app.inject({ method: 'PUT', url: `/api/planning/tasks/${task.id}`, headers: auth, payload: { ...input, version: activeTask.version } })).statusCode).toBe(409);
@@ -59,6 +66,7 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     const run = (await get(`/api/runs/${runId}`)).run;
     expect(run).toMatchObject({ executionStatus: 'succeeded', exitCode: 0, taskId: task.id, taskVersion: request.version, baseSha, workspaceKind: 'isolated_clone', verifyVerdict: null, humanAction: null });
     expect(run).not.toHaveProperty('workspaceGitIdentity');
+    expect(run.contextPackage).toEqual(request.contextPackage); expect(run.task).not.toContain('Preserved');
     const reviewedTask = (await get('/api/planning')).tasks[0]; expect(reviewedTask.status).toBe('awaiting_review');
     expect(readFileSync(join(repo, 'original.txt'), 'utf8')).toBe('Preserved'); expect(git(['status', '--porcelain'])).toBe('');
     expect((await post(route, request)).json()).toEqual({ runId }); expect(launched).toHaveLength(1);
@@ -68,6 +76,7 @@ it('T05: binds an exact task revision to an isolated real exit-zero process and 
     expect((await server.app.inject({ url: '/api/planning', headers: auth })).json().tasks[0]).toEqual(reviewedTask);
     expect((await server.app.inject({ url: `/api/runs/${runId}`, headers: auth })).json().run.executionStatus).toBe('succeeded');
     expect((await server.app.inject({ url: `/api/runs/${runId}`, headers: auth })).json().run.workspaceKind).toBe('isolated_clone');
+    expect((await server.app.inject({ url: `/api/runs/${runId}`, headers: auth })).json().run.contextPackage).toEqual(request.contextPackage);
     expect(launched).toHaveLength(1);
   } finally { await server?.close(); await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
 }, 120000);

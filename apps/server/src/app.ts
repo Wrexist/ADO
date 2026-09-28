@@ -798,6 +798,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     executionStatus: r.status === 'done' ? 'succeeded' : r.status,
     taskId: runner.taskExecution(r.id)?.taskId ?? null,
     taskVersion: runner.taskExecution(r.id)?.taskVersion ?? null,
+    contextPackage: runner.taskExecution(r.id)?.contextPackage ?? null,
     startedTs: r.startedTs,
     endedTs: r.endedTs,
     durationMs: r.durationMs,

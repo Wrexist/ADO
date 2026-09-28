@@ -505,9 +505,14 @@
         "apps/server/src/projects/contextPackages.test.ts",
         "apps/server/drizzle/0022_context_packages.sql",
         "docs/controlos/context-packages.md",
-        "docs/controlos/context-packages-evidence.json"
+        "docs/controlos/context-packages-evidence.json",
+        "apps/server/src/runner/contextDispatch.test.ts",
+        "apps/server/src/runner/taskExecutionApi.test.ts",
+        "apps/server/drizzle/0023_execution_context.sql",
+        "docs/controlos/context-dispatch.md",
+        "docs/controlos/context-dispatch-evidence.json"
       ],
-      "coverageNote": "Task prompt integrity, bounded committed source previews and immutable context packages with versioned review/revocation have local regression evidence. Approval rechecks task/checkout/base and source hashes; historical reads explicitly leave freshness unchecked. Packages survive server restart, and failed/corrupt storage is refused. Context-review UI, dispatch binding, approved instruction roles, handoffs, provider budgets and full sandbox/provider canary acceptance remain open."
+      "coverageNote": "Immutable context packages can now be selected by exact digest/review version in task dispatch. Binding is persisted with the task execution; current review, task/hash, repository/checkout/base, source integrity/secrets and combined byte budget are checked before provider input. Offline production API/local-process and revoked-queue restart evidence exist. Review UI, instruction roles, handoff provenance, live provider budgets and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "T11",
@@ -527,9 +532,14 @@
         "apps/server/src/projects/contextPackages.test.ts",
         "apps/server/drizzle/0022_context_packages.sql",
         "docs/controlos/context-packages.md",
-        "docs/controlos/context-packages-evidence.json"
+        "docs/controlos/context-packages-evidence.json",
+        "apps/server/src/runner/contextDispatch.test.ts",
+        "apps/server/src/runner/taskExecutionApi.test.ts",
+        "apps/server/drizzle/0023_execution_context.sql",
+        "docs/controlos/context-dispatch.md",
+        "docs/controlos/context-dispatch-evidence.json"
       ],
-      "coverageNote": "Task prompt integrity, bounded committed source previews and immutable context packages with versioned review/revocation have local regression evidence. Approval rechecks task/checkout/base and source hashes; historical reads explicitly leave freshness unchecked. Packages survive server restart, and failed/corrupt storage is refused. Context-review UI, dispatch binding, approved instruction roles, handoffs, provider budgets and full sandbox/provider canary acceptance remain open."
+      "coverageNote": "Immutable context packages can now be selected by exact digest/review version in task dispatch. Binding is persisted with the task execution; current review, task/hash, repository/checkout/base, source integrity/secrets and combined byte budget are checked before provider input. Offline production API/local-process and revoked-queue restart evidence exist. Review UI, instruction roles, handoff provenance, live provider budgets and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "T12",
@@ -1426,9 +1436,14 @@
         "apps/server/src/projects/contextPackages.test.ts",
         "apps/server/drizzle/0022_context_packages.sql",
         "docs/controlos/context-packages.md",
-        "docs/controlos/context-packages-evidence.json"
+        "docs/controlos/context-packages-evidence.json",
+        "apps/server/src/runner/contextDispatch.test.ts",
+        "apps/server/src/runner/taskExecutionApi.test.ts",
+        "apps/server/drizzle/0023_execution_context.sql",
+        "docs/controlos/context-dispatch.md",
+        "docs/controlos/context-dispatch-evidence.json"
       ],
-      "coverageNote": "Task prompt integrity, bounded committed source previews and immutable context packages with versioned review/revocation have local regression evidence. Approval rechecks task/checkout/base and source hashes; historical reads explicitly leave freshness unchecked. Packages survive server restart, and failed/corrupt storage is refused. Context-review UI, dispatch binding, approved instruction roles, handoffs, provider budgets and full sandbox/provider canary acceptance remain open."
+      "coverageNote": "Immutable context packages can now be selected by exact digest/review version in task dispatch. Binding is persisted with the task execution; current review, task/hash, repository/checkout/base, source integrity/secrets and combined byte budget are checked before provider input. Offline production API/local-process and revoked-queue restart evidence exist. Review UI, instruction roles, handoff provenance, live provider budgets and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "B13",

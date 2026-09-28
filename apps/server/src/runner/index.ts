@@ -106,7 +106,7 @@ export class Runner {
     private log: (msg: string) => void = () => {},
   ) {
     this.opts = { ...DEFAULTS, ...opts };
-    this.taskExecutions = new TaskExecutionStore(db);
+    this.taskExecutions = new TaskExecutionStore(db, this.opts.secrets);
     this.log = (message) => log(redact(message, this.opts.secrets?.()));
   }
 
@@ -221,7 +221,7 @@ export class Runner {
     const checkout = this.db.select().from(portfolioCheckouts).where(eq(portfolioCheckouts.id, request.checkoutId)).get();
     if (!checkout) throw new Error('Checkout not found');
     return this.dispatch({ repoId: existing?.repoId ?? checkout.sourceId, task: taskPrompt(task), provider: request.provider, model: request.model, idempotencyKey: request.idempotencyKey,
-      taskBinding: { taskId, taskVersion: request.version, checkoutId: request.checkoutId, baseSha: request.baseSha } });
+      taskBinding: { taskId, taskVersion: request.version, checkoutId: request.checkoutId, baseSha: request.baseSha, ...(request.contextPackage ? { contextPackage: request.contextPackage } : {}) } });
   }
 
   taskExecution(runId: string) { return this.taskExecutions.get(runId); }
@@ -503,6 +503,7 @@ export class Runner {
       });
     const upsertAgent = (status: 'running' | 'done' | 'failed', pct: number | null) => this.bus.publish(agentEvent(status, pct));
 
+    const providerPrompt = this.taskExecutions.providerPrompt(runId) ?? input.task;
     this.record(runId, 'status', 'Process launch requested');
     this.emitActivity(`act:${runId}:start`, input.repoId, `Agent dispatched: ${input.task}`, 'violet', 'agents');
     upsertAgent('running', null);
@@ -512,7 +513,7 @@ export class Runner {
     this.unconfirmedProcesses.add(runId);
     let handle: SpawnHandle;
     try {
-      handle = this.spawner.spawn({ cwd, prompt: input.task, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot, secrets: this.opts.secrets?.(),
+      handle = this.spawner.spawn({ cwd, prompt: providerPrompt, turnCap: this.opts.turnCap, model: input.model, provider: input.provider, receiptRoot: this.opts.receiptRoot, secrets: this.opts.secrets?.(),
         onProcessIdentity: (identity) => {
           this.assertTaskCanRun(runId, input.repoId, originalCwd);
           const saved = this.db.update(runs).set({ processIdentity: JSON.stringify(identity), processTermination: 'unconfirmed' })

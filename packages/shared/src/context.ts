@@ -18,3 +18,5 @@ export type ContextSourcePreview = z.infer<typeof ContextSourcePreview>;
 export const ContextPackageCreate = ContextPreviewRequest.extend({ id: z.string().uuid() });
 export const ContextPackageReviewRequest = z.object({ id: z.string().uuid(), version: z.number().int().nonnegative(), digest: z.string().regex(/^[a-f0-9]{64}$/), decision: z.enum(['approved_for_context', 'revoked']), reason: z.string().trim().min(1).max(2000) }).strict();
 export const ContextPackagePayload = z.object({ format: z.literal(1), id: z.string().uuid(), taskSnapshotHash: z.string().regex(/^[a-f0-9]{64}$/), source: ContextSourcePreview }).strict();
+export const ContextExecutionBinding = z.object({ id: z.string().uuid(), digest: z.string().regex(/^[a-f0-9]{64}$/), reviewVersion: z.number().int().positive() }).strict();
+export type ContextExecutionBinding = z.infer<typeof ContextExecutionBinding>;

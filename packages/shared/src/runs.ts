@@ -10,6 +10,7 @@
  * only what was persisted (the final report), never a reconstructed fake timeline.
  */
 import { z } from 'zod';
+import { ContextExecutionBinding } from './context';
 
 export const AgentRunStatus = z.enum(['queued', 'running', 'done', 'failed']);
 export type AgentRunStatus = z.infer<typeof AgentRunStatus>;
@@ -41,6 +42,7 @@ export const AgentRun = z.object({
   executionStatus: z.enum(['queued', 'running', 'succeeded', 'failed']).optional(),
   taskId: z.string().uuid().nullable().optional(),
   taskVersion: z.number().int().positive().nullable().optional(),
+  contextPackage: ContextExecutionBinding.nullable().optional(),
   startedTs: z.string(),
   endedTs: z.string().nullable(),
   durationMs: z.number().int().nullable(),

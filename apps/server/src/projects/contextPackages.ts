@@ -3,7 +3,7 @@ import { desc, eq } from 'drizzle-orm';
 import { ContextPackageCreate, ContextPackagePayload, ContextPackageReviewRequest, ContextSourcePreview } from '@ado/shared';
 import type { Db } from '../db';
 import { contextPackages, contextPackageReviews, planningTasks } from '../db/schema';
-import { TaskExecutionStore } from '../runner/taskExecution';
+import { taskRevision } from '../runner/taskRevision';
 import { LOCAL_OWNER } from '../runner/approvals';
 
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
@@ -47,7 +47,7 @@ export class ContextPackages {
       const task = this.db.select().from(planningTasks).where(eq(planningTasks.id, taskId)).get();
       if (!task || task.version !== request.version || source.taskId !== taskId || source.taskVersion !== task.version || source.projectId !== task.projectId || source.repositoryId !== task.repositoryId || source.checkoutId !== request.checkoutId || source.baseSha !== request.baseSha) throw new Error('Context package does not match the current task and checkout review');
       if (JSON.stringify(source.files.map(f => f.path)) !== JSON.stringify(request.files.map(f => f.path))) throw new Error('Context package source selection differs from request');
-      const taskSnapshotHash = hash(JSON.stringify(new TaskExecutionStore(this.db).revision(taskId, request.version)));
+      const taskSnapshotHash = hash(JSON.stringify(taskRevision(this.db, taskId, request.version)));
       const payloadJson = JSON.stringify(ContextPackagePayload.parse({ format: 1, id: request.id, taskSnapshotHash, source }));
       this.db.insert(contextPackages).values({ id: request.id, taskId, taskVersion: request.version, checkoutId: request.checkoutId, baseSha: request.baseSha, requestHash: requestHash(taskId, request), digest: hash(payloadJson), payloadJson, createdTs: new Date().toISOString() }).run();
       return this.get(request.id);
@@ -67,7 +67,7 @@ export class ContextPackages {
       if (request.decision === 'approved_for_context') {
         const original = pkg.payload.source;
         const task = this.db.select().from(planningTasks).where(eq(planningTasks.id, original.taskId)).get();
-        if (!task || task.version !== original.taskVersion || hash(JSON.stringify(new TaskExecutionStore(this.db).revision(task.id, task.version))) !== pkg.payload.taskSnapshotHash) throw new Error('Task context revision changed; create a new package');
+        if (!task || task.version !== original.taskVersion || hash(JSON.stringify(taskRevision(this.db, task.id, task.version))) !== pkg.payload.taskSnapshotHash) throw new Error('Task context revision changed; create a new package');
         if (!fresh || fresh.taskId !== original.taskId || fresh.taskVersion !== original.taskVersion || fresh.checkoutId !== original.checkoutId || fresh.baseSha !== original.baseSha || fresh.repositoryId !== original.repositoryId || fresh.projectId !== original.projectId || fresh.files.length !== original.files.length || fresh.files.some((f, i) => f.path !== original.files[i].path || f.sha256 !== original.files[i].sha256 || f.blobId !== original.files[i].blobId)) throw new Error('Context sources changed or were not rechecked; create a new package');
       }
       this.db.insert(contextPackageReviews).values({ ...request, version: request.version + 1, packageId: id, actorId: LOCAL_OWNER, recordedTs: new Date().toISOString() }).run();

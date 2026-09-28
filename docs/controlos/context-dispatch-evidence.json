@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-28T00:36:34.643Z",
+  "baseRevision": "942d4bfbeeb68b63b95faee837b666049b0354e2",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0"
+  },
+  "commands": [
+    "npx vitest run apps/server/src/runner/contextDispatch.test.ts apps/server/src/runner/taskContext.test.ts apps/server/src/runner/taskExecutionApi.test.ts",
+    "npm run verify"
+  ],
+  "result": "passed",
+  "sourceSha256": {
+    "apps/server/src/runner/taskExecution.ts": "b2e83e5fe358680d767b3fb8cb2c5b4f10d9b98d7ed9cf3872dea989ace03a72",
+    "apps/server/src/runner/taskRevision.ts": "bba506ad3d57ee368a08c7a9e427db31938f5fe416eb81a86864e49d827099f5",
+    "apps/server/src/runner/index.ts": "1a697548f91c01bea5e7a75a44f99432fa231c5eec79deddb1078fbf4c329a16",
+    "apps/server/src/runner/contextDispatch.test.ts": "c9879b50b450b0ad1b7e8f334d9cafeec72595bd72ab9331cce3916d684eaaad",
+    "apps/server/src/runner/taskExecutionApi.test.ts": "b88c58fe305bcaebe5c520d21729a3a98b885990bc35a822f0827f0de0c52906",
+    "apps/server/src/runner/taskReviewMigration.test.ts": "09420b463d20c58a33ae4ce8473509f0347b8d4d8cf1dcc8b354a7e9d9dcc1f9",
+    "apps/server/src/projects/contextPackages.ts": "b168250b52cf847a32e892227d0acd28fa630b0b7a7e839edfa78afb35143d64",
+    "apps/server/src/app.ts": "e061b8af70d5429ed11350bede900fe1e63e9a24347810882fed1a14639899a4",
+    "apps/server/src/db/schema.ts": "4fe6eb51e667a7e4eb46eede18102fd0785a080a69d89b0773f9a86eb105f858",
+    "apps/server/drizzle/0023_execution_context.sql": "c239ec1ae0c4326f4704ceca20ebca6215c3c4358133290ff8acbaed941b1a2e",
+    "apps/server/drizzle/meta/_journal.json": "a896f22c88696f4bc629cd98b9ea90383981c0f4046c5689f33f1d67ba6147bc",
+    "packages/shared/src/context.ts": "7ad0294cc4cc465af90fb283c65c73fcd9c66b5fdb688d41a3bda8ab08f7cb3e",
+    "packages/shared/src/planning.ts": "88e486d4c8643528484287653c5b6c263500e3961d1e1be17ca0301bf851557c",
+    "packages/shared/src/runs.ts": "9c3429d4db6239ee31ce1a4766aae85f7e4ce06337349aea274516cfb9fce88e"
+  },
+  "logSha256": {
+    "controlos-context-dispatch-focused.log": "7481ce1b89066a20522bd95a85d4fb4b2ebe131f5a4241058ae63cc584394f45",
+    "controlos-context-dispatch-verify.log": "9383c486445aaaf1bfc0989be03b6aa39d4f0dadce9c2f79a0b8beb0fed11d55"
+  },
+  "scope": "Synthetic local store and production API with real isolated local process adapter. Exact source delivery, persisted binding, revoked queue refusal, byte limits and old-schema preservation. No live model, review UI, native upgrade or sandbox acceptance."
+}

@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Valda kontextpaket binds till task-körningen
+
+Task-dispatch kan nu välja paketets ID, digest och granskningsversion. Schema 0023 lagrar kopplingen oföränderligt med task-körningen. Task-hash, repo, checkout, bascommit, paketbyte och aktuell granskning kontrolleras före start; återkallad eller förändrad granskning stoppar en köad användning. Provider-prompten byggs från task och paket med en gemensam gräns på 65 536 UTF-8-byte. Vanlig körlogg/aktivitet får inte en extra kopia av filinnehållet. Run-API:t visar paketkopplingen.
+
+Produktions-API-testet skapade och granskade en riktig Git-källa, vars text och digest nådde en isolerad lokal processadapter. Kopplingen bestod efter serveromstart. Ett separat diskprofilprov av återkallad kökontext gav ingen providerstart, arbetskopia eller skrivlås. Äldre schema migrerar med tomma kontextfält och bevarad historik. `npm run verify` passerade med typkontroll, lint, 436 tester i 98 filer och byggning. Underlag: `docs/controlos/context-dispatch.md` och `context-dispatch-evidence.json`; logg: `controlos-context-dispatch-verify.log`.
+
+Återkallning kan inte ta tillbaka text som redan levererats till en körande provider. Ingen riktig modell eller sandboxacceptans ingår i dessa tester. Gransknings-UI, instruktionsroller, handoffs och native migration/uppdatering av schema 0023 återstår. B12/T10/T11 och fulla R1–R4-grindar är öppna; fortsatt 18/46 lokalt godkända scenarier.
+
 ## Beständiga kontextpaket med separat granskning och återkallning
 
 Schema 0022 sparar oföränderliga källpaket bundna till task-version, task-hash, repo, checkout, bascommit och exakta filbyte. Paket och granskningshistorik kan läsas efter omstart. Godkännande som referenskontext kräver rätt digest/granskningsversion och en ny kontroll av task, checkout, HEAD och källfiler. Återkallning kräver inte att originalfilerna finns kvar. Gamla beslutsåterförsök kan inte återuppliva ett senare återkallat beslut.

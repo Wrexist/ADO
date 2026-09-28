@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ContextExecutionBinding } from './context';
 
 export const Criterion = z.object({ id: z.string().uuid(), text: z.string().trim().min(1).max(2000), required: z.boolean() }).strict();
 const criteria = z.array(Criterion).max(100).refine((values) => new Set(values.map((v) => v.id)).size === values.length, 'Criterion IDs must be unique');
@@ -28,4 +29,4 @@ export const TaskReopeningRequest = z.object({ runId: z.string().min(1), version
 export const TaskReopening = z.object({ id: z.string().uuid(), taskId: z.string().uuid(), runId: z.string(), fromVersion: z.number().int(), toVersion: z.number().int(), reason: z.string(), actorId: z.string(), recordedTs: z.string() });
 export const PlanningSnapshot = z.object({ tasks: z.array(PlanningTask), milestones: z.array(PlanningMilestone), inbox: z.array(InboxItem), executions: z.array(PlanningExecution).default([]), reviews: z.array(TaskReview).default([]), reopenings: z.array(TaskReopening).default([]) });
 export type PlanningSnapshot = z.infer<typeof PlanningSnapshot>;
-export const TaskDispatchRequest = z.object({ version: z.number().int().positive(), checkoutId: z.string().uuid(), baseSha: z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/), provider: z.enum(['claude', 'codex']), model: z.string().trim().min(1).max(100).optional(), idempotencyKey: z.string().uuid() }).strict();
+export const TaskDispatchRequest = z.object({ version: z.number().int().positive(), checkoutId: z.string().uuid(), baseSha: z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/), provider: z.enum(['claude', 'codex']), model: z.string().trim().min(1).max(100).optional(), idempotencyKey: z.string().uuid(), contextPackage: ContextExecutionBinding.optional() }).strict();

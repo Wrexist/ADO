@@ -189,6 +189,7 @@ export const taskExecutions = sqliteTable('task_executions', {
   runId: text('run_id').primaryKey().references(() => runs.id), taskId: text('task_id').notNull().references(() => planningTasks.id),
   taskVersion: integer('task_version').notNull(), taskSnapshotJson: text('task_snapshot_json').notNull(), checkoutId: text('checkout_id').notNull().references(() => portfolioCheckouts.id),
   baseSha: text('base_sha').notNull(), currentTaskVersion: integer('current_task_version').notNull(), state: text('state').notNull(), createdTs: text('created_ts').notNull(),
+  contextPackageId: text('context_package_id').references(() => contextPackages.id), contextDigest: text('context_digest'), contextReviewVersion: integer('context_review_version'),
 });
 
 export const contextPackages = sqliteTable('context_packages', {
