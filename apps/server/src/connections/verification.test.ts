@@ -41,3 +41,30 @@ it('discards a late verification response after the credential has changed', asy
     expect(store.status('github').checkedTs).toBeNull();
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+it('expires checks monotonically at five minutes and never revives an observed stale check', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-connection-clock-'));
+  let wall = 1000000, elapsed = 100;
+  const fake = (async () => new Response(null, { status: 200 })) as typeof fetch;
+  const store = new ConnectionsStore(join(root, 'connections.json'), undefined, undefined, fake, () => wall, () => elapsed);
+  try {
+    store.set('github', 'fixture-clock-key');
+    await store.verify('github'); const checkedTs = store.status('github').checkedTs;
+    elapsed += 299999; expect(store.status('github').authentication).toBe('verified');
+    elapsed++; expect(store.status('github').authentication).toBe('stale'); // wall clock held still
+    elapsed = 100; expect(store.status('github').authentication).toBe('stale');
+    expect(store.status('github').checkedTs).toBe(checkedTs);
+    expect((await store.verify('github')).authentication).toBe('verified');
+    wall += 10; store.status('github'); wall--;
+    expect(store.status('github').authentication).toBe('stale'); // backward movement after a read
+    wall += 1; expect(store.status('github').authentication).toBe('stale');
+    await store.verify('github'); wall += 300000;
+    expect(store.status('github').authentication).toBe('stale'); // exact wall deadline
+    await store.verify('github'); elapsed--;
+    expect(store.status('github').authentication).toBe('stale'); // broken elapsed clock
+    await store.verify('github'); wall = NaN;
+    expect(store.status('github').authentication).toBe('stale');
+    expect((await store.verify('github')).authentication).toBe('unverified');
+    expect(store.status('github').checkedTs).toBeNull();
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

@@ -16,7 +16,12 @@ There is no model request or paid-provider fallback.
 
 Results are tied to the exact credential and latest request generation in memory.
 A key change, removal, changed environment fallback or restart invalidates them.
-Checks older than five minutes are stale. Settings refreshes local status every
+Checks expire at five minutes, using both wall time and monotonic elapsed time.
+Backward movement in either observed clock, or an invalid clock reading, makes
+the check stale. Once observed stale, it cannot revive when the clock moves back
+into range: a new provider check is required. Invalid timestamps at completion
+cannot create a verified record. These checks remain in memory, so a restart
+still requires fresh verification. Settings refreshes local status every
 15 seconds and on focus; this does not recheck the provider. The UI distinguishes
 configuration from verification and displays the check timestamp and limitation.
 
@@ -43,6 +48,11 @@ It also shows Setup moving from rejected to verified to expired through focus
 refreshes, with no Ready label for the expired credential.
 Full T25 remains not_run pending actual expired-credential acceptance; fixture
 success does not establish a live provider account or all connector support.
+
+The clock regression holds wall time still while monotonic time reaches the
+exact deadline, moves both clocks backwards, checks that stale state never
+revives, verifies explicit renewal and rejects an invalid completion timestamp.
+This is deterministic local freshness evidence, not an actual expired credential.
 
 The endpoint and response interpretation follow
 [GitHub's authenticated-user API](https://docs.github.com/en/rest/users/users#get-the-authenticated-user).

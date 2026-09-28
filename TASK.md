@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Bound credential verification freshness by both wall and monotonic clocks, expire at the exact five-minute boundary, and prevent observed stale checks from reviving after clock rollback. Require a fresh provider response to renew; full live T25 remains open.
+
 - [x] Stop GitHub observations, CI/build/release events and health from late stopped-client responses; invalidate health on replacement/removal and share in-flight polls. Prove asynchronous boundaries, database replay and credential API replacement with controlled provider fixtures. Real expired credentials and full T25/T18 remain open.
 
 - [x] Invalidate Anthropic health on credential save/removal and startup; prevent old polls from publishing after replacement or stop. Persist explicit unknown health and exclude it from positive evidence. Cover asynchronous races, API mutation and built HTTP/SSE rendering; actual expired-provider/GitHub lifecycle/full T25 remain open.

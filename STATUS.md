@@ -1,5 +1,11 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Verifierad anslutning kan inte återupplivas av klockändring
+
+Anslutningskontroller använder nu både väggklocka och monoton förfluten tid. Kontrollen blir föråldrad exakt efter fem minuter, vid observerad bakåtrörelse eller ogiltig tid. En redan föråldrad kontroll kan inte bli grön igen genom klockändring; ett nytt providersvar krävs. Ogiltig tidsstämpel vid svar får inte skapa en verifierad post.
+
+`npm run verify` passerade typkontroll, lint, 452 tester i 101 filer och byggning. Tre riktade anslutningstester passerade också, inklusive stillastående väggklocka, exakta tidsgränser, bakåtflytt och uttrycklig förnyelse. Loggar: `controlos-connection-clock-focused.log` och `controlos-connection-clock-verify.log`. Underlag: `docs/controlos/connection-verification.md`. Providersvaren är lokala fixturer; verklig utgången credential och full T25/R1–R4-acceptans återstår. Fortsatt 18/46 lokalt godkända scenarier.
+
 ## GitHub-synk efter nyckelbyte och stopp
 
 Sena svar från en stoppad GitHub-synk kan inte längre publicera nya repoobservationer, CI-/bygghändelser, releaseaktivitet eller hälsostatus. Kontroll sker efter varje asynkron providergräns. Nyckelbyte/borttagning rensar tidigare grön status före eventuell ny klientstart. Samtidiga synkanrop delar en pågående hämtning och upprepade starter skapar inte dubbla pollningsloopar. Nätverksanrop som redan skickats kan avslutas, men deras sena effekter spärras; tidigare historik bevaras.

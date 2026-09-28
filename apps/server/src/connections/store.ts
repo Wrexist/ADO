@@ -26,7 +26,7 @@ interface StoredConn {
 export class ConnectionsStore {
   private file: ConnectionFile;
   private data: Record<string, StoredConn> = {};
-  private checks = new Map<string, { fingerprint: string; at: number; state: ConnectionStatus['authentication']; message: string }>();
+  private checks = new Map<string, { fingerprint: string; at: number; elapsedAt: number; lastWall: number; lastElapsed: number; stale: boolean; state: ConnectionStatus['authentication']; message: string }>();
   private revisions = new Map<string, number>();
 
   constructor(
@@ -35,6 +35,7 @@ export class ConnectionsStore {
     private codec?: SecretCodec,
     private fetchImpl: typeof fetch = fetch,
     private now: () => number = Date.now,
+    private elapsedNow: () => number = () => performance.now(),
   ) {
     this.file = new ConnectionFile(filePath);
     this.load();
@@ -99,10 +100,19 @@ export class ConnectionsStore {
     const value = stored?.value || envVal;
     const check = this.checks.get(id);
     const matching = value && check?.fingerprint === this.fingerprint(value) ? check : undefined;
+    if (matching && !matching.stale) {
+      const wall = this.now(), elapsed = this.elapsedNow();
+      // Wall time is displayed; monotonic elapsed time prevents clock adjustment
+      // from extending authentication freshness. Once stale, only rechecking renews it.
+      matching.stale = !Number.isFinite(wall) || !Number.isFinite(elapsed)
+        || wall < matching.lastWall || elapsed < matching.lastElapsed
+        || wall - matching.at >= 300000 || elapsed - matching.elapsedAt >= 300000;
+      matching.lastWall = wall; matching.lastElapsed = elapsed;
+    }
     return {
       id,
       configured: Boolean(value),
-      authentication: matching ? this.now() - matching.at > 300000 ? 'stale' : matching.state : 'unverified',
+      authentication: matching ? matching.stale ? 'stale' : matching.state : 'unverified',
       checkedTs: matching ? new Date(matching.at).toISOString() : null,
       verificationMessage: matching?.message ?? null,
       hint: value ? value.length > 4 ? `••••${value.slice(-4)}` : '••••' : null,
@@ -128,7 +138,12 @@ export class ConnectionsStore {
         await response.body?.cancel();
       } catch { state = 'unavailable'; message = 'GitHub could not be verified; check connectivity and retry.'; }
     }
-    if (this.revisions.get(id) === revision && this.resolve(id) === value) this.checks.set(id, { fingerprint: this.fingerprint(value), at: this.now(), state, message });
+    if (this.revisions.get(id) === revision && this.resolve(id) === value) {
+      const at = this.now(), elapsedAt = this.elapsedNow();
+      // Invalid clocks cannot produce a serializable verification timestamp.
+      if (!Number.isFinite(at) || !Number.isFinite(elapsedAt) || !Number.isFinite(new Date(at).getTime())) this.checks.delete(id);
+      else this.checks.set(id, { fingerprint: this.fingerprint(value), at, elapsedAt, lastWall: at, lastElapsed: elapsedAt, stale: false, state, message });
+    }
     return this.status(id);
   }
 
