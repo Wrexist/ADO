@@ -1,12 +1,22 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Kontextunderlag kan förhandsläsas från en bestämd commit
+
+Ett autentiserat preview-API läser uttryckligen valda textfiler från taskens registrerade checkout och basrevision. Resultatet redovisar Git-blob, innehållshash och byteantal som ogranskat referensmaterial. Avvikande angiven hash kräver ny granskning. Taskversion, repoidentitet och HEAD kontrolleras runt läsningen. Ett annat projekts checkout avvisas; planering och körningar ändras inte.
+
+Läsningen använder kontrollerad tillfällig Git-metadata och oförändrade blobbar, med högst 16 filer, 16 KiB per fil och 64 KiB totalt. Repoets filter körs inte. Testerna verifierar också smutsiga arbetsfiler, literal-/blankstegsnamn, länkar, submoduler, binärdata, ogiltig UTF-8, uteslutna sökvägar och konfigurerade canaryhemligheter. Detta är inte en fullständig hemlighetsdetektor eller OS-sandbox.
+
+Slutligt `npm run verify` passerade med typkontroll, lint, 430 tester i 96 filer och byggning på Windows x64 / Node 22.18.0 / Git 2.51.1.windows.1. Den första fullkörningen stoppades av tre lintfel som rättades före slutkörningen. Underlag: `docs/controlos/context-source-preview.md` och `context-source-evidence.json`; logg: `controlos-context-source-verify-final.log`.
+
+B12/T10/T11 är fortfarande öppna: beständiga godkända paket, instruktions-/handoffgranskning, UI, dispatchkoppling och provider-/sandboxacceptans återstår. Föregående dokumentationshänvisning till B13 har korrigerats till B12. Antalet lokalt godkända scenarier är oförändrat 18/46.
+
 ## Task-kontext kontrolleras på nytt före processstart
 
 En reproducerad brist gjorde att en sparad köprompt kunde avvika från den oföränderliga task-revisionen utan att körvalideringen stoppade den. Prompt och snapshot jämförs nu med originalrevisionen genom den befintliga startgränsen. Ett diskprofilprov verifierar att en utbytt prompt efter omstart ger failed/blocked innan skrivlås, arbetskopia eller providerstart, och att originalrevisionen bevaras. Snapshot-skada testas med uttrycklig felinjektion; vanliga snapshot-ändringar spärrades redan av SQLite-triggern.
 
 Hela den serialiserade task-prompten begränsas till 65 536 UTF-8-byte utan tyst trunkering. Gränsen gäller task-bunden dispatch och är inte ett mått på en providers tokenfönster. `npm run verify` passerade med typkontroll, lint, 427 tester i 95 filer och byggning. Loggar: `controlos-task-context-before.log`, `controlos-task-context-focused.log`, `controlos-task-context-verify.log`. Avgränsning och återstående kontextpaketarbete: `docs/controlos/task-context-integrity.md`.
 
-B13, T10 och T11 är fortsatt öppna. Godkända instruktionshashar, filurval vid commit, versionsbundna handoffs och verifierad canary-isolering återstår. Antalet lokalt godkända scenarier är fortsatt 18/46; fulla R1–R4-grindar är öppna.
+B12, T10 och T11 är fortsatt öppna. Godkända instruktionshashar, filurval vid commit, versionsbundna handoffs och verifierad canary-isolering återstår. Antalet lokalt godkända scenarier är fortsatt 18/46; fulla R1–R4-grindar är öppna.
 
 ## Universe: projekt och samband nås genom en tangentbordsstyrd lista
 

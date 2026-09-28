@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-28T00:12:39.505Z",
+  "baseRevision": "f6a60faccfc10710a09d095c0c8038e82ea6c9c7",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0",
+    "git": "git version 2.51.1.windows.1"
+  },
+  "commands": [
+    "npx vitest run apps/server/src/projects/contextSource.test.ts",
+    "npm run verify"
+  ],
+  "result": "passed",
+  "sourceSha256": {
+    "apps/server/src/projects/contextSource.ts": "c48f1f38ac9eee1fa6acbe6827517731cc455a9ee044a4089926368781f1c5fa",
+    "apps/server/src/projects/contextSource.test.ts": "09f2c141684c17acf7367c1f38a9e37ff0bce981a2448db883ab3bc711bf66ba",
+    "apps/server/src/app.ts": "b0792a6dee98512aab4e5eb6c73dcd35f2b6572505066aafaccd273d5bb6bb82",
+    "packages/shared/src/context.ts": "007f6da58e21e92f0163887ae1314ddad34629f8f9d04fd56732ee5dbba0df1a",
+    "packages/shared/src/index.ts": "cc2261d36cedbc40e6b02f705e4de42a36a0604fddb902421931152c9e780ba5"
+  },
+  "logSha256": {
+    "controlos-context-source-focused.log": "6b88df7cbf90eb83ccb942fd606bbd477467ac143f0855b9bc54698ff762e92d",
+    "controlos-context-source-verify-final.log": "b40363546ceb87a9a63c3a6d2b688f5fb4b1e6a0aba9c86e190c71de82651030"
+  },
+  "scope": "Real isolated Git repositories and production API with synthetic data. Committed-file source preview only, no approved persisted package, UI, model invocation, sandbox or native acceptance."
+}

@@ -32,6 +32,8 @@ import { proposeToday } from './projects/today';
 import { todayLockScope } from './projects/todayLocks';
 import { TodayPreferencesStore } from './projects/todayPreferences';
 import { UniverseStore } from './projects/universe';
+import { previewContextSources } from './projects/contextSource';
+import { ContextPreviewRequest, ContextSourcePreview } from '@ado/shared';
 import { ZodError } from 'zod';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
@@ -699,6 +701,20 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     try { return work(); } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
   };
   app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
+  app.post('/api/planning/tasks/:id/context/preview', async (req, reply) => {
+    reply.header('cache-control', 'no-store');
+    try {
+      const request = ContextPreviewRequest.parse(req.body), taskId = (req.params as { id: string }).id;
+      const task = planning.snapshot().tasks.find(t => t.id === taskId);
+      if (!task || task.version !== request.version) throw new Error('Task revision changed; review context again');
+      const checkout = registry.assertCheckout(request.checkoutId);
+      if (!task.repositoryId || checkout.repositoryId !== task.repositoryId) throw new Error('Context checkout must belong to the task repository');
+      const sources = await previewContextSources(checkout.canonicalPath, checkout.gitIdentity, request, () => [env.accToken, ...connections.statusAll().map(c => connections.resolve(c.id))]);
+      registry.assertCheckout(request.checkoutId);
+      if (planning.snapshot().tasks.find(t => t.id === taskId)?.version !== task.version) throw new Error('Task revision changed during context inspection; review required');
+      return ContextSourcePreview.parse({ ...sources, taskId, taskVersion: task.version, projectId: task.projectId, repositoryId: task.repositoryId, checkoutId: checkout.id, baseSha: request.baseSha, observedTs: new Date().toISOString(), executionEnabled: false, authority: 'reference_only' });
+    } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
+  });
   app.get('/api/universe', async (req, reply) => {
     if (!requireToken(req, reply)) return undefined;
     return planningMutation(reply, () => universe.snapshot());

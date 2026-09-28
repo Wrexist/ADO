@@ -495,9 +495,14 @@
       "relatedEvidence": [
         "apps/server/src/runner/taskExecution.ts",
         "apps/server/src/runner/taskContext.test.ts",
-        "docs/controlos/task-context-integrity.md"
+        "docs/controlos/task-context-integrity.md",
+        "apps/server/src/projects/contextSource.ts",
+        "apps/server/src/projects/contextSource.test.ts",
+        "packages/shared/src/context.ts",
+        "docs/controlos/context-source-preview.md",
+        "docs/controlos/context-source-evidence.json"
       ],
-      "coverageNote": "Task prompt and stored snapshot are revalidated against the immutable planning revision before execution, including disk-profile restart. Complete serialized task input is capped at 65536 UTF-8 bytes. Approved instruction/file context, commit/hash staleness, versioned handoffs, provider context accounting and full canary/sandbox acceptance remain unimplemented or unverified. This does not pass the complete context-package scenario."
+      "coverageNote": "Task prompt/snapshot integrity and a bounded commit-source preview API have local regression evidence. The preview verifies task/repository/checkout identity, reads only selected regular committed text, refuses configured canaries and unsafe file types/paths, and marks supplied-hash mismatch for review. It neither persists approval nor injects sources into dispatch. Approved instruction packages, handoffs, provider budget accounting and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "T11",
@@ -507,9 +512,14 @@
       "relatedEvidence": [
         "apps/server/src/runner/taskExecution.ts",
         "apps/server/src/runner/taskContext.test.ts",
-        "docs/controlos/task-context-integrity.md"
+        "docs/controlos/task-context-integrity.md",
+        "apps/server/src/projects/contextSource.ts",
+        "apps/server/src/projects/contextSource.test.ts",
+        "packages/shared/src/context.ts",
+        "docs/controlos/context-source-preview.md",
+        "docs/controlos/context-source-evidence.json"
       ],
-      "coverageNote": "Task prompt and stored snapshot are revalidated against the immutable planning revision before execution, including disk-profile restart. Complete serialized task input is capped at 65536 UTF-8 bytes. Approved instruction/file context, commit/hash staleness, versioned handoffs, provider context accounting and full canary/sandbox acceptance remain unimplemented or unverified. This does not pass the complete context-package scenario."
+      "coverageNote": "Task prompt/snapshot integrity and a bounded commit-source preview API have local regression evidence. The preview verifies task/repository/checkout identity, reads only selected regular committed text, refuses configured canaries and unsafe file types/paths, and marks supplied-hash mismatch for review. It neither persists approval nor injects sources into dispatch. Approved instruction packages, handoffs, provider budget accounting and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "T12",
@@ -1392,19 +1402,24 @@
       "id": "B12",
       "title": "Bygg versionsbundet kontextpaket",
       "status": "pending_acceptance",
-      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11.\n\nAnvänd godkända instruktioner, källfiler/commit, blockerare och tidigare verifierade resultat. Begränsa indexeringen och läck inte andra projekt.\n\n**Krav:** REQ08, REQ15. **Verifiering:** T10, T11."
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11.\n\nAnvänd godkända instruktioner, källfiler/commit, blockerare och tidigare verifierade resultat. Begränsa indexeringen och läck inte andra projekt.\n\n**Krav:** REQ08, REQ15. **Verifiering:** T10, T11.",
+      "relatedEvidence": [
+        "apps/server/src/runner/taskExecution.ts",
+        "apps/server/src/runner/taskContext.test.ts",
+        "docs/controlos/task-context-integrity.md",
+        "apps/server/src/projects/contextSource.ts",
+        "apps/server/src/projects/contextSource.test.ts",
+        "packages/shared/src/context.ts",
+        "docs/controlos/context-source-preview.md",
+        "docs/controlos/context-source-evidence.json"
+      ],
+      "coverageNote": "Task prompt/snapshot integrity and a bounded commit-source preview API have local regression evidence. The preview verifies task/repository/checkout identity, reads only selected regular committed text, refuses configured canaries and unsafe file types/paths, and marks supplied-hash mismatch for review. It neither persists approval nor injects sources into dispatch. Approved instruction packages, handoffs, provider budget accounting and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "B13",
       "title": "Fokusera Today och Project-vyerna",
       "status": "pending_acceptance",
-      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11, B12.\n\nPrioritera behov av användarbeslut och nästa handling. Återanvänd befintliga komponenter. Ingen full designomskrivning innan flödestest.\n\n**Krav:** REQ02, REQ24. **Verifiering:** T03, T34.",
-      "relatedEvidence": [
-        "apps/server/src/runner/taskExecution.ts",
-        "apps/server/src/runner/taskContext.test.ts",
-        "docs/controlos/task-context-integrity.md"
-      ],
-      "coverageNote": "Task prompt and stored snapshot are revalidated against the immutable planning revision before execution, including disk-profile restart. Complete serialized task input is capped at 65536 UTF-8 bytes. Approved instruction/file context, commit/hash staleness, versioned handoffs, provider context accounting and full canary/sandbox acceptance remain unimplemented or unverified. This does not pass the complete context-package scenario."
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11, B12.\n\nPrioritera behov av användarbeslut och nästa handling. Återanvänd befintliga komponenter. Ingen full designomskrivning innan flödestest.\n\n**Krav:** REQ02, REQ24. **Verifiering:** T03, T34."
     },
     {
       "id": "B14",

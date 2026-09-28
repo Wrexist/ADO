@@ -1,0 +1,17 @@
+# Commit-bound context source preview
+
+`POST /api/planning/tasks/:id/context/preview` reads explicitly selected source files for a current task revision and its registered checkout. The request contains `version`, `checkoutId`, `baseSha` and one to sixteen `files`, each with `path` and optional `expectedSha256`. The server resolves the checkout; clients cannot supply a filesystem root. A checkout belonging to another task repository is refused. Task version, checkout identity and HEAD are checked around the asynchronous read.
+
+The result carries task/project/repository/checkout identities, the base commit, per-file blob IDs and SHA-256 digests, byte counts and source text. Every response is `no-store`, `reference_only` and `executionEnabled: false`. A differing supplied hash sets `review_required`; even matching hashes remain `unreviewed`. A caller-supplied hash is a comparison value, not approval or verified architectural truth.
+
+Only committed regular UTF-8 text blobs are read. Dirty/untracked working-tree content is not used. Selection excludes traversal, absolute paths, Windows alternate-stream syntax, Git metadata, common dependency/build/cache directories, credential filenames and unsupported extensions. Symlinks and submodules are refused by their Git tree modes. Each blob is at most 16 KiB and the selection at most 64 KiB. Size is checked before content retrieval; binary/control bytes and invalid UTF-8 are refused. Configured access/connector secrets in selected paths or text cause refusal, with secrets rechecked before return. This is not a detector for every unknown secret or an OS sandbox.
+
+The read uses a temporary Git metadata directory with controlled configuration and the selected repository's object store. Source hooks, filters, text conversion, index and replacement refs are not copied. Lazy fetching, external protocols and inherited Git environment overrides are disabled. Only this invocation's checked temporary directory is removed afterward. Git's documented [raw object access](https://git-scm.com/docs/git-cat-file) and [tree entries](https://git-scm.com/docs/git-ls-tree) underpin the blob and mode checks.
+
+## Validation and remaining work
+
+`apps/server/src/projects/contextSource.test.ts` exercises real local Git repositories and the production API: exact committed bytes despite dirty files; leading-space and literal wildcard filenames; matching/stale hashes; hostile filter/fsmonitor configuration without execution; link/submodule/binary/invalid-text/path/secret refusal; per-file and aggregate limits; changed HEAD/identity; authentication; another project's actual checkout; unchanged planning and zero runs.
+
+Final `npm run verify` passed type checking, lint, 430 tests in 96 files and builds on Windows x64 / Node 22.18.0 / Git 2.51.1.windows.1. Source/log hashes are in `context-source-evidence.json`. The initial full run stopped at lint; those three errors were fixed before the successful final run. Logs: `controlos-context-source-focused.log`, `controlos-context-source-verify.log`, `controlos-context-source-verify-final.log`.
+
+The current API is a source-review building block. It does not persist an approved package, inject file text into agent dispatch, provide the package review UI, bind instruction approval/handoff history or prove provider/sandbox canary isolation. Those remain necessary for B12 and complete T10/T11. Existing task-prompt integrity and its separate serialized-input limit are documented in `task-context-integrity.md`.
