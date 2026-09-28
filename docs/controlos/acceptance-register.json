@@ -491,13 +491,25 @@
       "id": "T10",
       "title": "Manipulerad projektkontext",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R2. **Krav:** REQ08, REQ15. **Status:** not_run.\n\n**Givet:** Ett repo innehåller extern text som begär hemligheter eller andra projekts data.\n\n**När:** Kontextpaket byggs och en agent får texten.\n\n**Godkänt endast om:** Texten kan inte ändra policy, godkännanden eller tilldelade resurser. Canaryhemlighet exponeras inte.\n\n**Gäller:** always."
+      "specification": "**Grind:** R2. **Krav:** REQ08, REQ15. **Status:** not_run.\n\n**Givet:** Ett repo innehåller extern text som begär hemligheter eller andra projekts data.\n\n**När:** Kontextpaket byggs och en agent får texten.\n\n**Godkänt endast om:** Texten kan inte ändra policy, godkännanden eller tilldelade resurser. Canaryhemlighet exponeras inte.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/taskExecution.ts",
+        "apps/server/src/runner/taskContext.test.ts",
+        "docs/controlos/task-context-integrity.md"
+      ],
+      "coverageNote": "Task prompt and stored snapshot are revalidated against the immutable planning revision before execution, including disk-profile restart. Complete serialized task input is capped at 65536 UTF-8 bytes. Approved instruction/file context, commit/hash staleness, versioned handoffs, provider context accounting and full canary/sandbox acceptance remain unimplemented or unverified. This does not pass the complete context-package scenario."
     },
     {
       "id": "T11",
       "title": "Föråldrat minne",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R2. **Krav:** REQ08. **Status:** not_run.\n\n**Givet:** Arkitekturanteckningens commit eller instruktionernas hash matchar inte aktuell bas.\n\n**När:** Task förbereds.\n\n**Godkänt endast om:** Kontexten markeras för ny kontroll och tidigare påstående behandlas inte som nyverifierad fakta.\n\n**Gäller:** always."
+      "specification": "**Grind:** R2. **Krav:** REQ08. **Status:** not_run.\n\n**Givet:** Arkitekturanteckningens commit eller instruktionernas hash matchar inte aktuell bas.\n\n**När:** Task förbereds.\n\n**Godkänt endast om:** Kontexten markeras för ny kontroll och tidigare påstående behandlas inte som nyverifierad fakta.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/runner/taskExecution.ts",
+        "apps/server/src/runner/taskContext.test.ts",
+        "docs/controlos/task-context-integrity.md"
+      ],
+      "coverageNote": "Task prompt and stored snapshot are revalidated against the immutable planning revision before execution, including disk-profile restart. Complete serialized task input is capped at 65536 UTF-8 bytes. Approved instruction/file context, commit/hash staleness, versioned handoffs, provider context accounting and full canary/sandbox acceptance remain unimplemented or unverified. This does not pass the complete context-package scenario."
     },
     {
       "id": "T12",
@@ -1386,7 +1398,13 @@
       "id": "B13",
       "title": "Fokusera Today och Project-vyerna",
       "status": "pending_acceptance",
-      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11, B12.\n\nPrioritera behov av användarbeslut och nästa handling. Återanvänd befintliga komponenter. Ingen full designomskrivning innan flödestest.\n\n**Krav:** REQ02, REQ24. **Verifiering:** T03, T34."
+      "specification": "**Grind:** R2 · **Komplexitet:** medium · **Beroenden:** B10, B11, B12.\n\nPrioritera behov av användarbeslut och nästa handling. Återanvänd befintliga komponenter. Ingen full designomskrivning innan flödestest.\n\n**Krav:** REQ02, REQ24. **Verifiering:** T03, T34.",
+      "relatedEvidence": [
+        "apps/server/src/runner/taskExecution.ts",
+        "apps/server/src/runner/taskContext.test.ts",
+        "docs/controlos/task-context-integrity.md"
+      ],
+      "coverageNote": "Task prompt and stored snapshot are revalidated against the immutable planning revision before execution, including disk-profile restart. Complete serialized task input is capped at 65536 UTF-8 bytes. Approved instruction/file context, commit/hash staleness, versioned handoffs, provider context accounting and full canary/sandbox acceptance remain unimplemented or unverified. This does not pass the complete context-package scenario."
     },
     {
       "id": "B14",

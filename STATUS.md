@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Task-kontext kontrolleras på nytt före processstart
+
+En reproducerad brist gjorde att en sparad köprompt kunde avvika från den oföränderliga task-revisionen utan att körvalideringen stoppade den. Prompt och snapshot jämförs nu med originalrevisionen genom den befintliga startgränsen. Ett diskprofilprov verifierar att en utbytt prompt efter omstart ger failed/blocked innan skrivlås, arbetskopia eller providerstart, och att originalrevisionen bevaras. Snapshot-skada testas med uttrycklig felinjektion; vanliga snapshot-ändringar spärrades redan av SQLite-triggern.
+
+Hela den serialiserade task-prompten begränsas till 65 536 UTF-8-byte utan tyst trunkering. Gränsen gäller task-bunden dispatch och är inte ett mått på en providers tokenfönster. `npm run verify` passerade med typkontroll, lint, 427 tester i 95 filer och byggning. Loggar: `controlos-task-context-before.log`, `controlos-task-context-focused.log`, `controlos-task-context-verify.log`. Avgränsning och återstående kontextpaketarbete: `docs/controlos/task-context-integrity.md`.
+
+B13, T10 och T11 är fortsatt öppna. Godkända instruktionshashar, filurval vid commit, versionsbundna handoffs och verifierad canary-isolering återstår. Antalet lokalt godkända scenarier är fortsatt 18/46; fulla R1–R4-grindar är öppna.
+
 ## Universe: projekt och samband nås genom en tangentbordsstyrd lista
 
 Universe visar projekt, Inbox-idéer, milstolpar och uttryckliga resursreferenser med filter, identiteter och källor. Manuella relationer kan följas även utanför valt projektfilter och tas bort med versionskontroll. Gamla återförsök kan inte återuppliva borttagna poster. Ett misslyckat refresh behåller senast kända data, visar stale och spärrar ändringar tills omladdning lyckas. Relationerna ändrar inga uppgiftsberoenden eller agentbehörigheter.
