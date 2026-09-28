@@ -6,6 +6,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { openDb } from '../apps/server/src/db/index.ts';
+import { inspectProfileDatabase } from '../apps/server/src/db/inspection.ts';
 import { runs, executionLocks, portfolioProjects, portfolioRepositories, portfolioCheckouts, planningTasks } from '../apps/server/src/db/schema.ts';
 import { backupDatabase, restoreBackup } from '../apps/server/src/backup/index.ts';
 import { commonGitIdentity, directoryIdentity, pathKey } from '../apps/server/src/projects/checkoutIdentity.ts';
@@ -67,12 +68,10 @@ for (const phase of ['restore', 'reopen']) {
     try { await Promise.race([app.close(), new Promise<never>((_, reject) => { timer = setTimeout(() => { app.process().kill(); reject(new Error('Packaged restore did not close normally within 15 seconds')); }, 15000); })]); }
     finally { clearTimeout(timer); }
   }
-  const checked = openDb(join(profile, 'acc.sqlite'));
+  const checked = inspectProfileDatabase(join(profile, 'acc.sqlite'), resolve('apps/server/drizzle'), { restored: true });
   try {
-    for (const table of tables) assert.deepEqual(checked.sqlite.prepare(`SELECT * FROM ${table}`).all(), original[table], `Restored ${table} changed`);
-    assert.equal(checked.sqlite.pragma('integrity_check', { simple: true }), 'ok');
-    assert.deepEqual(checked.sqlite.pragma('foreign_key_check'), []);
-  } finally { checked.sqlite.close(); }
+    for (const table of tables) assert.deepEqual(checked.prepare(`SELECT * FROM ${table}`).all(), original[table], `Restored ${table} changed`);
+  } finally { checked.close(); }
   assert.equal(readFileSync(join(repo, 'work.txt'), 'utf8'), 'uncommitted work must survive');
   assert.deepEqual(readFileSync(join(repo, '.git/index')), index);
 }

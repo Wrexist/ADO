@@ -1,5 +1,7 @@
 # Packaged Windows profile evidence
 
+Current evidence (2026-09-28): [read-only native schema inspection](native-schema-inspection.md) and [artifact/probe hashes](native-schema-evidence.json) supersede the older migration inspection described here. The original probe called `openDb()` after app shutdown, which could itself finish a migration. The corrected probe inspects read-only and compares the full ledger/schema against an independent memory reference. Baselines 0008 and 0019 now both pass through migration 0023 on a fresh artifact built from revision `79d4bdd`.
+
 The Windows unpacked Electron artifact has been built and started with its actual
 packaged resources, SQLite native module, renderer/preload and DPAPI helper. This
 is distinct from a source-server test or the earlier credential-only probe.

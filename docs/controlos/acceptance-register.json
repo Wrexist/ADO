@@ -1190,9 +1190,15 @@
         "docs/controlos/automation-persistence.md",
         "apps/server/src/automations/journal.test.ts",
         "apps/server/src/projects/todayPreferences.test.ts",
-        "docs/controlos/today-planning.md"
+        "docs/controlos/today-planning.md",
+        "apps/server/src/db/inspection.ts",
+        "apps/server/src/db/inspection.test.ts",
+        "scripts/probe-packaged-profile.mts",
+        "scripts/probe-packaged-restore.mts",
+        "docs/controlos/native-schema-inspection.md",
+        "docs/controlos/native-schema-evidence.json"
       ],
-      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. Automation rename-failure regression now checks committed memory, exact bytes, reopen state and real Windows replacement denial. It does not cover all stores, migration interruption or power loss; acceptance remains not_run. Additional local evidence: accepted automation run, receipt and queue event commit together; four actual child-process exits and reopened SQLite verify history-only repair without dispatch. Restored profiles retain pending receipts and refuse activation until explicit resolution. This does not prove remote-event deduplication or provider outcome reconciliation. Normal automation reconciliation now shares guarded projection and refuses newer/ambiguous history, externally changed files and actual hard links; receipt/run/memory/file preservation and blocked dispatch are tested. Distinct fresh requests with equal timestamps remain supported. Today preference storage now has local API evidence for restart/profile isolation, stale-write refusal, rollback after injected commit denial and corrupt JSON preservation. Migration 0020 native packaged upgrade/restore is not certified."
+      "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. Automation rename-failure regression now checks committed memory, exact bytes, reopen state and real Windows replacement denial. It does not cover all stores, migration interruption or power loss; acceptance remains not_run. Additional local evidence: accepted automation run, receipt and queue event commit together; four actual child-process exits and reopened SQLite verify history-only repair without dispatch. Restored profiles retain pending receipts and refuse activation until explicit resolution. This does not prove remote-event deduplication or provider outcome reconciliation. Normal automation reconciliation now shares guarded projection and refuses newer/ambiguous history, externally changed files and actual hard links; receipt/run/memory/file preservation and blocked dispatch are tested. Distinct fresh requests with equal timestamps remain supported. Today preference storage now has local API evidence for restart/profile isolation, stale-write refusal, rollback after injected commit denial and corrupt JSON preservation. Normal native unpacked upgrades from schemas 0008 and 0019 through 0023 now have read-only ledger/schema/integrity evidence, including negative controls that cannot complete a missing migration. A fresh packaged synthetic restore/reopen also passes with retained rows, locks, dirty work and missing-marker refusal. Installer/update, real-profile restore and the complete interrupted/full-disk matrix remain unverified; T35 stays not_run."
     },
     {
       "id": "T36",

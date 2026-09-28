@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Native profilkontroll utan efterföljande migration
+
+Det tidigare paketerade migrationsprovet kunde självt slutföra migrationer under efterkontrollen. Det är ersatt med en skrivskyddad jämförelse av migrationsjournal, tabeller, index, triggers, integritet och främmande nycklar mot en separat minnesdatabas. Ett negativt kontrollfall visar att en gammal profil vägras utan att ändras. Återställningsskyddets extra schema kontrolleras uttryckligen.
+
+En färsk separat Windows-build från `79d4bdd` passerade sex migration-/omstartsprov från schema 0008 respektive 0019 genom 0023. Historiska körfält, projekt/repo/checkout, uppgifter, revisionshistorik, tidigare körkoppling, promptar, policy och krypterade nycklar bevarades. Två syntetiska återställningsstarter passerade; förlorad återställningsmarkör vägrade start med oförändrad databas och repoarbete. Bygget använder Electron 44.4.5/Node 24.21.0 och är osignerat och unpacked. Utvecklingskopians SQLite-modul ändrades inte av Electron-bygget.
+
+`npm run verify` passerade 438 tester i 99 filer. Slutliga riktade tester, typkontroll/lint och native-prover passerade efter stödet för återställningsskyddets schema. Underlag: `docs/controlos/native-schema-inspection.md` och `native-schema-evidence.json`. Installer/uppdatering, verklig användarprofil, hela avbrotts-/diskfullmatrisen och OS-sandbox återstår. Ingen ny full acceptansgrind har godkänts; fortsatt 18/46 scenarier.
+
 ## Granskning och val av kontextpaket i körvyn
 
 Körgranskningen innehåller nu förhandsvisning av versionsbundna källfiler, sparade paket, motiverat godkännande/återkallning och ett separat val inför start. Valet skickar exakt paket-ID, digest och granskningsversion. Ett återkallat eller oläsbart valt paket spärrar start utan att tyst tas bort. Användaren kan uttryckligen välja bort referenskontexten. Enter i granskningsfältet startar ingen körning.

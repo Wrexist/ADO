@@ -1,0 +1,89 @@
+{
+  "date": "2026-09-28T01:24:52.888614+00:00",
+  "artifactSourceRevision": "79d4bdd74798a976da5b6d98958df549980e63ab",
+  "sourceNote": "Runtime built from a fresh git archive and independent npm ci dependency copy; inspection/probe changes are executed from the development workspace and are not required inside the artifact. No runtime source patch was applied to the archive.",
+  "archiveSha256": "5b296c57fc3d4440ce15e21337d13cec9964569742c2386a5fd9ba14a91ff2ce",
+  "environment": {
+    "platform": "Windows x64",
+    "buildNode": "22.18.0",
+    "npm": "11.7.0",
+    "electron": "44.4.5",
+    "embeddedNode": "24.21.0",
+    "signatureStatus": "NotSigned"
+  },
+  "result": "passed",
+  "checks": [
+    {
+      "result": "passed",
+      "baseline": 8,
+      "migrationCount": 24,
+      "executableSha256": "077f6f6953323ebd7d85189412d0e51a0c51aefafab7616a582ab8c6beaa3230",
+      "scope": "Unpacked packaged desktop; synthetic legacy profile, credential migration, preserved historical rows/prompt/policy and reopen. Read-only schema/ledger/integrity audit, negative pre-upgrade control. No installer/update or real user-profile acceptance."
+    },
+    {
+      "result": "passed",
+      "baseline": 19,
+      "migrationCount": 24,
+      "executableSha256": "077f6f6953323ebd7d85189412d0e51a0c51aefafab7616a582ab8c6beaa3230",
+      "scope": "Unpacked packaged desktop; synthetic legacy profile, credential migration, preserved historical rows/prompt/policy and reopen. Read-only schema/ledger/integrity audit, negative pre-upgrade control. No installer/update or real user-profile acceptance."
+    },
+    {
+      "result": "passed",
+      "executableSha256": "077f6f6953323ebd7d85189412d0e51a0c51aefafab7616a582ab8c6beaa3230",
+      "scope": "Synthetic profile backup/restore, two unpacked desktop starts and refused startup after marker loss. Preserved plans, run rows, locks and local dirty work; identity report only. No installer, active-profile promotion or real user-profile claim."
+    }
+  ],
+  "verification": "npm run verify passed: 438 tests in 99 files, typecheck, lint and build. Final focused inspector regression, typecheck/lint and all native probes passed after explicit restore-guard schema support.",
+  "sourceSha256": {
+    "apps/server/src/db/inspection.ts": "1a556403ad65fd96757b7ebf7030cc934cb85dc4c34069f0d6aca4abed6b21a7",
+    "apps/server/src/db/inspection.test.ts": "e693e24acc9f381320989f89d2426195327590463f3cbac5e7e9436da2ea2b41",
+    "scripts/probe-packaged-profile.mts": "e12c249f5ad761ea3e3c2d08dbb05293143cd19af450f2447448314c1b345aa8",
+    "scripts/probe-packaged-restore.mts": "589fa4b8a00cab5c55ecd785eb548f39af63198c927e25b5270953ac0fa47439"
+  },
+  "artifactSha256": {
+    "ai-control-center.exe": "077f6f6953323ebd7d85189412d0e51a0c51aefafab7616a582ab8c6beaa3230",
+    "resources/app.asar": "95d541b1e8ae079bb30a4e92c44f3a0c017c5fb9c1e7369842e66d4f6b13e874",
+    "resources/app.asar.unpacked/node_modules/better-sqlite3/build/Release/better_sqlite3.node": "e734a15724040b8e47cb698fcd8d7eb8408651bf72b851552072e0775c05d9c7",
+    "resources/process-host/ControlOS.CredentialHost.exe": "1b25712f2f41b954413396b7241545ff28311aceb5205fa728bb4872142a1171",
+    "resources/process-host/ControlOS.JobHost.exe": "c1c767fc8391196d873dd8d0752934af86afde47db0c16ca018179c6f385466f",
+    "resources/drizzle/0000_init.sql": "62c058dbb394ba7bb6596cbc78d7f7b87c317e50e3c555e0df3488785b3a1fb1",
+    "resources/drizzle/0001_runs.sql": "a7c6b526b30ebb4321c81fbd873ceafa0be4a79b5ffd57fa0baae44f7121e61e",
+    "resources/drizzle/0002_drop_snapshots.sql": "954d03c378a2e70c4740b4574c228986ed8a3711663a466f58b6d397b7d989ba",
+    "resources/drizzle/0003_run_result_text.sql": "4fc70ee5a140fb5ba984101d326aaa653182a17da75e2bf383b4cc2eecd2911b",
+    "resources/drizzle/0004_run_workspace.sql": "ed08ff0e4b6f14b53d502c28b4ce5854a896a252fd3ff9d1f8815e177455bda4",
+    "resources/drizzle/0005_durable_execution.sql": "b7712a2c04504299ae05753670da6a2423c7f3b37113a5a941fa063ef154623e",
+    "resources/drizzle/0006_verification.sql": "fac746234598dc2eba24d219792c171dc676bdd4e19e93384a2a3415cb2f81a7",
+    "resources/drizzle/0007_run_provider.sql": "86e93e3328f765b20897b1ca61949bd340bba99d94b3479bdad478adb73c6570",
+    "resources/drizzle/0008_process_identity.sql": "aaf1fb619c0bb66c9eb0290e670d4caa48e639337bca7afa7e1a184a4bccb817",
+    "resources/drizzle/0009_operation_approvals.sql": "1c0accb176f2fe84ecc60a4a03d59cea157f4e1908e43c351b8a2fac805a52bd",
+    "resources/drizzle/0010_project_registry.sql": "2454918e83c4575aa189a269001d6e759b4979729abb0c5e1ae3dd2caa93612e",
+    "resources/drizzle/0011_planning.sql": "62af5d8c2c5d7abca2679a0f7bf0486f522db4977b27d1503d0e503f1771a9e5",
+    "resources/drizzle/0012_task_executions.sql": "435d1e255c8e93fb92923b9b0c06d093a79fc438c55dc210a3d05d3994b077a0",
+    "resources/drizzle/0013_task_reviews.sql": "cab1975d4bb22793f63db194b4f525372c1e31a9526c0be09613a792ed0c5e15",
+    "resources/drizzle/0014_task_reopenings.sql": "3ec41a61eab1503de1b5326c0d0158749581106a0838164b95010e85bbc7e63f",
+    "resources/drizzle/0015_verification_attempts.sql": "8d54c9ead81182a757c03d177c63be2f087a9183cd77608b6d5584e39b1338ee",
+    "resources/drizzle/0016_execution_capacity.sql": "2acb3231945aa13c5582114ba85ffe0ca126012a7897a08b1831ea17aab910ca",
+    "resources/drizzle/0017_run_source_identity.sql": "52ed948eb9f1e663d9d971fdcb3402344e8fb36bf45d05516e87734df5372f71",
+    "resources/drizzle/0018_workspace_provenance.sql": "607d5845e96b1fe00c3fbbea8c02f6009d97fb33ef950e26d8a2a5560a05662d",
+    "resources/drizzle/0019_automation_dispatches.sql": "cd0ac92ec2803ad48fa594bf533bcaba3a7f7aa9df19187533ebac62a3f96b3d",
+    "resources/drizzle/0020_today_preferences.sql": "6b17de7349bec6424b624206a2c9d348af6806a3555ff739a3c65ca5fd0e064e",
+    "resources/drizzle/0021_universe.sql": "0be639201c42885745a89cbf00c5c97523d0af352931e27632fc46ea8d844576",
+    "resources/drizzle/0022_context_packages.sql": "8e102db1ba7cf32b6f49749672e4636911fa8df6a944cc5d8f781bc552d43252",
+    "resources/drizzle/0023_execution_context.sql": "1d538dc5fdd65aebd69abb0d5a675c322f1256b02f546b9bf706fa60ef6fffbe",
+    "resources/drizzle/meta/0000_snapshot.json": "9c9c0787774b5ef3710e202d316c69996bd49bcb9b6d5c0f98bad9b092f22698",
+    "resources/drizzle/meta/0001_snapshot.json": "378efd4c2481308f4b28d4f92690eacc66b031e699daac367be947418d97781d",
+    "resources/drizzle/meta/_journal.json": "dd76439830ae8e84d3f732f7ba6c9139cb043b205a380cc9dd9d324676a4c00d",
+    "resources/web/assets/index-CCmyJAbZ.js": "c64d8c804a3ca37e789b2fb67712535c62255f085f611e727143f76e6ca3e92b",
+    "resources/web/assets/index-D3Fjnc7Z.css": "49a9bc12e72b441dea4f48333960b3ed29e191f9bed8704cb37dd688615a9224"
+  },
+  "logSha256": {
+    "controlos-native-schema-0008.log": "dad3c46a5e472c25698f105ec236f29210293ff4777c5519cddc9640af42253c",
+    "controlos-native-schema-0019.log": "f65a0695ef2ca22745cc157409b1aeb9898954553b53a69c5e3ec724c302d039",
+    "controlos-native-schema-restore.log": "76923403c6950d7714704864f12fcf74b5bd3cac48c8eb33ceef55bbf2ca4bc8",
+    "controlos-native-schema-focused.log": "9300f231bd26370de476ceeadbb6884a6c77fdcfa175f8a5547f31287c1172f9",
+    "controlos-native-schema-verify.log": "2e348f1c008689dbe59c804af0177562cddadea063c7ce15c508e332c8d61f55",
+    "controlos-native-schema-final-checks.log": "182c5d18b80c953d4533d60737c48129520ba3fbd73538b67955be7f618dbc6a",
+    "controlos-native-schema-build.log": "ae7d67c0c753be9915d8159378ad897139ed43a37da759bb58f56b23b6bfd1a5"
+  },
+  "scope": "Synthetic isolated profiles only; unpacked Windows artifact. Read-only negative/positive migration evidence through 0023, historical fields and credentials retained, restore review and missing-marker refusal. No NSIS installation/update/rollback, signing, real-user profile, disk-full/crash matrix or sandbox acceptance."
+}
