@@ -1086,9 +1086,11 @@
         "apps/server/src/runner/approvalApi.test.ts",
         "apps/server/src/runner/approvalMigration.test.ts",
         "apps/server/src/runner/taskReviewApi.test.ts",
-        "docs/controlos/task-criteria.md"
+        "docs/controlos/task-criteria.md",
+        "scripts/probe-result-acceptance.mts",
+        "docs/controlos/result-acceptance-ui-evidence.json"
       ],
-      "coverageNote": "Exact current-result ledger coverage includes result.accept and task.accept with criterion decisions. TestFlight dispatch rejects unrelated approval fields through a strict request contract; a current real result approval cannot dispatch or change deploy history, remains unconsumed, and still accepts only its intended result once. See approvalApi.test.ts and testflight/testflight.test.ts. This is boundary regression evidence; other operation paths and the full scenario remain unaccepted."
+      "coverageNote": "Exact current-result ledger coverage includes result.accept and task.accept with criterion decisions. TestFlight dispatch rejects unrelated approval fields through a strict request contract. The built 1536/390px renderer now exercises real HTTP verification/review, changed binary bytes, stale rejection with cleared UI verdict, fresh approval and one-time consumption; revoked/consumed decisions remain refused after disk-profile reopen. Different action/deploy requests do not consume the result review or create a run. Completed runs are seeded fixtures; full task/provider/other-operation acceptance is still unproven. See result-acceptance-ui.md."
     },
     {
       "id": "T27",

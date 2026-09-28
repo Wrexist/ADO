@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: A rejected confirmation can unmount the focused control. Move focus to the error and clear stale verification state; on mobile, scroll the new review with header clearance so both its binding and confirmation remain visible.
+
 - 2026-09-28: Validate the complete body at an action boundary instead of projecting known fields: otherwise unrelated approval fields can be silently ignored while another action executes. Prove rejection before dispatch and preserve the original approval for its intended operation.
 
 - 2026-09-28: Persist a selected context package with its exact review version in the task execution. Rebuild provider input from immutable sources at start, recheck revocation/secrets, and avoid copying source text into ordinary activity records. Revocation cannot retract bytes already delivered.

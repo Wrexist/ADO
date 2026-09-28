@@ -36,7 +36,14 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   const setErrorNote = (value: string) => { setNoteValue(value); setNoteIsError(true); };
   const [review, setReview] = useState<OperationApproval | null>(null);
   const reviewHeading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { if (review) reviewHeading.current?.focus(); }, [review]);
+  const errorNote = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (review) {
+      reviewHeading.current?.focus();
+      reviewHeading.current?.scrollIntoView({ block: 'start' });
+    }
+  }, [review]);
+  useEffect(() => { if (noteIsError) errorNote.current?.focus(); }, [noteIsError, note]);
 
   // Load, then poll every 2s while the run is live so the timeline grows in place.
   const wasLive = useRef(false);
@@ -225,7 +232,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         <p className="mt-3 text-label text-text3">No final report captured for this run.</p>
       ) : null}
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         {inFlight ? (
           <Button size="sm" variant="outline" onClick={() => void kill()} disabled={busy}
             className={confirmKill ? 'border-danger/60 text-danger' : ''}>
@@ -239,7 +246,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         {confirmKill ? (
           <Button size="sm" variant="ghost" onClick={() => setConfirmKill(false)}>Keep running</Button>
         ) : null}
-        {note ? <span role={noteIsError ? 'alert' : 'status'} className={cx('text-label', noteIsError ? 'text-danger' : 'text-text2')}>{note}</span> : null}
+        {note ? <span ref={errorNote} tabIndex={noteIsError ? -1 : undefined} role={noteIsError ? 'alert' : 'status'} className={cx('scroll-mt-48 text-label', noteIsError ? 'text-danger' : 'text-text2')}>{note}</span> : null}
       </div>
 
       {/* Work outcomes are human decisions; versioned acceptance requires a prepared review. */}
@@ -269,7 +276,7 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
         </div>
       ) : null}
       {review && <section aria-label="Confirm result acceptance" className="mt-3 space-y-2 break-words rounded-tile border p-3 text-label">
-        <h3 ref={reviewHeading} tabIndex={-1} className="font-medium">Accept this verified result?</h3>
+        <h3 ref={reviewHeading} tabIndex={-1} className="scroll-mt-48 font-medium">Accept this verified result?</h3>
         <p>This records your acceptance of this result. It does not merge or deploy.</p>
         <p>Repository: {review.repoId}</p>
         <p>Revision: {review.headSha}</p>

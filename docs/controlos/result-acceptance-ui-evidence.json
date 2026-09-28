@@ -1,0 +1,43 @@
+{
+  "date": "2026-09-28T01:39:24.156Z",
+  "baseRevision": "f0dc751bb06aa4facbd5c6b17da9804cca06f785",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0",
+    "chromium": "153.0.8010.12"
+  },
+  "checks": [
+    "built renderer with production HTTP, no route interception",
+    "real npm verification before review",
+    "separate preparation and keyboard confirmation",
+    "different human action and TestFlight dispatch refuse result approval without side effects",
+    "leading-space binary file mutation invalidates reviewed digest",
+    "UI removes old verdict and review after 409",
+    "identical restored bytes still require new verification and new decision",
+    "fresh decision accepted exactly once",
+    "revoked and consumed decisions remain refused after disk-profile reopen",
+    "1536/390 px light/dark, no horizontal overflow or page errors"
+  ],
+  "sourceSha256": {
+    "scripts/probe-result-acceptance.mts": "7de4087e89321196b9fc34da065e00c5d3e0b8d93c94ea891acab867f649f23a",
+    "apps/web/src/views/RunHistory.tsx": "5cb2e96d81d0e39f2cd1c6758a596cced97a1782eb22ac30d2c69c084f908832",
+    "apps/server/src/app.ts": "6286cc2a2b55259a9ae7a1a56081b010e80bcfc2930653570390b23496c55c97",
+    "apps/server/src/runner/verification.ts": "450576efe50528839dfb774c07789b65dedc7040187270fe08f5ce8b5f8deb2b",
+    "apps/server/src/runner/approvals.ts": "075afdf5e6b078bce8fc4da8a93cd252f14eb77e7d19afc37c823cd060b89e5d",
+    "packages/shared/src/testflight.ts": "134608a9a56b2aaf174b8fdd6372f107b74b0538df89829c3c45c886c3ab41b8"
+  },
+  "assetSha256": {
+    "apps/web/dist/assets/index-D-uh0DU5.js": "7b8b9cce2bba8bfe4b29c11cf1a20980c9e991c55004fcef03882a724fe530e9",
+    "apps/web/dist/assets/index-D3Fjnc7Z.css": "49a9bc12e72b441dea4f48333960b3ed29e191f9bed8704cb37dd688615a9224"
+  },
+  "screenshotSha256": {
+    "smoke-shots/result-review-1536-light.png": "41357eff346c76157139596e3d3db877ae353a63576f18125da4758565aa8348",
+    "smoke-shots/result-review-1536-dark.png": "46ca7ae4d64d59f3c6a3486413b94f87ad562b109f987ddddeffa76d2eee2383",
+    "smoke-shots/result-review-1536-stale.png": "c21276fc61499681686f00fcb3973d3b55c152d094d1765daea5d2da272500df",
+    "smoke-shots/result-review-390-light.png": "b8fc90aeb0709ee7231cd48a0a849f022cbc56e862b6a0dddff171708426fb66",
+    "smoke-shots/result-review-390-dark.png": "3f7ee66b5288eb713ea486a683847d50f1f736323918e229c217878b1b702d38",
+    "smoke-shots/result-review-390-stale.png": "8051baf387592ba3ca8ab29e7481a527dbcccd0f1efe90355b61dadae14dec5a"
+  },
+  "scope": "Synthetic seeded completed runs, disposable Git repositories and disk profile. Production verification/approval HTTP and built UI; no live provider, task.accept browser scenario, sandbox, iOS upload or full T26 certification."
+}

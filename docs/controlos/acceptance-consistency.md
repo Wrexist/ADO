@@ -70,6 +70,11 @@ accepted run. `smoke.mjs` uses explicit API fixtures for separate preparation an
 confirmation, keyboard confirmation and desktop/mobile review rendering. No
 provider or pilot job is started by these fixtures.
 
+The [built result-review probe](./result-acceptance-ui.md) additionally exercises
+real loopback HTTP, verification subprocesses, binary-content invalidation,
+desktop/mobile confirmation, rejection focus and disk-profile reopen. Its seeded
+completed runs are explicit fixtures; it does not certify full T26 or a provider.
+
 ## TestFlight dispatch boundary (2026-09-28)
 
 The TestFlight dispatch endpoint previously projected the version fields from

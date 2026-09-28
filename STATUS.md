@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Resultatgranskning genom byggd webb och riktigt HTTP-flöde
+
+Ett nytt isolerat prov kör riktig `npm run verify`, förbereder en separat granskning och ändrar sedan en binär fil med inledande blanksteg i namnet. Bekräftelsen avvisas, tidigare grön verifiering försvinner och fokus flyttas till felet. Återställda identiska byte kräver fortfarande ny verifiering och nytt beslut. Ett färskt beslut konsumeras exakt en gång; både återkallade och förbrukade beslut avvisas efter serveromstart mot samma diskprofil. Anrop för annan åtgärd eller TestFlight-start får inga nya jobb eller deployhistorik.
+
+Provet använder den byggda React-appen och produktions-HTTP utan avlyssnade webbrutter vid 1536/390 px i båda teman. Granskningsrubriken scrollas fram med plats för mobilnavigationen, bekräftelsen syns och fel får tangentbordsfokus. Körningsraderna är uttryckligen förberedda DEMO-fixturer; ingen provider eller iOS-uppladdning har körts.
+
+`npm run verify` passerade typkontroll, lint, 439 tester i 99 filer och byggning. Det nya HTTP-/webbläsarprovet samt `npm run smoke` passerade. Loggar: `controlos-result-review-ui.log`, `controlos-result-review-verify.log` och `controlos-result-review-smoke.log`. Färska bilder omfattar resultatgranskning och de kanoniska Command/Ops-vyerna; alla visar testdata. Underlag: `docs/controlos/result-acceptance-ui.md` och `result-acceptance-ui-evidence.json`. Full T26 inklusive återstående task-/provider-/operationsfall samt R1–R4 återstår; fortsatt 18/46 lokalt godkända scenarier.
+
 ## Separat kontrakt för TestFlight-start
 
 TestFlight-starten validerar nu hela anropet och avvisar främmande godkännandefält, okända fält och ogiltiga modellvärden före dispatch. Ett riktigt resultatgodkännande prövades genom API:t: deployförsöket avvisades utan runner-anrop eller ändrad historik, godkännandet förblev oförbrukat och kunde sedan användas exakt en gång för sin avsedda resultatacceptans. Befintliga giltiga deployanrop fungerar fortsatt med den lokala testadaptern.
