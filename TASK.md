@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Persist immutable exact-byte context packages with explicit versioned reference review/revocation, fresh task/Git checks before approval, retry protection and rollback on invalid storage. Prove disk-profile restart and stale-base refusal; UI, dispatch binding and native schema 0022 acceptance remain open.
+
 - [x] Add a task/repository-bound context source preview from exact committed blobs, with raw Git reads, source hashes, stale-hash review, path/text/secret exclusions and byte limits. Real Git/API regression evidence; approved persisted packages, UI and dispatch integration remain open under B12.
 
 - [x] Revalidate saved task prompts and snapshots against immutable planning revisions before execution; reject oversized serialized task context by UTF-8 byte count and prove replaced queued prompts cannot reach a provider after profile restart. Full context packages/T10/T11 remain open.

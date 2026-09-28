@@ -19,4 +19,4 @@ Final `npm run verify` passed type checking, lint, 427 tests in 95 files and bui
 
 ## Remaining context package work
 
-This change does not complete B12 or T10/T11. Context packages still need approved instruction hashes, bounded source-file selection at a recorded commit, versioned handoffs, source-conflict/staleness review and provider budget accounting. Repository text must not alter policy or resource assignments. Canary isolation requires independent sandbox/provider evidence; prompt framing alone is insufficient. No new full acceptance scenario is marked passed here.
+This change does not complete B12 or T10/T11. Committed source selection and durable reference-package review now exist in `context-packages.md`; instruction roles, provider integration, versioned handoffs, full source-conflict/staleness review and provider budget accounting remain open. Repository text must not alter policy or resource assignments. Canary isolation requires independent sandbox/provider evidence; prompt framing alone is insufficient. No new full acceptance scenario is marked passed here.

@@ -500,9 +500,14 @@
         "apps/server/src/projects/contextSource.test.ts",
         "packages/shared/src/context.ts",
         "docs/controlos/context-source-preview.md",
-        "docs/controlos/context-source-evidence.json"
+        "docs/controlos/context-source-evidence.json",
+        "apps/server/src/projects/contextPackages.ts",
+        "apps/server/src/projects/contextPackages.test.ts",
+        "apps/server/drizzle/0022_context_packages.sql",
+        "docs/controlos/context-packages.md",
+        "docs/controlos/context-packages-evidence.json"
       ],
-      "coverageNote": "Task prompt/snapshot integrity and a bounded commit-source preview API have local regression evidence. The preview verifies task/repository/checkout identity, reads only selected regular committed text, refuses configured canaries and unsafe file types/paths, and marks supplied-hash mismatch for review. It neither persists approval nor injects sources into dispatch. Approved instruction packages, handoffs, provider budget accounting and full sandbox/provider canary acceptance remain open."
+      "coverageNote": "Task prompt integrity, bounded committed source previews and immutable context packages with versioned review/revocation have local regression evidence. Approval rechecks task/checkout/base and source hashes; historical reads explicitly leave freshness unchecked. Packages survive server restart, and failed/corrupt storage is refused. Context-review UI, dispatch binding, approved instruction roles, handoffs, provider budgets and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "T11",
@@ -517,9 +522,14 @@
         "apps/server/src/projects/contextSource.test.ts",
         "packages/shared/src/context.ts",
         "docs/controlos/context-source-preview.md",
-        "docs/controlos/context-source-evidence.json"
+        "docs/controlos/context-source-evidence.json",
+        "apps/server/src/projects/contextPackages.ts",
+        "apps/server/src/projects/contextPackages.test.ts",
+        "apps/server/drizzle/0022_context_packages.sql",
+        "docs/controlos/context-packages.md",
+        "docs/controlos/context-packages-evidence.json"
       ],
-      "coverageNote": "Task prompt/snapshot integrity and a bounded commit-source preview API have local regression evidence. The preview verifies task/repository/checkout identity, reads only selected regular committed text, refuses configured canaries and unsafe file types/paths, and marks supplied-hash mismatch for review. It neither persists approval nor injects sources into dispatch. Approved instruction packages, handoffs, provider budget accounting and full sandbox/provider canary acceptance remain open."
+      "coverageNote": "Task prompt integrity, bounded committed source previews and immutable context packages with versioned review/revocation have local regression evidence. Approval rechecks task/checkout/base and source hashes; historical reads explicitly leave freshness unchecked. Packages survive server restart, and failed/corrupt storage is refused. Context-review UI, dispatch binding, approved instruction roles, handoffs, provider budgets and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "T12",
@@ -1411,9 +1421,14 @@
         "apps/server/src/projects/contextSource.test.ts",
         "packages/shared/src/context.ts",
         "docs/controlos/context-source-preview.md",
-        "docs/controlos/context-source-evidence.json"
+        "docs/controlos/context-source-evidence.json",
+        "apps/server/src/projects/contextPackages.ts",
+        "apps/server/src/projects/contextPackages.test.ts",
+        "apps/server/drizzle/0022_context_packages.sql",
+        "docs/controlos/context-packages.md",
+        "docs/controlos/context-packages-evidence.json"
       ],
-      "coverageNote": "Task prompt/snapshot integrity and a bounded commit-source preview API have local regression evidence. The preview verifies task/repository/checkout identity, reads only selected regular committed text, refuses configured canaries and unsafe file types/paths, and marks supplied-hash mismatch for review. It neither persists approval nor injects sources into dispatch. Approved instruction packages, handoffs, provider budget accounting and full sandbox/provider canary acceptance remain open."
+      "coverageNote": "Task prompt integrity, bounded committed source previews and immutable context packages with versioned review/revocation have local regression evidence. Approval rechecks task/checkout/base and source hashes; historical reads explicitly leave freshness unchecked. Packages survive server restart, and failed/corrupt storage is refused. Context-review UI, dispatch binding, approved instruction roles, handoffs, provider budgets and full sandbox/provider canary acceptance remain open."
     },
     {
       "id": "B13",

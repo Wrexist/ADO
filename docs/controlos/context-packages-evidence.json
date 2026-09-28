@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-28T00:23:46.834Z",
+  "baseRevision": "8066356f140a39aaccd28d920d1f4b0a78956b58",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0",
+    "git": "git version 2.51.1.windows.1"
+  },
+  "commands": [
+    "npx vitest run apps/server/src/projects/contextPackages.test.ts apps/server/src/projects/contextSource.test.ts",
+    "npm run verify"
+  ],
+  "result": "passed",
+  "sourceSha256": {
+    "apps/server/src/projects/contextPackages.ts": "ac7599b98478556e79ce5584933e88b11125c4a7363427160ba1905d5a34e1d5",
+    "apps/server/src/projects/contextPackages.test.ts": "eb83eba19bcc6ccd8f66b97d169d270f4bf86e2f18517608db37f42f39a035b7",
+    "apps/server/src/projects/contextSource.ts": "2d956055995734e8205bdf8d7a09354f7f9d3f18b97f2998fc004e02147dc1ca",
+    "apps/server/src/projects/contextSource.test.ts": "0f4b0fc8159179233882970188f3d5fa9d5e3935292b671845492b8fae0badd0",
+    "apps/server/src/app.ts": "10f99e4b3c6c08acc65776420c261854506860080fdde77a2a44a18cd3a0b1ce",
+    "packages/shared/src/context.ts": "6f15f0fa0ddfa93bc51d49bf0520e1765e6d85ece45937a94240ee1a88a93901",
+    "apps/server/src/db/schema.ts": "b9f165fea17a791a122aa7ad03828f1899843174d4405ec3624eabf82921e941",
+    "apps/server/drizzle/0022_context_packages.sql": "e72f30be6a7bc15f498b218e72f1a8ea3e8113b4c61c0e53b4602e981f5a360a",
+    "apps/server/drizzle/meta/_journal.json": "7fb8bcca0552fa97bc325c3285a7582cb402f8651a210de49d760c2086ba1dcc"
+  },
+  "logSha256": {
+    "controlos-context-packages-focused.log": "67fb57f97a350d1f56694397f064de447d708d73d7601bdf3171dec854028f2a",
+    "controlos-context-packages-store.log": "7cdbac32e10ed1437b927f8fc62f96d25486ca9afe24844409620cbaec64849a",
+    "controlos-context-packages-verify.log": "0b0794852c83e098630da6ec4581135d124e709ded8b26a4d975d7b96a4e7c85"
+  },
+  "scope": "Local synthetic store and production API/Git tests, including profile reopen, reference approval/revocation and stale base. No review UI, dispatch binding, model invocation, native migration or full sandbox acceptance."
+}

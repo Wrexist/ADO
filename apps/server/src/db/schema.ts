@@ -191,6 +191,16 @@ export const taskExecutions = sqliteTable('task_executions', {
   baseSha: text('base_sha').notNull(), currentTaskVersion: integer('current_task_version').notNull(), state: text('state').notNull(), createdTs: text('created_ts').notNull(),
 });
 
+export const contextPackages = sqliteTable('context_packages', {
+  id: text('id').primaryKey(), taskId: text('task_id').notNull().references(() => planningTasks.id), taskVersion: integer('task_version').notNull(),
+  checkoutId: text('checkout_id').notNull().references(() => portfolioCheckouts.id), baseSha: text('base_sha').notNull(),
+  requestHash: text('request_hash').notNull(), digest: text('digest').notNull(), payloadJson: text('payload_json').notNull(), createdTs: text('created_ts').notNull(),
+});
+export const contextPackageReviews = sqliteTable('context_package_reviews', {
+  id: text('id').primaryKey(), packageId: text('package_id').notNull().references(() => contextPackages.id), version: integer('version').notNull(),
+  digest: text('digest').notNull(), decision: text('decision').notNull(), reason: text('reason').notNull(), actorId: text('actor_id').notNull(), recordedTs: text('recorded_ts').notNull(),
+}, t => [uniqueIndex('context_review_version').on(t.packageId, t.version)]);
+
 export const approvalPolicies = sqliteTable('approval_policies', {
   repoId: text('repo_id').primaryKey(), version: text('version').notNull().references(() => approvalPolicyVersions.version), digest: text('digest').notNull(),
 });

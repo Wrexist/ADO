@@ -33,7 +33,8 @@ import { todayLockScope } from './projects/todayLocks';
 import { TodayPreferencesStore } from './projects/todayPreferences';
 import { UniverseStore } from './projects/universe';
 import { previewContextSources } from './projects/contextSource';
-import { ContextPreviewRequest, ContextSourcePreview } from '@ado/shared';
+import { ContextPreviewRequest, ContextSourcePreview, ContextPackageCreate, ContextPackageReviewRequest } from '@ado/shared';
+import { ContextPackages } from './projects/contextPackages';
 import { ZodError } from 'zod';
 import { GithubCloner, parseGithubRepo, readGitLink } from './projects/github';
 import { seedDemo } from './demo';
@@ -218,6 +219,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   const planning = new PlanningStore(db);
   const todayPreferencesStore = new TodayPreferencesStore(db);
   const universe = new UniverseStore(db);
+  const contextPackages = new ContextPackages(db, () => [env.accToken, ...connections.statusAll().map(c => connections.resolve(c.id))]);
   if (!recovery) bus.compact((msg) => app.log.info(msg)); // preserve restored history during review
   bus.replayFromDb((msg) => app.log.warn(msg));
 
@@ -701,10 +703,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     try { return work(); } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
   };
   app.post('/api/planning/tasks', async (req, reply) => planningMutation(reply, () => ({ task: planning.saveTask(req.body) })));
-  app.post('/api/planning/tasks/:id/context/preview', async (req, reply) => {
-    reply.header('cache-control', 'no-store');
-    try {
-      const request = ContextPreviewRequest.parse(req.body), taskId = (req.params as { id: string }).id;
+  const taskContextPreview = async (taskId: string, request: ContextPreviewRequest) => {
       const task = planning.snapshot().tasks.find(t => t.id === taskId);
       if (!task || task.version !== request.version) throw new Error('Task revision changed; review context again');
       const checkout = registry.assertCheckout(request.checkoutId);
@@ -713,6 +712,36 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       registry.assertCheckout(request.checkoutId);
       if (planning.snapshot().tasks.find(t => t.id === taskId)?.version !== task.version) throw new Error('Task revision changed during context inspection; review required');
       return ContextSourcePreview.parse({ ...sources, taskId, taskVersion: task.version, projectId: task.projectId, repositoryId: task.repositoryId, checkoutId: checkout.id, baseSha: request.baseSha, observedTs: new Date().toISOString(), executionEnabled: false, authority: 'reference_only' });
+  };
+  app.post('/api/planning/tasks/:id/context/preview', async (req, reply) => {
+    reply.header('cache-control', 'no-store');
+    try { return await taskContextPreview((req.params as { id: string }).id, ContextPreviewRequest.parse(req.body)); }
+    catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
+  });
+  app.post('/api/planning/tasks/:id/context/packages', async (req, reply) => {
+    reply.header('cache-control', 'no-store');
+    try {
+      const taskId = (req.params as { id: string }).id, request = ContextPackageCreate.parse(req.body);
+      const existing = contextPackages.replay(taskId, request); if (existing) return existing;
+      const preview = await taskContextPreview(taskId, { version: request.version, checkoutId: request.checkoutId, baseSha: request.baseSha, files: request.files });
+      return contextPackages.save(taskId, request, preview);
+    } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
+  });
+  for (const statusOnly of [false, true]) app.get(`/api/context/packages/:id${statusOnly ? '/status' : ''}`, async (req, reply) => {
+    if (!requireToken(req, reply)) return undefined;
+    reply.header('cache-control', 'no-store');
+    return planningMutation(reply, () => statusOnly ? contextPackages.status((req.params as { id: string }).id) : contextPackages.get((req.params as { id: string }).id));
+  });
+  app.post('/api/context/packages/:id/review', async (req, reply) => {
+    reply.header('cache-control', 'no-store');
+    try {
+      const id = (req.params as { id: string }).id, request = ContextPackageReviewRequest.parse(req.body);
+      let fresh: ContextSourcePreview | undefined;
+      if (request.decision === 'approved_for_context') {
+        const source = contextPackages.get(id).payload.source;
+        fresh = await taskContextPreview(source.taskId, { version: source.taskVersion, checkoutId: source.checkoutId, baseSha: source.baseSha, files: source.files.map(f => ({ path: f.path, expectedSha256: f.sha256 })) });
+      }
+      return contextPackages.review(id, request, fresh);
     } catch (error) { return reply.code(error instanceof ZodError ? 400 : 409).send({ error: registryError(error) }); }
   });
   app.get('/api/universe', async (req, reply) => {

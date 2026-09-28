@@ -9,9 +9,12 @@ export const ContextPreviewRequest = z.object({
 export type ContextPreviewRequest = z.infer<typeof ContextPreviewRequest>;
 export const ContextSourcePreview = z.object({
   taskId: z.string().uuid(), taskVersion: z.number().int().positive(), projectId: z.string().uuid(), repositoryId: z.string().uuid(),
-  checkoutId: z.string().uuid(), baseSha: z.string(), observedTs: z.string(), executionEnabled: z.literal(false),
+  checkoutId: z.string().uuid(), baseSha: z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/), observedTs: z.string(), executionEnabled: z.literal(false),
   status: z.enum(['unreviewed', 'review_required']), authority: z.literal('reference_only'),
-  totalBytes: z.number().int().nonnegative(), maxBytes: z.number().int().positive(),
-  files: z.array(z.object({ path: z.string(), blobId: z.string(), sha256: z.string(), bytes: z.number().int().nonnegative(), text: z.string(), comparison: z.enum(['not_supplied', 'matches_supplied_hash', 'differs_from_supplied_hash']) })),
+  totalBytes: z.number().int().nonnegative().max(65536), maxBytes: z.literal(65536),
+  files: z.array(z.object({ path: z.string(), blobId: z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/), sha256: z.string().regex(/^[a-f0-9]{64}$/), bytes: z.number().int().nonnegative().max(16384), text: z.string(), comparison: z.enum(['not_supplied', 'matches_supplied_hash', 'differs_from_supplied_hash']) })).min(1).max(16),
 });
 export type ContextSourcePreview = z.infer<typeof ContextSourcePreview>;
+export const ContextPackageCreate = ContextPreviewRequest.extend({ id: z.string().uuid() });
+export const ContextPackageReviewRequest = z.object({ id: z.string().uuid(), version: z.number().int().nonnegative(), digest: z.string().regex(/^[a-f0-9]{64}$/), decision: z.enum(['approved_for_context', 'revoked']), reason: z.string().trim().min(1).max(2000) }).strict();
+export const ContextPackagePayload = z.object({ format: z.literal(1), id: z.string().uuid(), taskSnapshotHash: z.string().regex(/^[a-f0-9]{64}$/), source: ContextSourcePreview }).strict();

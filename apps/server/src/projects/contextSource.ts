@@ -56,7 +56,7 @@ export async function previewContextSources(cwd: string, identity: string, reque
       const bytes = await git(['cat-file', 'blob', blobId]);
       if (bytes.length !== size || bytes.includes(0)) throw new Error('Context source is not supported text');
       let text: string;
-      try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+      try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
       catch { throw new Error('Context source is not valid UTF-8 text'); }
       if (containsControl(text, true)) throw new Error('Context source contains unsupported control bytes');
       if (containsSecret(text)) throw new Error('Context source contains a configured secret; selection refused');

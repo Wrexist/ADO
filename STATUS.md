@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Beständiga kontextpaket med separat granskning och återkallning
+
+Schema 0022 sparar oföränderliga källpaket bundna till task-version, task-hash, repo, checkout, bascommit och exakta filbyte. Paket och granskningshistorik kan läsas efter omstart. Godkännande som referenskontext kräver rätt digest/granskningsversion och en ny kontroll av task, checkout, HEAD och källfiler. Återkallning kräver inte att originalfilerna finns kvar. Gamla beslutsåterförsök kan inte återuppliva ett senare återkallat beslut.
+
+Historiska läsningar anger `freshness: not_checked` och ger ingen körbehörighet. Registrerade hemligheter kontrolleras igen före innehållsläsning; en separat metadatavy tillåter återkallning även när innehållet spärrats. UTF-8-BOM bevaras nu, så att lagrad text överensstämmer med filhashen. Felaktiga byte och injicerade skrivfel avvisas utan tomma reservvärden eller delvis sparade beslut.
+
+`npm run verify` passerade med typkontroll, lint, 433 tester i 97 filer och byggning. Diskprofil/API/Git-provet täcker skapande, godkännande, omstart, ändrad HEAD och återkallning med oförändrad planering och noll körningar. Underlag: `docs/controlos/context-packages.md` och `context-packages-evidence.json`; logg: `controlos-context-packages-verify.log`.
+
+Gransknings-UI, dispatchkoppling, separata instruktionsroller, handoffs och provider-/sandboxacceptans återstår. Native migration/installer/restore av schema 0022 är inte godkänd av servertesterna. B12/T10/T11 och fulla R1–R4-grindar är fortsatt öppna; 18/46 scenarier är lokalt godkända.
+
 ## Kontextunderlag kan förhandsläsas från en bestämd commit
 
 Ett autentiserat preview-API läser uttryckligen valda textfiler från taskens registrerade checkout och basrevision. Resultatet redovisar Git-blob, innehållshash och byteantal som ogranskat referensmaterial. Avvikande angiven hash kräver ny granskning. Taskversion, repoidentitet och HEAD kontrolleras runt läsningen. Ett annat projekts checkout avvisas; planering och körningar ändras inte.

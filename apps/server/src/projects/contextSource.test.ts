@@ -13,6 +13,7 @@ function fixture() {
   const git = (args: string[], input?: string) => execFileSync('git', args, { cwd: repo, input, encoding: 'utf8', windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   git(['init', '-q']); git(['config', 'user.name', 'Fixture']); git(['config', 'user.email', 'fixture@example.test']);
   for (const path of ['notes.md', ' leading.md', 'literal[1].md']) writeFileSync(join(repo, path), 'Committed reference text');
+  writeFileSync(join(repo, 'bom.md'), '\uFEFFReference with a BOM');
   writeFileSync(join(repo, 'canary.md'), 'FIXTURE_PRIVATE_CONTEXT_CANARY');
   writeFileSync(join(repo, 'binary.txt'), Buffer.from([0, 1, 2])); writeFileSync(join(repo, 'invalid.txt'), Buffer.from([255, 254, 253]));
   writeFileSync(join(repo, 'large.md'), 'a'.repeat(16385));
@@ -41,6 +42,9 @@ it('reads exact committed blobs with provenance, ignores dirty files and never e
   expect(result.files.map(f => f.text)).toEqual(Array(3).fill('Committed reference text'));
   expect(result.files.map(f => f.comparison)).toEqual(['matches_supplied_hash', 'differs_from_supplied_hash', 'not_supplied']);
   expect(result.files.every(f => f.sha256 === hash && /^[a-f0-9]{40}$/.test(f.blobId))).toBe(true);
+  const bom = await previewContextSources(h.repo, h.identity, { ...h.request, files: [{ path: 'bom.md' }] }, []);
+  expect(bom.files[0].text.charCodeAt(0)).toBe(0xfeff);
+  expect(createHash('sha256').update(bom.files[0].text).digest('hex')).toBe(bom.files[0].sha256);
   expect(existsSync(marker)).toBe(false); expect(readFileSync(join(h.repo, '.git/config'))).toEqual(config); expect(readFileSync(join(h.repo, '.git/index'))).toEqual(index);
 });
 
@@ -57,7 +61,8 @@ it('refuses excluded paths, symbolic links, submodules, binary/invalid text, kno
 
 it('binds the production preview API to current task and checkout identities without changing planning or dispatching', async () => {
   const h = fixture(), token = 'FIXTURE_PRIVATE_CONTEXT_CANARY';
-  const server = await buildServer({ port: 8787, webOrigin: 'http://localhost:5173', accToken: token, dbPath: join(h.root, 'profile.sqlite'), projectDirs: [], demo: false }, { startSystem: false });
+  const env = { port: 8787, webOrigin: 'http://localhost:5173', accToken: token, dbPath: join(h.root, 'profile.sqlite'), projectDirs: [], demo: false };
+  let server = await buildServer(env, { startSystem: false });
   const headers = { host: '127.0.0.1:8787', 'x-acc-token': token };
   try {
     const post = (url: string, payload: object) => server.app.inject({ method: 'POST', url, headers, payload });
@@ -83,6 +88,23 @@ it('binds the production preview API to current task and checkout identities wit
     expect((await post(route, { ...body, checkoutId: randomUUID() })).statusCode).toBe(409);
     expect((await post(route, { ...body, cwd: h.root })).statusCode).toBe(400);
     const secret = await post(route, { ...body, files: [{ path: 'canary.md' }] }); expect(secret.statusCode).toBe(409); expect(secret.body).not.toContain(token);
+    const create = { ...body, id: randomUUID(), files: [{ path: 'bom.md' }] }, packagesRoute = `/api/planning/tasks/${task.id}/context/packages`;
+    const saved = await post(packagesRoute, create); expect(saved.statusCode, saved.body).toBe(200);
+    const pkg = saved.json(); expect(pkg.reviewVersion).toBe(0);
+    expect((await post(packagesRoute, create)).json()).toEqual(pkg);
+    expect((await post(packagesRoute, { ...create, files: [{ path: 'notes.md' }] })).statusCode).toBe(409);
+    const reviewRoute = `/api/context/packages/${pkg.id}/review`;
+    const decision = { id: randomUUID(), version: 0, digest: pkg.digest, decision: 'approved_for_context', reason: 'Reviewed exact source bytes' };
+    expect((await post(reviewRoute, { ...decision, actorId: 'injected' })).statusCode).toBe(400);
+    expect((await post(reviewRoute, decision)).json()).toMatchObject({ reviewVersion: 1, decision: 'approved_for_context' });
+    await server.close(); server = await buildServer(env, { startSystem: false });
+    const restored = await get(`/api/context/packages/${pkg.id}`);
+    expect(restored.payload).toEqual(pkg.payload); expect(restored.digest).toBe(pkg.digest); expect(restored.reviewVersion).toBe(1); expect(restored.freshness).toBe('not_checked');
+    h.git(['commit', '--allow-empty', '-qm', 'changed after review']);
+    expect((await post(reviewRoute, { ...decision, id: randomUUID(), version: 1 })).statusCode).toBe(409);
+    const revoked = await post(reviewRoute, { ...decision, id: randomUUID(), version: 1, decision: 'revoked', reason: 'Base changed' });
+    expect(revoked.statusCode, revoked.body).toBe(200); expect(revoked.json()).toMatchObject({ reviewVersion: 2, decision: 'revoked' });
+    expect((await get(`/api/context/packages/${pkg.id}/status`)).decision).toBe('revoked');
     expect(await get('/api/planning')).toEqual(before); expect((await get('/api/runs')).runs).toEqual([]);
   } finally { await server.close(); }
 });
