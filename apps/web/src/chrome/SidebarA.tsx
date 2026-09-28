@@ -24,8 +24,6 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
       { icon: 'games', label: 'Games', count: counts.games, to: '/repositories?cat=game' },
       { icon: 'agents', label: 'Agents', count: counts.agents, to: '/agents' },
       { icon: 'templates', label: 'Templates', to: '/planned/templates' },
-      { icon: 'keys', label: 'Secrets & Keys', to: '/settings' },
-      { icon: 'integrations', label: 'Integrations', to: '/settings' },
     ],
   },
   {
@@ -49,7 +47,6 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
       { icon: 'health', label: 'Performance', to: '/performance' },
       { icon: 'sparkle', label: 'Diagnostics', count: counts.diagnostics || undefined, to: '/diagnostics' },
       { icon: 'pipeline', label: 'CI/CD Pipelines', to: '/planned/cicd-pipelines' },
-      { icon: 'releases', label: 'Releases', to: '/deployments' },
     ],
   },
   {
@@ -63,7 +60,7 @@ const buildGroups = (counts: { repositories: number; games: number; agents: numb
 
 function NavItem({ icon, label, count, active, to }: NavEntry) {
   const cls = cx(
-    'flex w-full items-center gap-2.5 rounded-tile px-3 py-2 text-body transition-colors duration-150 ease-soft',
+    'flex min-h-11 w-full items-center gap-2.5 rounded-tile px-3 py-2 text-body transition-colors duration-150 ease-soft',
     active ? 'bg-elevated font-medium text-text1' : 'text-text2 hover:bg-elevated hover:text-text1',
   );
   const inner = (
@@ -87,11 +84,11 @@ const isPlanned = (to?: string): boolean => Boolean(to?.startsWith('/planned/'))
 function SoonDisclosure({ items }: { items: NavEntry[] }) {
   return (
     <details className="group mt-2">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 pb-1 pt-5 text-label font-medium uppercase tracking-wider text-text3 hover:text-text2 [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2 text-label font-medium text-text3 hover:text-text2 [&::-webkit-details-marker]:hidden">
         <Icon name="chevronDown" size={12} className="-rotate-90 transition-transform duration-150 ease-soft group-open:rotate-0" />
         Soon ({items.length})
       </summary>
-      <div className="flex flex-col gap-0.5 opacity-55">
+      <div className="flex flex-col gap-0.5">
         {items.map((item) => (
           <NavItem key={item.label} {...item} />
         ))}
@@ -126,7 +123,7 @@ export function SidebarA() {
         {groups.map((group, gi) => (
           <div key={group.eyebrow ?? gi} className="flex flex-col gap-0.5">
             {group.eyebrow ? (
-              <p className="px-3 pb-1 pt-5 text-label font-medium uppercase tracking-wider text-text3">
+              <p className="px-3 pb-2 pt-5 text-label font-medium text-text3">
                 {group.eyebrow}
               </p>
             ) : null}

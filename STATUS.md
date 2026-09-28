@@ -1,5 +1,13 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## OpenShip-inspirerad projektöversikt
+
+Projektregistret har fått sökning, statusfilter, kort-/listvy och tydligare tomlägen. Skapande och import öppnas uttryckligen; tekniska identiteter och observationer ligger i expanderbara detaljer. Omladdning bevarar osparade ändringar och deras ursprungliga versionskontroll. Desktopnavigationen har färre dubbla länkar, lugnare sektionsrubriker och större klickytor.
+
+OpenShips källkod, licens och referensbild granskades på revision `89036eb45165c488d49ced99c76852eabc48d566`. Ingen upstream-kod, grafik eller nya beroenden kopierades. `npm run verify` passerade med 436 tester i 98 filer. Efter en tillgänglighetsrättning av statusfiltrets etikett passerade den byggda webbläsarsmoken, inklusive 375/390/768/1536 px, 844×390 liggande, båda teman, reducerad rörelse vid 375 px och kontroll att filter/layout inte ändrar projektdata. Underlag: `docs/controlos/openship-design-review.md`; bilder i `smoke-shots/` använder DEMO-data.
+
+Detta är en gränssnittsförbättring. Pågående kontextpaket-UI är bevarat separat och ännu inte färdigintegrerat. Fortsatt 18/46 lokalt godkända scenarier; ingen full R1–R4-grind är godkänd.
+
 ## Valda kontextpaket binds till task-körningen
 
 Task-dispatch kan nu välja paketets ID, digest och granskningsversion. Schema 0023 lagrar kopplingen oföränderligt med task-körningen. Task-hash, repo, checkout, bascommit, paketbyte och aktuell granskning kontrolleras före start; återkallad eller förändrad granskning stoppar en köad användning. Provider-prompten byggs från task och paket med en gemensam gräns på 65 536 UTF-8-byte. Vanlig körlogg/aktivitet får inte en extra kopia av filinnehållet. Run-API:t visar paketkopplingen.

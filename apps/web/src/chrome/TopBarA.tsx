@@ -15,7 +15,7 @@ function TopBarButton({ icon, label, to }: { icon: IconName; label: string; to: 
     <Link
       to={to}
       aria-label={label}
-      className="relative flex h-9 w-9 items-center justify-center rounded-tile border bg-card text-text2 transition-colors duration-150 ease-soft hover:border-hover hover:text-text1"
+      className="relative flex h-11 w-11 items-center justify-center rounded-tile text-text2 transition-colors duration-150 ease-soft hover:bg-elevated hover:text-text1"
     >
       <Icon name={icon} size={16} />
     </Link>
@@ -67,7 +67,7 @@ export function TopBarA() {
         <Link
           to="/settings"
           aria-label="Account settings"
-          className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-label font-semibold text-primary transition-colors duration-150 ease-soft hover:bg-primary/30"
+          className="ml-1 flex h-11 w-11 items-center justify-center rounded-full bg-elevated text-label font-semibold text-text2 transition-colors duration-150 ease-soft hover:text-text1"
         >
           <Icon name="settings" size={16} />
         </Link>

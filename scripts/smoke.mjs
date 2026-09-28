@@ -217,8 +217,12 @@ try {
     const importsBefore = importRequests;
     await page.setViewportSize({ width, height: 1024 });
     await page.goto(base + '/projects'); await pair();
-    await page.getByText('No projects registered yet. Create one to start collecting its goal and repositories.').waitFor();
+    await page.getByRole('heading', { name: 'Your next project starts here' }).waitFor();
+    await page.getByText('Import observed repository metadata', { exact: true }).click();
     if (!await page.getByRole('button', { name: 'Import DEMO observed repository', exact: true }).isDisabled()) throw new Error('Import requires an owning project');
+    await page.getByRole('button', { name: 'New project', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    if (!await page.getByLabel('Project name', { exact: true }).evaluate((element) => element === document.activeElement)) throw new Error('New project must focus its name');
     await page.getByLabel('Project name', { exact: true }).fill('DEMO product');
     await page.getByLabel('Project goal', { exact: true }).fill('DEMO: preserve the manually chosen project goal.');
     await page.getByLabel('Focus project', { exact: true }).check();
@@ -228,18 +232,52 @@ try {
     await page.getByRole('button', { name: 'Edit DEMO product', exact: true }).click();
     if (!await page.getByLabel('Project name', { exact: true }).evaluate((element) => element === document.activeElement)) throw new Error('Edit form needs keyboard focus');
     await page.getByLabel('Project name', { exact: true }).fill('DEMO product renamed');
+    await page.getByRole('button', { name: 'Reload registry', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Registry reloaded.' }).waitFor();
+    if (await page.getByLabel('Project name', { exact: true }).inputValue() !== 'DEMO product renamed') throw new Error('Reload discarded an unsaved project draft');
     await page.getByRole('button', { name: 'Save project', exact: true }).click();
     await page.getByRole('heading', { name: 'DEMO product renamed', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Import DEMO observed repository', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Repository metadata imported.' }).waitFor();
     if (importRequests !== importsBefore + 1) throw new Error('Expected exactly one explicit import');
     await page.reload(); await pair();
+    await page.getByText('Repositories & identity', { exact: true }).focus();
+    await page.keyboard.press('Enter');
     await page.getByText(`Checkout ID: ${portfolioCheckoutId}`, { exact: true }).waitFor();
     await page.getByText('DEMO: preserve the manually chosen project goal.', { exact: true }).waitFor();
     await page.getByText('Default branch: not verified', { exact: true }).waitFor();
     if (portfolio.projects.length !== 1 || portfolio.projects[0].version !== 2) throw new Error('Edit created a duplicate project');
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Project registry overflow at ${width}px`);
     await page.screenshot({ path: join(out, `project-registry-${width}.png`), fullPage: true });
+  }
+  // Explicit DEMO design fixture: no pilot data, real provider or deployment.
+  portfolio.projects.push(
+    { ...portfolio.projects[0], id: '44444444-4444-4444-8444-444444444444', name: 'DEMO Design system', kind: 'library', goal: 'Shared components and accessible patterns for the next release.', lifecycle: 'maintenance', focus: false },
+    { ...portfolio.projects[0], id: '55555555-5555-4555-8555-555555555555', name: 'DEMO Mobile companion', kind: 'mobile', goal: 'Capture ideas on the move. Connection work is still pending.', lifecycle: 'paused', focus: false },
+  );
+  for (const width of [1536, 768, 390, 375, 844]) {
+    await page.setViewportSize({ width, height: width === 844 ? 390 : 1024 });
+    await page.emulateMedia({ reducedMotion: width === 375 ? 'reduce' : 'no-preference' });
+    await page.goto(base + '/projects'); await pair();
+    await page.getByRole('heading', { name: 'DEMO Mobile companion', exact: true }).waitFor();
+    const before = JSON.stringify(portfolio);
+    await page.getByLabel('Search projects', { exact: true }).fill('mobile');
+    if (await page.getByRole('region', { name: 'Project list', exact: true }).getByRole('heading').count() !== 1) throw new Error('Project search did not narrow the list');
+    await page.getByLabel('Project status', { exact: true }).selectOption('active');
+    await page.getByRole('heading', { name: 'No matching projects' }).waitFor();
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    if (await page.getByRole('region', { name: 'Project list', exact: true }).getByRole('heading').count() !== 3) throw new Error('Clear filters did not restore projects');
+    await page.getByRole('button', { name: 'List view', exact: true }).focus(); await page.keyboard.press('Enter');
+    if (await page.getByRole('button', { name: 'List view', exact: true }).getAttribute('aria-pressed') !== 'true') throw new Error('Keyboard list view failed');
+    await page.screenshot({ path: join(out, `openship-projects-list-${width}.png`), fullPage: true, animations: 'disabled' });
+    await page.getByRole('button', { name: 'Grid view', exact: true }).click();
+    for (const theme of ['light', 'dark']) {
+      if (await page.locator('html').getAttribute('data-theme') !== theme) await page.getByRole('button', { name: `Switch to ${theme} theme` }).click();
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Project overview overflow at ${width}px/${theme}`);
+      await page.screenshot({ path: join(out, `openship-projects-${theme}-${width}.png`), fullPage: true, animations: 'disabled' });
+    }
+    await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    if (JSON.stringify(portfolio) !== before) throw new Error('Presentation controls mutated project data');
   }
   // Credential state fixture: no real provider request or saved credential.
   const connectionFixture = { id: 'github', configured: true, authentication: 'unverified', checkedTs: null,
