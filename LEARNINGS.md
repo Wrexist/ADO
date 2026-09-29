@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-29: "We only read GitHub" is a claim until code enforces it. A request hook that refuses non-GET methods turns the T18 scope into a tested boundary.
+
 - 2026-09-29: An agent's cwd is attacker-controlled config: repo .claude/settings.json and .mcp.json load by default. Spawn with --setting-sources user --strict-mcp-config, keep workspaces outside the app tree, and gate billing on the init event's apiKeySource.
 
 - 2026-09-29: Per-item best-effort catches can hide a rate limit and keep hammering the API. Classify rate limits separately and abort the whole pass; treat a partial pass as a failure for backoff.

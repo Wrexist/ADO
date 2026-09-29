@@ -17,6 +17,12 @@ export class OctokitClient implements GitHubClient {
 
   constructor(token: string, fetchImpl: typeof fetch = fetch) {
     this.octokit = new Octokit({ auth: token, request: { fetch: fetchImpl } });
+    // T18 scope: the dashboard only reads GitHub. A write has an uncertain outcome on
+    // timeout and would need a journal with a stable identity, a lookup before any retry
+    // and an unknown_outcome state. Until that exists, writes are refused here.
+    this.octokit.hook.before('request', (options) => {
+      if (options.method !== 'GET' && options.method !== 'HEAD') throw new Error(`GitHub ${options.method} refused: the dashboard is read-only on GitHub`);
+    });
   }
 
   /** Run a call with the cached ETag; a 304 (resolved or thrown) returns cached data. */

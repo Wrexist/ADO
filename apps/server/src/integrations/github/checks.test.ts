@@ -55,3 +55,17 @@ it.each(['initial-head', 'initial-unavailable', 'head', 'base', 'closed', 'numbe
   expect(result).toMatchObject({ number: 1, mergeable: null, checks: null });
   expect(checkReads).toBe(change.startsWith('initial-') ? 0 : 1);
 });
+
+it('refuses every GitHub write before it leaves the process (T18 scope)', async () => {
+  const requests: string[] = [];
+  const fake = (async (input: string | URL | Request, init?: RequestInit) => { requests.push(`${init?.method ?? 'GET'} ${String(input)}`); return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }); }) as typeof fetch;
+  const client = new OctokitClient('fixture-token', fake);
+  const octokit = (client as unknown as { octokit: { request: (route: string, params?: object) => Promise<unknown> } }).octokit;
+  for (const route of ['POST /repos/{owner}/{repo}/issues', 'PATCH /repos/{owner}/{repo}', 'PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge', 'DELETE /repos/{owner}/{repo}']) {
+    await expect(octokit.request(route, { owner: 'o', repo: 'r', pull_number: 1 })).rejects.toThrow('read-only on GitHub');
+  }
+  expect(requests).toEqual([]);
+  await client.listReleases('o', 'r');
+  expect(requests).toHaveLength(1);
+  expect(requests[0]).toMatch(/^GET /);
+});

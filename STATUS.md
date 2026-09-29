@@ -1,5 +1,9 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## T18 avgränsat till dashboardens egna GitHub-operationer
+
+Beslut 2026-09-29 (Isac): T18 gäller endast GitHub-operationer som ControlOS själv utför. Agenters GitHub-skrivningar via egna verktyg ligger utanför. ControlOS läser bara GitHub, och det är nu tvingat i koden: adaptern nekar alla metoder utom GET/HEAD innan anropet lämnar processen (test i `checks.test.ts`). Regler för eventuella framtida skrivningar (stabil identitet, journal, `unknown_outcome`, uppslag före omförsök) står i `docs/controlos/t18-scope.md`. Scenariostatus ändras inte här; det är ett grindbeslut.
+
 ## Identitet, bas, omförsök, kontext och origin (2026-09-29)
 
 - **T01:** Synkade GitHub-repon identifieras med numeriskt repo-ID; namnbyte uppdaterar samma post och ett återanvänt namn får en egen post (`github-repo-identity.md`).

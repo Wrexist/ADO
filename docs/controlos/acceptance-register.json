@@ -845,7 +845,12 @@
       "id": "T18",
       "title": "Oklart externt utfall",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R1. **Krav:** REQ12, REQ20. **Status:** not_run.\n\n**Givet:** En operation mot GitHub får timeout efter att motparten kan ha utfört den.\n\n**När:** Återförsök övervägs.\n\n**Godkänt endast om:** Det externa objektet söks via stabil identitet före nytt försök. Oklart resultat visas som unknown_outcome.\n\n**Gäller:** always."
+      "specification": "**Grind:** R1. **Krav:** REQ12, REQ20. **Status:** not_run.\n\n**Givet:** En operation mot GitHub får timeout efter att motparten kan ha utfört den.\n\n**När:** Återförsök övervägs.\n\n**Godkänt endast om:** Det externa objektet söks via stabil identitet före nytt försök. Oklart resultat visas som unknown_outcome.\n\n**Gäller:** always.",
+      "scopeDecision": "2026-09-29 (Isac): covers only GitHub operations performed by ControlOS itself; agent tool writes are out of scope. See docs/controlos/t18-scope.md.",
+      "relatedEvidence": [
+        "docs/controlos/t18-scope.md",
+        "apps/server/src/integrations/github/checks.test.ts"
+      ]
     },
     {
       "id": "T19",
