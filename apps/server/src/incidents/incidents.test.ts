@@ -145,7 +145,7 @@ const HOST = { host: '127.0.0.1:8787' };
 const AUTH = { ...HOST, 'x-acc-token': 'test-token' };
 
 const SUCCESS_STREAM = [
-  '{"type":"system","subtype":"init"}',
+  '{"type":"system","subtype":"init","apiKeySource":"none"}',
   '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":10,"output_tokens":5}}',
 ];
 function fakeSpawner(lines: string[], code = 0): Spawner {

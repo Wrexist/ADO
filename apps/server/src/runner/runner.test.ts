@@ -10,7 +10,7 @@ import { ProcessNotStartedError } from '../lib/processLaunch';
 
 describe('stream-json adapter (council B5)', () => {
   it('normalizes known line shapes', () => {
-    expect(parseStreamLine('{"type":"system","subtype":"init"}')).toEqual([{ kind: 'started' }]);
+    expect(parseStreamLine('{"type":"system","subtype":"init","apiKeySource":"none"}')).toEqual([{ kind: 'started' }]);
     expect(parseStreamLine('{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit"}]}}')).toEqual([{ kind: 'tool', name: 'Edit' }]);
     const done = parseStreamLine('{"type":"result","subtype":"success","num_turns":3,"usage":{"input_tokens":100,"output_tokens":50}}');
     expect(done[0]).toMatchObject({ kind: 'done', ok: true, tokensIn: 100, tokensOut: 50, turns: 3 });
@@ -43,7 +43,7 @@ function fakeSpawner(lines: string[], code = 0): Spawner {
 }
 
 const SUCCESS_STREAM = [
-  '{"type":"system","subtype":"init"}',
+  '{"type":"system","subtype":"init","apiKeySource":"none"}',
   '{"type":"assistant","message":{"content":[{"type":"text","text":"Reading the code"}]}}',
   '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit"}]}}',
   '{"type":"result","subtype":"success","num_turns":2,"usage":{"input_tokens":1200,"output_tokens":340}}',
@@ -127,7 +127,7 @@ describe('runner (Prompts 3.1–3.2)', () => {
   it('a failed exit marks the run + build failed', async () => {
     const { db, sqlite } = openDb(':memory:');
     const bus = new Bus(db);
-    const runner = new Runner(bus, db, fakeSpawner(['{"type":"system","subtype":"init"}'], 1), { cwdFor });
+    const runner = new Runner(bus, db, fakeSpawner(['{"type":"system","subtype":"init","apiKeySource":"none"}'], 1), { cwdFor });
     const { runId } = runner.dispatch({ repoId: 'sentinel', task: 'x' });
     await drain();
     expect(db.select().from(runs).where(eq(runs.id, runId)).get()!.status).toBe('failed');
@@ -140,7 +140,7 @@ describe('runner (Prompts 3.1–3.2)', () => {
     const bus = new Bus(db);
     const calls: Array<{ runId: string; ok: boolean; resultText: string | null }> = [];
     const stream = [
-      '{"type":"system","subtype":"init"}',
+      '{"type":"system","subtype":"init","apiKeySource":"none"}',
       '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":1,"output_tokens":1},"result":"TESTFLIGHT_UPLOADED com.a.b 1.0 (2)"}',
     ];
     const runner = new Runner(bus, db, fakeSpawner(stream), {
@@ -168,7 +168,7 @@ describe('runner (Prompts 3.1–3.2)', () => {
     const { db, sqlite } = openDb(':memory:');
     const bus = new Bus(db);
     const stream = [
-      '{"type":"system","subtype":"init"}',
+      '{"type":"system","subtype":"init","apiKeySource":"none"}',
       '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit"}]}}',
       '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":5,"output_tokens":5},"result":"All done: fixed the test."}',
     ];
@@ -267,6 +267,29 @@ describe('runner (Prompts 3.1–3.2)', () => {
     const b = runner.dispatch({ repoId: 'sentinel', task: 'b' });
     await drain();
     expect(db.select().from(runs).where(eq(runs.id, b.runId)).get()!.status).toBe('done'); // slot was free
+    sqlite.close();
+  });
+});
+
+describe('API billing guard (T32)', () => {
+  it.each(['ANTHROPIC_API_KEY', 'apiKeyHelper', undefined])('refuses init with apiKeySource %s', (source) => {
+    expect(() => parseStreamLine(JSON.stringify({ type: 'system', subtype: 'init', ...(source ? { apiKeySource: source } : {}) })))
+      .toThrow(source ? `API billing (${source})` : 'subscription billing could not be confirmed');
+  });
+
+  it('stops an API-billed run at init and never records a result', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const bus = new Bus(db);
+    const runner = new Runner(bus, db, fakeSpawner([
+      '{"type":"system","subtype":"init","apiKeySource":"ANTHROPIC_API_KEY"}',
+      '{"type":"result","subtype":"success","num_turns":1,"usage":{"input_tokens":5,"output_tokens":5},"result":"should not count"}',
+    ]), { cwdFor });
+    const { runId } = runner.dispatch({ repoId: 'sentinel', task: 'x' });
+    await drain();
+    const row = db.select().from(runs).where(eq(runs.id, runId)).get()!;
+    expect(row.status).toBe('failed');
+    expect(row.note).toContain('API billing (ANTHROPIC_API_KEY)');
+    expect(row.tokensIn).toBeNull();
     sqlite.close();
   });
 });

@@ -310,7 +310,7 @@ const ts = '2026-07-13T08:00:00.000Z';
 function fakeSpawner(): Spawner {
   return {
     spawn(_opts: SpawnOpts): SpawnHandle {
-      async function* gen() { yield '{"type":"system","subtype":"init"}'; }
+      async function* gen() { yield '{"type":"system","subtype":"init","apiKeySource":"none"}'; }
       return { lines: gen(), done: Promise.resolve(0), kill: () => {} };
     },
   };

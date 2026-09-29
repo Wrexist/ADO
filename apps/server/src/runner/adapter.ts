@@ -20,9 +20,19 @@ export type AgentUpdate =
 /** Cap on the captured final text — enough for outcome markers + a summary, never unbounded. */
 const RESULT_TEXT_CAP = 4000;
 
+/** Thrown when the CLI would authenticate with API billing instead of a subscription. */
+export class ApiBillingRefused extends Error {
+  constructor(readonly source: string | null) {
+    super(source
+      ? `Stopped before any model request: Claude Code is using API billing (${source}). ControlOS runs agents only on a subscription sign-in and no API budget is configured. Run \`claude\` and sign in with your Claude subscription, or remove the API key from Claude Code settings.`
+      : 'Stopped before any model request: Claude Code did not report how it is signed in, so subscription billing could not be confirmed. Update Claude Code and sign in with your Claude subscription.');
+  }
+}
+
 interface Line {
   type?: unknown;
   subtype?: unknown;
+  apiKeySource?: unknown;
   message?: { content?: Array<{ type?: string; name?: string; text?: string }> };
   usage?: { input_tokens?: number; output_tokens?: number };
   num_turns?: number;
@@ -45,7 +55,14 @@ export function parseStreamLine(raw: string, secrets: Array<string | undefined> 
 
   switch (obj.type) {
     case 'system':
-      return obj.subtype === 'init' ? [{ kind: 'started' }] : [];
+      if (obj.subtype !== 'init') return [];
+      // T32: agents run only on the CLI's subscription sign-in ('none' = no API key in
+      // use). An API key, key helper or missing field could bill per token with no budget
+      // chosen, so the run stops at init, before its first model request.
+      if (obj.apiKeySource !== 'none') {
+        throw new ApiBillingRefused(typeof obj.apiKeySource === 'string' ? redact(obj.apiKeySource, secrets).slice(0, 60) : null);
+      }
+      return [{ kind: 'started' }];
 
     case 'assistant': {
       const content = obj.message?.content;

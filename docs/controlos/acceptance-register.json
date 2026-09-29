@@ -523,7 +523,8 @@
         "apps/web/src/lib/context.ts",
         "scripts/probe-context-packages.mts",
         "docs/controlos/context-packages-ui.md",
-        "docs/controlos/context-packages-ui-evidence.json"
+        "docs/controlos/context-packages-ui-evidence.json",
+        "docs/controlos/agent-policy-boundary.md"
       ],
       "coverageNote": "Immutable source packages and exact dispatch bindings now have a built-renderer review flow: preview, save, approval/revocation, explicit selection, versioned retries and metadata-only recovery. Production Git/context API browser evidence covers lost responses, changed HEAD refusal and preserved selection on revoked/inaccessible content; dispatch is captured as an explicit UI fixture. Instruction roles, handoff provenance, full stale-memory treatment, live provider budgets and full sandbox/provider canary acceptance remain open."
     },
@@ -1158,7 +1159,8 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R3. **Krav:** REQ19. **Status:** not_run.\n\n**Givet:** API-betalt autentiseringsläge har ingen användarvald budget.\n\n**När:** En betalande körning startas.\n\n**Godkänt endast om:** Start nekas med budgetval, ingen dold fallback från abonnemang till API-betalning.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/runner/codex.test.ts"
+        "apps/server/src/runner/codex.test.ts",
+        "docs/controlos/agent-policy-boundary.md"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },

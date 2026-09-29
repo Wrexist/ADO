@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-29: An agent's cwd is attacker-controlled config: repo .claude/settings.json and .mcp.json load by default. Spawn with --setting-sources user --strict-mcp-config, keep workspaces outside the app tree, and gate billing on the init event's apiKeySource.
+
 - 2026-09-29: Per-item best-effort catches can hide a rate limit and keep hammering the API. Classify rate limits separately and abort the whole pass; treat a partial pass as a failure for backoff.
 
 - 2026-09-29: A "Verify" button users must remember is friction; check right after save and once on page open, but keep freshness expiry so an old check never stays green.

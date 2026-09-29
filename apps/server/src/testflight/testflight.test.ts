@@ -194,7 +194,7 @@ const AUTH = { ...HOST, 'x-acc-token': 'test-token' };
 function fakeSpawner(): Spawner {
   return {
     spawn(_opts: SpawnOpts): SpawnHandle {
-      async function* gen() { yield '{"type":"system","subtype":"init"}'; }
+      async function* gen() { yield '{"type":"system","subtype":"init","apiKeySource":"none"}'; }
       return { lines: gen(), done: Promise.resolve(0), kill: () => {} };
     },
   };

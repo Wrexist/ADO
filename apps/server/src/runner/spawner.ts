@@ -38,24 +38,27 @@ export interface Spawner {
 
 /** Env allow-list: only what a child process legitimately needs. NO secrets. */
 
+export const CLAUDE_POLICY_ARGS: readonly string[] = [
+  '-p', '--output-format', 'stream-json', '--verbose',
+  '--setting-sources', 'user',
+  '--strict-mcp-config',
+];
+
 export class ClaudeSpawner implements Spawner {
   constructor(private readonly executable = (args: string[]) => commandFor('claude', args)) {}
   spawn(opts: SpawnOpts): SpawnHandle {
-    const args = [
-      '-p',
-      opts.prompt,
-      '--output-format',
-      'stream-json',
-      '--verbose',
-      '--max-turns',
-      String(opts.turnCap),
-    ];
+    // The prompt goes over stdin: it can carry untrusted reference text and exceed the
+    // Windows command-line limit, and argv is visible to other local processes.
+    // Only the owner's user settings load; settings, hooks and MCP servers committed in
+    // the target repository cannot change the agent's policy (T10).
+    const args = CLAUDE_POLICY_ARGS.concat(['--max-turns', String(opts.turnCap)]);
     if (opts.model) args.push('--model', opts.model);
 
     const executable = this.executable(args);
     const owned = spawnOwned(executable.command, executable.args, opts.cwd, opts.onProcessIdentity, opts.receiptRoot);
     const { child, done, kill } = owned;
-    child.stdin.end();
+    child.stdin.on('error', () => { /* child exited before reading; its exit status reports the failure */ });
+    child.stdin.end(opts.prompt);
     // Best-effort: drop the child's scheduling priority so a build can't pin the box.
     try {
       // On Windows this is the control host, not the agent. Keep its inherited

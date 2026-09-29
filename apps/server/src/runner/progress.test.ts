@@ -14,7 +14,7 @@ it('preserves rapid same-millisecond status updates and never derives progress f
   const runner = new Runner(bus, db, { spawn(options) {
     cap = options.turnCap;
     return { lines: (async function* () {
-      yield '{"type":"system","subtype":"init"}';
+      yield '{"type":"system","subtype":"init","apiKeySource":"none"}';
       yield '{"type":"assistant","message":{"content":[{"type":"text","text":"First update"}]}}';
       yield '{"type":"assistant","message":{"content":[{"type":"text","text":"Latest update"}]}}';
       yield '{"type":"result","subtype":"success","num_turns":8}';

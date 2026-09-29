@@ -1,5 +1,9 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Agentgräns och betalningsspärr
+
+Claude-agenter startas nu med `--setting-sources user` och `--strict-mcp-config`, så inställningar, hooks och MCP-servrar som committats i målrepot inte kan ändra agentens policy. Prompten skickas via stdin i stället för kommandoraden. Arbetskopior ligger utanför profilen och ControlOS-mappen. En körning stoppas vid init, före första modellanropet, om Claude Code inte rapporterar prenumerationsinloggning (`apiKeySource: none`); det finns inget API-betalt läge och därmed ingen dold övergång. 493 tester passerade och ett kontrollerat riktigt anrop med Claude Code 2.1.284 bekräftade flaggor, stdin och `apiKeySource: none`. Underlag: `docs/controlos/agent-policy-boundary.md`. T10/T14/T32 återstår.
+
 ## GitHub otillgängligt eller rate-limitat
 
 En synk avbryts nu vid första rate-limit (429, eller 403 med `x-ratelimit-remaining: 0`/`retry-after`) och nästa försök väntar till GitHubs återställning, begränsat till 1–60 minuter. Delvis misslyckade pass ger fördubblad väntetid i stället för 60 s. Tidigare repodata ändras inte. Systemstatus visar “Data from …” för degraderad tjänst via senaste friska kontroll. 485 tester och smoke passerade; endast fixturer, ingen verklig GitHub-störning. Underlag: `docs/controlos/github-unavailable.md`. Full T34 återstår; fortsatt 18/46.

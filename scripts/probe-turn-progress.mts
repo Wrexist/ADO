@@ -26,7 +26,7 @@ assert.equal(parseStreamLine(resultLine).find(update => update.kind === 'done')?
 const spawner: Spawner = { spawn(options) {
   starts++; observedCap = options.turnCap;
   return { lines: (async function* () {
-    yield JSON.stringify({ type: 'system', subtype: 'init' });
+    yield JSON.stringify({ type: 'system', subtype: 'init', apiKeySource: 'none' });
     yield JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'Offline fixture waiting for process exit' }] } });
     yield resultLine; streamConsumed = true;
   })(), done, kill() { finish(1); }, terminationConfirmed: () => true };

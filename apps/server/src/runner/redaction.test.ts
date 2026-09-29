@@ -19,7 +19,7 @@ it('redacts real child stdout, stderr and provider failure before runner storage
   writeFileSync(child, `
 const secret = ${JSON.stringify(credential)};
 const emit = (message) => process.stdout.write(JSON.stringify(message)+'\\n');
-emit({type:'system',subtype:'init'});
+emit({type:'system',subtype:'init',apiKeySource:'none'});
 emit({type:'assistant',message:{content:[{type:'text',text:'stdout '+secret},{type:'tool_use',name:secret}]}});
 process.stderr.write('stderr '+secret.slice(0, 12));
 process.stderr.write(secret.slice(12)+'\\r\\n');

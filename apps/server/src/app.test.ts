@@ -210,7 +210,7 @@ describe('run log + live run control API (persisted history, honest timeline sta
   const spawner: Spawner = {
     spawn(_opts: SpawnOpts): SpawnHandle {
       async function* gen() {
-        yield '{"type":"system","subtype":"init"}';
+        yield '{"type":"system","subtype":"init","apiKeySource":"none"}';
         yield '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit"}]}}';
         yield '{"type":"result","subtype":"success","num_turns":2,"usage":{"input_tokens":1200,"output_tokens":340},"result":"All green — fixed the flaky test."}';
       }

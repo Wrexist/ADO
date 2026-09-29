@@ -2,6 +2,7 @@
  * Server factory (Prompt 2.1): security → bus → routes. Split from index.ts so
  * tests can build an app against :memory: without binding a port.
  */
+import { agentWorkspaceRoot } from './runner/workspaceRoot';
 import { randomUUID } from 'node:crypto';
 import { existsSync, statSync } from 'node:fs';
 import { and, desc, eq, gte } from 'drizzle-orm';
@@ -510,7 +511,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
       assertCheckout: (id, sourceId, cwd) => registry.assertCheckout(id, sourceId, cwd),
       defaultProvider: env.agentProvider,
       secrets: () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))],
-      workspaceRoot: deps.workspaceRoot ?? (!deps.spawner && !env.demo ? join(dirname(env.dbPath), 'workspaces') : undefined),
+      workspaceRoot: deps.workspaceRoot ?? (!deps.spawner && !env.demo ? agentWorkspaceRoot(env.dbPath) : undefined),
       receiptRoot: !deps.spawner && !env.demo ? join(dirname(env.dbPath), 'process-receipts') : undefined,
       blockedReason: (repoId) => recoveryReview ? recoveryMessage :
         projectSettings.isEnabled(repoId, 'agents')
