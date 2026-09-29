@@ -41,3 +41,6 @@ apps/desktop/release/
 
 # Local version-specific provider protocol inspection
 docs/controlos/codex-schema-*/
+
+# commercial render output (frames, shots, video)
+marketing/commercial/build/

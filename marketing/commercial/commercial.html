@@ -1,0 +1,230 @@
+<!doctype html>
+<!--
+  ControlOS commercial — 42 s, 1920×1080. Every frame is a pure function of time:
+  window.render(t) positions everything, so render.mts can step frame by frame.
+  Screens are real captures (capture.mts). Copy is a single-shot draft for Isac to edit.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ControlOS</title>
+<style>
+  @font-face { font-family: Inter; font-weight: 400; src: url('../../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: Inter; font-weight: 500; src: url('../../node_modules/@fontsource/inter/files/inter-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: Inter; font-weight: 600; src: url('../../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family: Inter; font-weight: 700; src: url('../../node_modules/@fontsource/inter/files/inter-latin-700-normal.woff2') format('woff2'); }
+  :root { --bg: #0A0A12; --text1: #F4F5FA; --text2: #9CA0B4; --text3: #5E6274; --violet: #7C5CFF; --from: #A855F7; --to: #EC4899; --success: #22C55E; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  body { font-family: Inter, system-ui, sans-serif; color: var(--text1); -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  .layer { position: absolute; inset: 0; will-change: opacity, transform; }
+  #glow { position: absolute; width: 1600px; height: 1600px; left: 160px; top: -560px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(124,92,255,0.28), rgba(236,72,153,0.08) 55%, transparent 72%); filter: blur(10px); }
+  #grid { position: absolute; inset: -200px; background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 64px 64px; mask-image: radial-gradient(ellipse at 50% 40%, black 20%, transparent 70%); }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,0.55)); pointer-events: none; }
+
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .mark { width: 120px; height: 120px; border-radius: 50%; border: 22px solid var(--text1); box-shadow: 0 0 80px rgba(124,92,255,0.35); }
+  .brand { font-size: 112px; font-weight: 700; letter-spacing: -0.045em; }
+  .tagline { font-size: 34px; font-weight: 500; color: var(--text2); letter-spacing: -0.01em; }
+  .grad { background: linear-gradient(90deg, var(--from), var(--to)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .word { position: absolute; font-size: 120px; font-weight: 700; letter-spacing: -0.045em; white-space: nowrap; }
+  .line { font-size: 64px; font-weight: 600; letter-spacing: -0.035em; }
+
+  .copy { position: absolute; left: 120px; top: 150px; width: 560px; }
+  .eyebrow { font-size: 18px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--violet); }
+  .headline { margin-top: 22px; font-size: 72px; font-weight: 700; line-height: 1.02; letter-spacing: -0.045em; }
+  .sub { margin-top: 28px; font-size: 28px; line-height: 1.45; color: var(--text2); font-weight: 400; letter-spacing: -0.005em; }
+
+  .window { position: absolute; left: 760px; top: 150px; width: 1440px; height: 900px; border-radius: 22px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.10); background: #111118;
+    box-shadow: 0 60px 140px rgba(0,0,0,0.65), 0 0 0 1px rgba(124,92,255,0.10), 0 0 120px rgba(124,92,255,0.18); transform-origin: 0% 50%; }
+  .window .bar { height: 40px; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: #16161F; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .window .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+  .window .title { margin-left: 14px; font-size: 14px; color: var(--text3); font-weight: 500; }
+  .window .viewport { position: absolute; top: 40px; left: 0; right: 0; bottom: 0; overflow: hidden; }
+  .window img { display: block; width: 1440px; height: auto; position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+  .pillars { display: flex; gap: 36px; margin-top: 64px; }
+  .pillar { width: 440px; padding: 40px 38px; border-radius: 24px; background: rgba(20,20,31,0.85); border: 1px solid rgba(255,255,255,0.08); text-align: left; }
+  .pillar .k { font-size: 16px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--violet); }
+  .pillar .v { margin-top: 16px; font-size: 32px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.2; }
+  .pillar .d { margin-top: 14px; font-size: 20px; color: var(--text2); line-height: 1.45; }
+
+  .cta { margin-top: 56px; display: inline-flex; align-items: center; gap: 14px; padding: 22px 40px; border-radius: 999px; font-size: 28px; font-weight: 600;
+    background: linear-gradient(90deg, var(--violet), #9B6BFF); box-shadow: 0 20px 60px rgba(124,92,255,0.45); }
+  .fine { margin-top: 26px; font-size: 20px; color: var(--text3); }
+  #fade { position: absolute; inset: 0; background: #000; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="grid"></div>
+  <div id="glow"></div>
+
+  <!-- 1 · brand open -->
+  <div class="layer center" id="s1">
+    <div class="mark" id="s1mark"></div>
+    <div class="brand" id="s1brand" style="margin-top:44px">ControlOS</div>
+    <div class="tagline" id="s1tag" style="margin-top:18px">Mission control for your code.</div>
+  </div>
+
+  <!-- 2 · the problem -->
+  <div class="layer" id="s2">
+    <div class="word" id="w1">Repositories.</div>
+    <div class="word" id="w2">Builds.</div>
+    <div class="word" id="w3">Agents.</div>
+    <div class="word" id="w4">Deploys.</div>
+    <div class="layer center" id="s2line"><div class="line">All in <span class="grad">one calm place.</span></div></div>
+  </div>
+
+  <!-- 3–6 · product scenes -->
+  <div class="layer" id="scene">
+    <div class="copy" id="copy">
+      <div class="eyebrow" id="eyebrow"></div>
+      <div class="headline" id="headline"></div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="window" id="win">
+      <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title" id="wintitle">ControlOS</span></div>
+      <div class="viewport"><img id="imgA" alt="" /><img id="imgB" alt="" /></div>
+    </div>
+  </div>
+
+  <!-- 7 · trust -->
+  <div class="layer center" id="s7">
+    <div class="line" id="s7title">Built to be <span class="grad">trusted.</span></div>
+    <div class="pillars">
+      <div class="pillar" id="p1"><div class="k">Local-first</div><div class="v">Runs on your machine.</div><div class="d">Your projects, history and keys stay on this computer.</div></div>
+      <div class="pillar" id="p2"><div class="k">Honest data</div><div class="v">Nothing is faked.</div><div class="d">Missing or stale data is shown as missing or stale — never a guess.</div></div>
+      <div class="pillar" id="p3"><div class="k">You decide</div><div class="v">Every result is reviewed.</div><div class="d">Agent work waits for your explicit acceptance.</div></div>
+    </div>
+  </div>
+
+  <!-- 8 · end card -->
+  <div class="layer center" id="s8">
+    <div class="mark" id="s8mark" style="width:96px;height:96px;border-width:18px"></div>
+    <div class="brand" id="s8brand" style="margin-top:36px;font-size:96px">ControlOS</div>
+    <div class="tagline" id="s8tag" style="margin-top:14px">Every project. One command center.</div>
+    <div class="cta" id="s8cta">Download for Windows</div>
+    <div class="fine" id="s8fine">Works with Claude Code and GitHub</div>
+  </div>
+
+  <div id="vignette"></div>
+  <div id="fade"></div>
+</div>
+
+<script>
+  const DURATION = 42;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x) => Math.max(0, Math.min(1, x));
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const outCubic = (x) => 1 - Math.pow(1 - x, 3);
+  const inOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const outExpo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+  // Visible from a to b with eased fades in/out.
+  const window_ = (t, a, b, fadeIn = 0.6, fadeOut = 0.6) => Math.min(outCubic(seg(t, a, a + fadeIn)), 1 - inOutCubic(seg(t, b - fadeOut, b)));
+  const set = (el, opacity, transform = '') => { el.style.opacity = opacity.toFixed(4); el.style.transform = transform; el.style.visibility = opacity <= 0.001 ? 'hidden' : 'visible'; };
+
+  const SCENES = [
+    { a: 8.6, b: 15.4, eyebrow: 'Overview', head: 'Every project,<br>at a glance.', sub: 'Repositories, builds, agents and deployments — live, in one place.', img: 'build/shots/command.png', title: 'Workspace overview', zoom: 1, pan: [0, 0, 0, -40] },
+    { a: 15.4, b: 21.8, eyebrow: 'Operations', head: 'Know what’s<br>actually passing.', sub: 'CI results are checked against your latest commit. Anything older is labeled — never counted.', img: 'build/shots/ops.png', title: 'Operations', zoom: 1, pan: [0, 0, 0, -40] },
+    { a: 21.8, b: 28.4, eyebrow: 'Agents', head: 'Hand the work<br>to Claude.', sub: 'Dispatch agents into your repos, follow every run, and accept only what you’ve reviewed.', img: 'build/shots/project.png', img2: 'build/shots/agents.png', title: 'SENTINEL', zoom: 1, pan: [0, 0, 0, -30] },
+    { a: 28.4, b: 33.6, eyebrow: 'Setup', head: 'Ready in<br>three steps.', sub: 'Pick your code folder. Sign in to Claude. Connect GitHub if you like.', img: 'build/shots/first-run.png', title: 'Get started', zoom: 1.2, pan: [-230, -120, -230, -220] },
+  ];
+
+  let currentImg = '';
+  function render(t) {
+    // global: opening fade from black, closing fade to black
+    set($('fade'), Math.max(1 - seg(t, 0, 0.8), seg(t, DURATION - 0.8, DURATION)));
+    const drift = Math.sin(t * 0.25) * 40;
+    $('glow').style.transform = `translate(${drift}px, ${Math.cos(t * 0.2) * 30}px) scale(${1 + 0.04 * Math.sin(t * 0.3)})`;
+    $('grid').style.transform = `translateY(${-(t * 6) % 64}px)`;
+
+    // 1 · brand open 0–4.4
+    const s1 = window_(t, 0.2, 4.4, 0.9, 0.7);
+    set($('s1'), s1);
+    const m = outExpo(seg(t, 0.3, 1.6));
+    $('s1mark').style.transform = `scale(${0.6 + 0.4 * m}) rotate(${(1 - m) * -90}deg)`;
+    set($('s1brand'), outCubic(seg(t, 0.9, 1.9)), `translateY(${(1 - outCubic(seg(t, 0.9, 1.9))) * 40}px)`);
+    set($('s1tag'), outCubic(seg(t, 1.5, 2.5)), `translateY(${(1 - outCubic(seg(t, 1.5, 2.5))) * 24}px)`);
+
+    // 2 · problem 4.4–8.8: words stack in, then resolve into one line
+    const s2 = window_(t, 4.4, 8.8, 0.3, 0.6);
+    set($('s2'), s2);
+    const words = ['w1', 'w2', 'w3', 'w4'];
+    words.forEach((id, i) => {
+      const start = 4.6 + i * 0.55, p = outExpo(seg(t, start, start + 0.6));
+      const gather = inOutCubic(seg(t, 7.0, 7.7));
+      const y = 250 + i * 150;
+      const el = $(id);
+      el.style.left = '160px';
+      el.style.top = `${y}px`;
+      el.style.color = i === 3 ? '#F4F5FA' : `rgba(244,245,250,${0.35 + 0.2 * i})`;
+      set(el, p * (1 - gather), `translateX(${(1 - p) * -80}px) translateY(${gather * (540 - y - 60) * 0.6}px) scale(${1 - gather * 0.2})`);
+    });
+    const lineP = outCubic(seg(t, 7.5, 8.2));
+    set($('s2line'), lineP, `scale(${0.94 + 0.06 * lineP})`);
+
+    // 3–6 · product scenes
+    let active = null, local = 0;
+    for (const s of SCENES) if (t >= s.a && t < s.b) { active = s; local = t - s.a; }
+    const sceneVis = window_(t, 8.6, 33.6, 0.5, 0.6);
+    set($('scene'), sceneVis);
+    if (active) {
+      const len = active.b - active.a;
+      if (currentImg !== active.img) {
+        currentImg = active.img;
+        $('imgA').src = active.img; $('imgB').src = active.img2 || '';
+        $('eyebrow').textContent = active.eyebrow; $('headline').innerHTML = active.head; $('sub').textContent = active.sub; $('wintitle').textContent = active.title;
+      }
+      const inP = outCubic(clamp(local / 0.9)), outP = inOutCubic(clamp((local - (len - 0.55)) / 0.55));
+      const copyVis = inP * (1 - outP);
+      set($('eyebrow'), copyVis, `translateY(${(1 - inP) * 20}px)`);
+      set($('headline'), outCubic(clamp((local - 0.1) / 0.9)) * (1 - outP), `translateY(${(1 - outCubic(clamp((local - 0.1) / 0.9))) * 36}px)`);
+      set($('sub'), outCubic(clamp((local - 0.35) / 0.9)) * (1 - outP), `translateY(${(1 - outCubic(clamp((local - 0.35) / 0.9))) * 28}px)`);
+      // window: glide in with a gentle 3D settle, slow Ken Burns pan while held
+      const w = outExpo(clamp(local / 1.2));
+      const tilt = (1 - w) * 14, x = (1 - w) * 220, hold = clamp(local / len);
+      set($('win'), Math.min(w * 1.4, 1) * (1 - outP * 0.9), `perspective(2400px) translateX(${x}px) rotateY(${-tilt}deg) scale(${1.0 + 0.035 * hold})`);
+      const [x0, y0, x1, y1] = active.pan;
+      const pan = inOutCubic(hold);
+      const move = `translate(${x0 + (x1 - x0) * pan}px, ${y0 + (y1 - y0) * pan}px) scale(${active.zoom})`;
+      $('imgA').style.transform = move;
+      $('imgB').style.transform = move;
+      const cross = active.img2 ? inOutCubic(clamp((local - len * 0.5) / 0.7)) : 0;
+      $('imgA').style.opacity = String(1 - cross);
+      $('imgB').style.opacity = String(cross);
+      if (active.img2 && cross > 0.5) $('wintitle').textContent = 'Agents';
+    }
+
+    // 7 · trust 33.6–37.4
+    set($('s7'), window_(t, 33.6, 37.4, 0.5, 0.6));
+    set($('s7title'), outCubic(seg(t, 33.7, 34.5)), `translateY(${(1 - outCubic(seg(t, 33.7, 34.5))) * 30}px)`);
+    ['p1', 'p2', 'p3'].forEach((id, i) => {
+      const p = outCubic(seg(t, 34.1 + i * 0.25, 34.9 + i * 0.25));
+      set($(id), p, `translateY(${(1 - p) * 50}px)`);
+    });
+
+    // 8 · end card 37.4–42
+    set($('s8'), window_(t, 37.4, 42.5, 0.6, 0.1));
+    const e = outExpo(seg(t, 37.5, 38.7));
+    $('s8mark').style.transform = `scale(${0.7 + 0.3 * e}) rotate(${(1 - e) * -90}deg)`;
+    set($('s8brand'), outCubic(seg(t, 37.9, 38.8)), `translateY(${(1 - outCubic(seg(t, 37.9, 38.8))) * 30}px)`);
+    set($('s8tag'), outCubic(seg(t, 38.3, 39.2)));
+    const c = outCubic(seg(t, 38.8, 39.7));
+    set($('s8cta'), c, `translateY(${(1 - c) * 24}px) scale(${0.96 + 0.04 * c})`);
+    set($('s8fine'), outCubic(seg(t, 39.3, 40.1)));
+  }
+  window.DURATION = DURATION;
+  window.render = render;
+  window.ready = Promise.all([document.fonts.ready, ...['command', 'ops', 'project', 'agents', 'first-run'].map((n) => { const i = new Image(); i.src = `build/shots/${n}.png`; return i.decode(); })]);
+  render(0);
+  // Live preview when opened directly in a browser (render.mts drives time itself).
+  if (!new URLSearchParams(location.search).has('frames')) { const t0 = performance.now(); const loop = () => { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+</script>
+</body>
+</html>
