@@ -89,14 +89,21 @@ export class OctokitClient implements GitHubClient {
     // still computing mergeability, degrades to null — an honest unknown, never a guess.
     // (Deliberately NOT ETag-cached: mergeable/checks must reflect now, not a cached poll.)
     let mergeable: boolean | null = null;
+    let target: { head: string; base: string } | null = null;
     try {
       const full = await this.octokit.pulls.get({ owner, repo: name, pull_number: pr.number });
-      mergeable = full.data.mergeable ?? null;
+      if (full.data.number === pr.number && full.data.state === 'open'
+        && /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(full.data.head?.sha ?? '')
+        && full.data.head.sha === pr.head?.sha
+        && /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(full.data.base?.sha ?? '')) {
+        target = { head: full.data.head.sha, base: full.data.base.sha };
+      }
     } catch {
       /* not visible → unknown */
     }
     let checks: GhPr['checks'] = null;
     try {
+      if (!target) throw new Error('Current PR revision could not be established');
       const runs = await this.octokit.checks.listForRef({ owner, repo: name, ref: pr.head.sha, per_page: 50 });
       const all = runs.data.check_runs ?? [];
       if (all.length > 0 && all.every(r => r.head_sha === pr.head.sha && Number.isSafeInteger(r.id) && r.id > 0) && new Set(all.map(r => r.id)).size === all.length) {
@@ -109,6 +116,16 @@ export class OctokitClient implements GitHubClient {
       }
     } catch {
       /* no checks scope / none configured → unknown */
+    }
+    if (target) {
+      try {
+        // Re-read after checks: head/base changes or closure invalidate the combined
+        // observation. Do not mix mergeability from one revision with checks of another.
+        const current = await this.octokit.pulls.get({ owner, repo: name, pull_number: pr.number });
+        if (current.data.number !== pr.number || current.data.state !== 'open'
+          || current.data.head?.sha !== target.head || current.data.base?.sha !== target.base) checks = null;
+        else mergeable = typeof current.data.mergeable === 'boolean' ? current.data.mergeable : null;
+      } catch { checks = null; }
     }
     return {
       number: pr.number,

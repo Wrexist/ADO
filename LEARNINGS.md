@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-28: Cross-request PR summaries need matching head and base identities before and after checks. Withhold the combined result when either changes or cannot be re-read; even matching reads remain observations, not atomic merge authorization.
+
 - 2026-09-28: A successful first page of checks is not evidence that all checks passed. Require complete counts, unique identities, the reviewed revision and explicit successful conclusions; keep observed check summaries separate from branch-protection or merge authorization.
 
 - 2026-09-28: Expiring authentication evidence needs monotonic elapsed time as well as a display timestamp. Latch observed expiration or clock rollback so moving time back cannot revive a stale successful check; only a fresh verification may renew it.

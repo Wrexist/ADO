@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Bind PR check/mergeability observations to matching open-PR head/base revisions before and after check retrieval; withhold both statuses on changed or unavailable identity. Verify adapter races without external writes; these reads are not atomic merge authorization.
+
 - [x] Correct false-green PR check summaries: require complete, unique, revision-matching explicit success evidence; preserve unknown for truncated/unknown outcomes. Inspect the read-only adapter boundary and document that agent remote writes still need T18 reconciliation.
 
 - [x] Bound credential verification freshness by both wall and monotonic clocks, expire at the exact five-minute boundary, and prevent observed stale checks from reviving after clock rollback. Require a fresh provider response to renew; full live T25 remains open.
