@@ -1,5 +1,15 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Identitet, bas, omförsök, kontext och origin (2026-09-29)
+
+- **T01:** Synkade GitHub-repon identifieras med numeriskt repo-ID; namnbyte uppdaterar samma post och ett återanvänt namn får en egen post (`github-repo-identity.md`).
+- **T02:** Varje synk sparar default-branchens exakta namn och head-commit. Task-körning från annan commit nekas om den inte uttryckligen bekräftas; granskningsvyn visar status (`default-branch-base.md`).
+- **T27:** Host, Origin, nyckel och proxyheaders prövas var för sig över läsning, mutation, händelseström och statiska filer; nyckel i URL för `/events` tas bort (`hostile-origin.md`).
+- **T31:** Omförsök är nya försök med oföränderlig koppling (migration 0024), serverspärrar och riskbekräftelse; ingen resume (`retry-lineage.md`).
+- **T11:** Kontextpaket markeras för ny kontroll när bas eller task har ändrats; flyttad arbetskopia nekas före köläggning (`context-recheck.md`).
+
+`scripts/verify.sh` passerade 501 tester; `npm run smoke` passerade. Inga riktiga GitHub-anrop. Ingen scenariostatus har ändrats till godkänd; fortsatt 18/46.
+
 ## Agentgräns och betalningsspärr
 
 Claude-agenter startas nu med `--setting-sources user` och `--strict-mcp-config`, så inställningar, hooks och MCP-servrar som committats i målrepot inte kan ändra agentens policy. Prompten skickas via stdin i stället för kommandoraden. Arbetskopior ligger utanför profilen och ControlOS-mappen. En körning stoppas vid init, före första modellanropet, om Claude Code inte rapporterar prenumerationsinloggning (`apiKeySource: none`); det finns inget API-betalt läge och därmed ingen dold övergång. 493 tester passerade och ett kontrollerat riktigt anrop med Claude Code 2.1.284 bekräftade flaggor, stdin och `apiKeySource: none`. Underlag: `docs/controlos/agent-policy-boundary.md`. T10/T14/T32 återstår.
