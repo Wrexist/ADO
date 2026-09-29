@@ -113,3 +113,35 @@ it('requires explicit matching GitHub association, collapses directory aliases, 
     expect(registry.snapshot().repositories).toHaveLength(2);
   } finally { sqlite.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
 }, 60000);
+
+it('requires the verified exact-case default-branch head as task base unless another commit is explicitly chosen (T02)', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-registry-default-'));
+  const repo = join(root, 'repo'); mkdirSync(repo);
+  const git = (args: string[]) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  const { db, sqlite } = openDb(':memory:');
+  const registry = new ProjectRegistry(db, () => [observation('source', repo)], (id) => id === 'source' ? repo : null);
+  try {
+    git(['init', '-q', '-b', 'feature']); git(['config', 'user.name', 'Fixture']); git(['config', 'user.email', 'fixture@example.test']);
+    git(['remote', 'add', 'origin', 'https://github.com/owner/app.git']);
+    writeFileSync(join(repo, 'a.txt'), 'a'); git(['add', '.']); git(['commit', '-qm', 'base']);
+    const head = git(['rev-parse', 'HEAD']), other = 'c'.repeat(40);
+    const project = registry.create(input('Default branch'));
+    registry.observeGitHub([gh('401', 'app', 'Main')], '2026-09-29T00:00:00Z');
+    const remote = await registry.importSource({ projectId: project.id, sourceId: 'github:401' });
+    const checkoutId = (await registry.importSource({ projectId: project.id, sourceId: 'local:source', repositoryId: remote.repositoryId })).checkoutId!;
+
+    expect(() => registry.assertDefaultBase(checkoutId, head, false)).toThrow('has not been verified with GitHub yet');
+    registry.observeGitHubHead('401', 'main', head, '2026-09-29T00:01:00Z'); // wrong case is not the default branch
+    expect(registry.snapshot().repositories[0]).toMatchObject({ defaultBranch: 'Main', defaultBranchSha: null });
+    registry.observeGitHubHead('401', 'Main', other, '2026-09-29T00:02:00Z');
+    expect(() => registry.assertDefaultBase(checkoutId, head, false)).toThrow(`not the head of the default branch 'Main' (${other.slice(0, 12)})`);
+    expect(() => registry.assertDefaultBase(checkoutId, head, true)).not.toThrow();
+    registry.observeGitHubHead('401', 'Main', head, '2026-09-29T00:03:00Z');
+    expect(() => registry.assertDefaultBase(checkoutId, head, false)).not.toThrow();
+    registry.observeGitHub([gh('401', 'app', 'Main')], '2026-09-29T00:04:00Z'); // resync keeps the verified head
+    expect(registry.snapshot().repositories[0]).toMatchObject({ defaultBranchSha: head, defaultBranchCheckedTs: '2026-09-29T00:03:00Z' });
+    registry.observeGitHub([gh('401', 'app', 'trunk')], '2026-09-29T00:05:00Z'); // default branch renamed → head no longer verified
+    expect(registry.snapshot().repositories[0]).toMatchObject({ defaultBranch: 'trunk', defaultBranchSha: null });
+    expect(() => registry.assertDefaultBase(checkoutId, head, false)).toThrow('has not been verified');
+  } finally { sqlite.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
+}, 60000);

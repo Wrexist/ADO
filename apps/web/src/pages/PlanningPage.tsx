@@ -34,7 +34,7 @@ export function PlanningPage() {
   const [filter, setFilter] = useState('');
   const [criterionReview, setCriterionReview] = useState<{ taskId: string; runId: string } | null>(null);
   const [reopening, setReopening] = useState<{ task: PlanningTask; runId: string } | null>(null);
-  const [runReview, setRunReview] = useState<{ task: PlanningTask; checkoutId: string; provider: string; contextPackage?: ContextExecutionBinding; contextReady?: boolean; submission: { version: number; checkoutId: string; baseSha: string; provider: string; idempotencyKey: string; contextPackage?: ContextExecutionBinding } | null } | null>(null);
+  const [runReview, setRunReview] = useState<{ task: PlanningTask; checkoutId: string; provider: string; contextPackage?: ContextExecutionBinding; contextReady?: boolean; nonDefaultBase?: boolean; submission: { version: number; checkoutId: string; baseSha: string; provider: string; idempotencyKey: string; contextPackage?: ContextExecutionBinding; nonDefaultBase?: true } | null } | null>(null);
   const taskTitle = useRef<HTMLInputElement>(null), promotionTitle = useRef<HTMLInputElement>(null), milestoneTitle = useRef<HTMLInputElement>(null);
   const runReviewTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (runReview) runReviewTitle.current?.focus(); }, [runReview?.task.id]);
@@ -60,6 +60,17 @@ export function PlanningPage() {
   const editTask = (t: PlanningTask) => {
     setEditing(t); setTask({ projectId: t.projectId, repositoryId: t.repositoryId ?? '', milestoneId: t.milestoneId ?? '', title: t.title, outcome: t.outcome, scope: t.scope, outOfScope: t.outOfScope, priority: t.priority, status: t.status, dependsOn: t.dependsOn, acceptance: t.acceptance.map((c) => c.text).join('\n'), sourceRefs: t.sourceRefs.join('\n') });
   };
+  // T02: explain how the reviewed base relates to GitHub's verified default branch.
+  const baseCheck = (headSha: string): { text: string; needsConfirm: boolean } => {
+    const repository = portfolio?.repositories.find((r) => r.id === runReview?.task.repositoryId);
+    if (!repository || repository.host !== 'github') return { text: 'Local repository: its default branch cannot be verified with GitHub; the run starts from this checkout commit.', needsConfirm: false };
+    const branch = repository.defaultBranch ?? 'unknown';
+    if (!repository.defaultBranchSha) return { text: `The default branch '${branch}' has not been verified with GitHub yet.`, needsConfirm: true };
+    const checked = repository.defaultBranchCheckedTs ? ` (checked ${new Date(repository.defaultBranchCheckedTs).toLocaleString()})` : '';
+    return repository.defaultBranchSha === headSha
+      ? { text: `Base is the head of the default branch '${branch}'${checked}.`, needsConfirm: false }
+      : { text: `This commit is not the head of the default branch '${branch}' (${repository.defaultBranchSha.slice(0, 12)})${checked}. Update the working copy, or confirm below.`, needsConfirm: true };
+  };
   return <PageShell title="Tasks & Inbox" subtitle="Capture ideas, define outcomes and review explicitly started runs.">
     <div className="mt-5 min-w-0 space-y-5">
       <Link to="/today" className="block text-body text-primary">Choose a next step in Today →</Link>
@@ -78,12 +89,22 @@ export function PlanningPage() {
           if (busy || runReview.contextReady === false) return;
           const checkout = portfolio?.checkouts.find((c) => c.id === runReview.checkoutId);
           if (!checkout?.headSha) return;
-          const submission = runReview.submission ?? { version: runReview.task.version, checkoutId: checkout.id, baseSha: checkout.headSha, provider: runReview.provider, idempotencyKey: crypto.randomUUID(), ...(runReview.contextPackage ? { contextPackage: runReview.contextPackage } : {}) };
+          if (baseCheck(checkout.headSha).needsConfirm && !runReview.nonDefaultBase && !runReview.submission) return;
+          const submission = runReview.submission ?? { version: runReview.task.version, checkoutId: checkout.id, baseSha: checkout.headSha, provider: runReview.provider, idempotencyKey: crypto.randomUUID(), ...(runReview.contextPackage ? { contextPackage: runReview.contextPackage } : {}), ...(runReview.nonDefaultBase && baseCheck(checkout.headSha).needsConfirm ? { nonDefaultBase: true as const } : {}) };
           setRunReview({ ...runReview, submission });
           void act(async () => { await planningRequest(`/tasks/${runReview.task.id}/dispatch`, 'POST', submission); setRunReview(null); }, 'Run accepted. Task acceptance requires separate criterion review.');
         }}>
           <label className="block text-body">Run checkout<select aria-label="Run checkout" required disabled={Boolean(runReview.submission)} className={field} value={runReview.checkoutId} onChange={(e) => setRunReview({ ...runReview, checkoutId: e.target.value, contextPackage: undefined, contextReady: true })}><option value="">Select a committed working copy</option>{portfolio?.checkouts.filter((c) => c.repositoryId === runReview.task.repositoryId && c.headSha).map((c) => <option key={c.id} value={c.id}>{c.canonicalPath} · {c.headSha!.slice(0, 12)}</option>)}</select></label>
           <p className="break-all text-label text-text2">Reviewed base: {runReview.submission?.baseSha ?? portfolio?.checkouts.find((c) => c.id === runReview.checkoutId)?.headSha ?? 'Select a checkout'}</p>
+          {(() => {
+            const head = portfolio?.checkouts.find((c) => c.id === runReview.checkoutId)?.headSha;
+            if (!head) return null;
+            const check = baseCheck(head);
+            return <div className="space-y-1">
+              <p className={check.needsConfirm ? 'break-words text-label text-warning' : 'break-words text-label text-text2'}>{check.text}</p>
+              {check.needsConfirm && <label className="flex items-start gap-2 text-body"><input type="checkbox" className="mt-1" disabled={Boolean(runReview.submission)} checked={runReview.nonDefaultBase === true} onChange={(e) => setRunReview({ ...runReview, nonDefaultBase: e.target.checked })} />Start from this commit anyway</label>}
+            </div>;
+          })()}
           <label className="block text-body">Run provider<select aria-label="Run provider" required disabled={Boolean(runReview.submission)} className={field} value={runReview.provider} onChange={(e) => setRunReview({ ...runReview, provider: e.target.value })}><option value="">Choose provider</option><option value="claude">Claude</option><option value="codex">Codex (experimental, ChatGPT login)</option></select></label>
         </form>
         {portfolio?.checkouts.find(c => c.id === runReview.checkoutId)?.headSha && <ContextPackagePanel

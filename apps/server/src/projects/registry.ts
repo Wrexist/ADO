@@ -15,7 +15,10 @@ import { readGitLink } from './github';
 import { commonGitIdentity, directoryIdentity as identity, pathKey } from './checkoutIdentity';
 
 const exec = promisify(execFile);
-const remoteObservation = z.object({ externalId: z.string().min(1), name: z.string(), canonicalRemote: z.string(), defaultBranch: z.string().nullable() });
+const SHA = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
+const remoteObservation = z.object({ externalId: z.string().min(1), name: z.string(), canonicalRemote: z.string(), defaultBranch: z.string().nullable(),
+  defaultBranchSha: z.string().regex(SHA).nullable().optional(), defaultBranchCheckedTs: z.string().nullable().optional() });
+type RemoteObservation = z.infer<typeof remoteObservation>;
 
 /** Planning identities. Importing metadata never grants runner permission or changes Git. */
 export class ProjectRegistry {
@@ -36,13 +39,48 @@ export class ProjectRegistry {
     this.db.transaction(() => {
       for (const repo of repos) {
         if (!repo.externalId || !/^[\w.-]+$/.test(repo.owner) || !/^[\w.-]+$/.test(repo.name)) continue;
-        const data = { externalId: repo.externalId, name: `${repo.owner}/${repo.name}`, canonicalRemote: `https://github.com/${repo.owner}/${repo.name}`, defaultBranch: repo.defaultBranch || null };
+        const previous = this.remote(repo.externalId);
+        const data: RemoteObservation = { externalId: repo.externalId, name: `${repo.owner}/${repo.name}`, canonicalRemote: `https://github.com/${repo.owner}/${repo.name}`, defaultBranch: repo.defaultBranch || null };
+        // A verified head only survives while the default branch name is unchanged.
+        if (previous?.defaultBranchSha && previous.defaultBranch === data.defaultBranch) Object.assign(data, { defaultBranchSha: previous.defaultBranchSha, defaultBranchCheckedTs: previous.defaultBranchCheckedTs ?? null });
         const row = { id: `github:${repo.externalId}`, kind: 'github', dataJson: JSON.stringify(data), observedTs };
         this.db.insert(sources).values(row).onConflictDoUpdate({ target: sources.id, set: row }).run();
         this.db.update(repositories).set({ name: data.name, canonicalRemote: data.canonicalRemote, defaultBranch: data.defaultBranch, observedTs })
           .where(and(eq(repositories.host, 'github'), eq(repositories.externalId, repo.externalId))).run();
       }
     });
+  }
+
+  private remote(externalId: string): RemoteObservation | null {
+    const row = this.db.select().from(sources).where(eq(sources.id, `github:${externalId}`)).get();
+    if (!row) return null;
+    const parsed = remoteObservation.safeParse(JSON.parse(row.dataJson));
+    return parsed.success ? parsed.data : null;
+  }
+
+  /** Record the default branch head GitHub reported; ignored if the branch name no longer matches exactly. */
+  observeGitHubHead(externalId: string, branch: string, sha: string | null, checkedTs: string) {
+    const row = this.db.select().from(sources).where(eq(sources.id, `github:${externalId}`)).get();
+    const data = this.remote(externalId);
+    if (!row || !data || data.defaultBranch !== branch) return;
+    const next = { ...data, defaultBranchSha: sha && SHA.test(sha) ? sha : null, defaultBranchCheckedTs: checkedTs };
+    this.db.update(sources).set({ dataJson: JSON.stringify(next) }).where(eq(sources.id, row.id)).run();
+  }
+
+  /**
+   * T02: new task work starts from the verified head of the exact default branch, unless
+   * the owner explicitly chose another commit. Local-only repositories have no API to
+   * verify against; their base is the checkout's reviewed commit.
+   */
+  assertDefaultBase(checkoutId: string, baseSha: string, nonDefaultBase: boolean) {
+    const checkout = this.db.select().from(checkouts).where(eq(checkouts.id, checkoutId)).get();
+    const repository = checkout && this.db.select().from(repositories).where(eq(repositories.id, checkout.repositoryId)).get();
+    if (!repository || repository.host !== 'github' || nonDefaultBase) return;
+    const remote = this.remote(repository.externalId);
+    const branch = remote?.defaultBranch ?? repository.defaultBranch;
+    if (remote?.defaultBranchSha && baseSha === remote.defaultBranchSha) return;
+    if (!branch || !remote?.defaultBranchSha) throw new Error(`The default branch of ${repository.name} has not been verified with GitHub yet. Connect GitHub and wait for a sync, or confirm that this run should start from the checkout's commit.`);
+    throw new Error(`Base ${baseSha.slice(0, 12)} is not the head of the default branch '${branch}' (${remote.defaultBranchSha.slice(0, 12)}). Update the working copy to '${branch}', or confirm that this run should start from a different commit.`);
   }
 
   snapshot() {
@@ -52,7 +90,12 @@ export class ProjectRegistry {
       return { id: row.id, kind: 'github' as const, name: data.name, location: data.canonicalRemote, observedTs: row.observedTs };
     });
     const local = this.observedRepos().filter((r) => r.localPath).map((r) => ({ id: `local:${r.id}`, kind: 'local' as const, name: r.name, location: r.localPath!, observedTs: r.scannedTs ?? null }));
-    return { projects: this.db.select().from(projects).all(), repositories: this.db.select().from(repositories).all(), checkouts: this.db.select().from(checkouts).all(), sources: [...local, ...remote] };
+    const withHead = (r: typeof repositories.$inferSelect) => {
+      const remote = r.host === 'github' ? this.remote(r.externalId) : null;
+      const current = remote && remote.defaultBranch === r.defaultBranch;
+      return { ...r, defaultBranchSha: current ? remote.defaultBranchSha ?? null : null, defaultBranchCheckedTs: current ? remote.defaultBranchCheckedTs ?? null : null };
+    };
+    return { projects: this.db.select().from(projects).all(), repositories: this.db.select().from(repositories).all().map(withHead), checkouts: this.db.select().from(checkouts).all(), sources: [...local, ...remote] };
   }
 
   create(input: unknown) {

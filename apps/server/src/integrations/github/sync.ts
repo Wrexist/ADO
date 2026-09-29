@@ -48,6 +48,7 @@ export class GitHubSync {
     private client: GitHubClient,
     private log: (msg: string) => void = () => {},
     private observe?: (repos: GhRepo[], observedTs: string) => void,
+    private observeHead?: (externalId: string, branch: string, sha: string | null, checkedTs: string) => void,
   ) {}
 
   /** One full sync pass. Returns the number of repos enriched. */
@@ -120,6 +121,7 @@ export class GitHubSync {
           : Promise.resolve(null),
       ]);
       if (this.stopped) return enriched;
+      if (repoId && gh.defaultBranch) this.observeHead?.(repoId, gh.defaultBranch, branchHead, now());
 
       const patch: Record<string, unknown> = {
         ...(repoId ? { githubRepoId: repoId } : {}),

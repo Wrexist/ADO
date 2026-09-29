@@ -148,3 +148,12 @@ it('adopts a legacy name-keyed entry once, without moving a local checkout to a 
   expect(state['github-8']).toMatchObject({ githubRepoId: '8', githubFullName: 'wrexist/tool' });
   sqlite.close();
 });
+
+it('reports the exact default-branch head it read to the registry (T02)', async () => {
+  const { db, sqlite } = openDb(':memory:');
+  const seen: unknown[] = [];
+  const client = new FakeClient([REPO('app', { externalId: '9', defaultBranch: 'Main' })], {}, {}, { app: 'f'.repeat(40) });
+  await new GitHubSync(new Bus(db), client, () => {}, undefined, (id, branch, sha) => seen.push([id, branch, sha])).sync();
+  expect(seen).toEqual([['9', 'Main', 'f'.repeat(40)]]);
+  sqlite.close();
+});

@@ -42,6 +42,8 @@ interface RunnerOpts {
   timeoutMs?: number;
   defaultProvider?: 'claude' | 'codex';
   workspaceRoot?: string;
+  /** Throws when a task base is not the verified default-branch head and was not explicitly chosen. */
+  assertDefaultBase?: (checkoutId: string, baseSha: string, nonDefaultBase: boolean) => void;
   receiptRoot?: string;
   secrets?: () => Array<string | undefined>;
   /** repoId → absolute cwd (the allow-list; a dispatch outside it is rejected). */
@@ -220,6 +222,7 @@ export class Runner {
     const existing = this.db.select().from(runs).where(eq(runs.idempotencyKey, request.idempotencyKey)).get();
     const checkout = this.db.select().from(portfolioCheckouts).where(eq(portfolioCheckouts.id, request.checkoutId)).get();
     if (!checkout) throw new Error('Checkout not found');
+    if (!existing) this.opts.assertDefaultBase?.(request.checkoutId, request.baseSha, request.nonDefaultBase === true);
     return this.dispatch({ repoId: existing?.repoId ?? checkout.sourceId, task: taskPrompt(task), provider: request.provider, model: request.model, idempotencyKey: request.idempotencyKey,
       taskBinding: { taskId, taskVersion: request.version, checkoutId: request.checkoutId, baseSha: request.baseSha, ...(request.contextPackage ? { contextPackage: request.contextPackage } : {}) } });
   }

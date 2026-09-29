@@ -29,4 +29,6 @@ export const TaskReopeningRequest = z.object({ runId: z.string().min(1), version
 export const TaskReopening = z.object({ id: z.string().uuid(), taskId: z.string().uuid(), runId: z.string(), fromVersion: z.number().int(), toVersion: z.number().int(), reason: z.string(), actorId: z.string(), recordedTs: z.string() });
 export const PlanningSnapshot = z.object({ tasks: z.array(PlanningTask), milestones: z.array(PlanningMilestone), inbox: z.array(InboxItem), executions: z.array(PlanningExecution).default([]), reviews: z.array(TaskReview).default([]), reopenings: z.array(TaskReopening).default([]) });
 export type PlanningSnapshot = z.infer<typeof PlanningSnapshot>;
-export const TaskDispatchRequest = z.object({ version: z.number().int().positive(), checkoutId: z.string().uuid(), baseSha: z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/), provider: z.enum(['claude', 'codex']), model: z.string().trim().min(1).max(100).optional(), idempotencyKey: z.string().uuid(), contextPackage: ContextExecutionBinding.optional() }).strict();
+export const TaskDispatchRequest = z.object({ version: z.number().int().positive(), checkoutId: z.string().uuid(), baseSha: z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/), provider: z.enum(['claude', 'codex']), model: z.string().trim().min(1).max(100).optional(), idempotencyKey: z.string().uuid(), contextPackage: ContextExecutionBinding.optional(),
+  /** Explicit owner choice to start from a commit that is not the verified default-branch head (T02). */
+  nonDefaultBase: z.literal(true).optional() }).strict();

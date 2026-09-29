@@ -479,7 +479,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     const token = connections.resolve('github');
     const client = deps.githubClient ?? (token ? new OctokitClient(token) : null);
     if (!client) return;
-    github = new GitHubSync(bus, client, (msg) => app.log.info(msg), (repos, ts) => registry.observeGitHub(repos, ts));
+    github = new GitHubSync(bus, client, (msg) => app.log.info(msg), (repos, ts) => registry.observeGitHub(repos, ts), (externalId, branch, sha, ts) => registry.observeGitHubHead(externalId, branch, sha, ts));
     github.start();
   };
   // Boot-time sync only in real runs — tests (startSystem:false) stay hermetic (no network),
@@ -509,6 +509,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     {
       cwdFor,
       assertCheckout: (id, sourceId, cwd) => registry.assertCheckout(id, sourceId, cwd),
+      assertDefaultBase: (checkoutId, baseSha, nonDefaultBase) => registry.assertDefaultBase(checkoutId, baseSha, nonDefaultBase),
       defaultProvider: env.agentProvider,
       secrets: () => [env.accToken, ...connections.statusAll().map((c) => connections.resolve(c.id))],
       workspaceRoot: deps.workspaceRoot ?? (!deps.spawner && !env.demo ? agentWorkspaceRoot(env.dbPath) : undefined),
