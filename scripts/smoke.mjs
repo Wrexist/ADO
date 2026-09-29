@@ -421,6 +421,14 @@ try {
         await page.getByText('Process stop confirmed. The previous attempt remains failed.', { exact: true }).waitFor();
         await page.getByText('Agent processes: stopped.', { exact: true }).waitFor();
         if (await page.getByRole('button', { name: 'Dispatch again', exact: true }).isDisabled()) throw new Error('Confirmed receipt did not update run controls');
+        // A retry is a new attempt: risks are shown before anything is dispatched (T31).
+        await page.getByRole('button', { name: 'Dispatch again', exact: true }).click();
+        await page.getByText('This starts a new attempt; it does not resume this run.', { exact: true }).waitFor();
+        await page.getByRole('button', { name: 'Start new attempt', exact: true }).waitFor();
+        if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Retry confirmation overflow at ${width}px`);
+        await page.screenshot({ path: join(out, `retry-confirm-${width}.png`), fullPage: true });
+        await page.getByRole('button', { name: 'Keep this run only', exact: true }).click();
+        await page.getByRole('button', { name: 'Dispatch again', exact: true }).waitFor();
       }
     }
   }

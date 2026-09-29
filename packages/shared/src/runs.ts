@@ -63,6 +63,8 @@ export const AgentRun = z.object({
   diffDigest: z.string().nullable().optional(),
   verifyVerdict: z.enum(['pass', 'fail']).nullable().optional(),
   processTermination: z.enum(['confirmed', 'unconfirmed']).nullable().optional(),
+  /** This run is a new attempt of that earlier run (providers do not resume). */
+  retryOfRunId: z.string().nullable().optional(),
 });
 export type AgentRun = z.infer<typeof AgentRun>;
 
@@ -82,6 +84,7 @@ export const RunDetail = AgentRun.extend({
   verificationEvidence: z.array(VerificationEvidence).optional(),
   approvalPolicyVersion: z.string().uuid().nullable().optional(),
   approvalHistory: z.array(OperationApproval).optional(),
+  retriedBy: z.array(z.string()).optional(),
   diagnostics: z.string().nullable().optional(),
   /**
    * live  = the run is in flight, timeline grows (poll again);

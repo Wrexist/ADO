@@ -228,7 +228,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   await app.register(cors, {
     origin: env.webOrigin, // exactly one origin — no wildcards
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id'],
+    allowedHeaders: ['content-type', 'x-acc-token', 'last-event-id', 'idempotency-key'],
   });
   app.addHook('preHandler', async (req, reply) => {
     if (recoveryReview && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !['/api/session', '/api/recovery/prepare', '/api/recovery/activate'].includes(req.url.split('?')[0]) && !/^\/api\/recovery\/runs\/[^/]+\/(cancel-queued|review-automation)$/.test(req.url.split('?')[0])) {
@@ -666,12 +666,13 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     return { providers: PROVIDERS, defaultProvider: env.agentProvider ?? 'claude' };
   });
   app.post('/api/dispatch', async (req, reply) => {
-    const body = (req.body ?? {}) as { repoId?: string; task?: string; model?: string; provider?: string };
+    const body = (req.body ?? {}) as { repoId?: string; task?: string; model?: string; provider?: string; retryOf?: unknown };
+    if (body.retryOf !== undefined && (typeof body.retryOf !== 'string' || !body.retryOf || body.retryOf.length > 300)) return reply.code(400).send({ error: 'Invalid retryOf' });
     if (typeof body.repoId !== 'string' || !body.repoId.trim() || body.repoId.length > 512 || typeof body.task !== 'string' || !body.task.trim() || body.task.length > 100_000 || (body.model !== undefined && (typeof body.model !== 'string' || body.model.length > 128)) || (body.provider !== undefined && body.provider !== 'claude' && body.provider !== 'codex')) return reply.code(400).send({ error: 'Valid repoId, task and optional model/provider are required' });
     const requestKey = req.headers['idempotency-key'];
     if (requestKey !== undefined && (typeof requestKey !== 'string' || !requestKey.trim() || requestKey.length > 200)) return reply.code(400).send({ error: 'Invalid idempotency key' });
     try {
-      return runner.dispatch({ repoId: body.repoId, task: body.task, model: body.model, provider: body.provider, idempotencyKey: typeof req.headers['idempotency-key'] === 'string' ? req.headers['idempotency-key'] : undefined });
+      return runner.dispatch({ repoId: body.repoId, task: body.task, model: body.model, provider: body.provider, idempotencyKey: typeof req.headers['idempotency-key'] === 'string' ? req.headers['idempotency-key'] : undefined, ...(typeof body.retryOf === 'string' ? { retryOf: body.retryOf } : {}) });
     } catch (err) {
       return reply.code((err as Error).message.startsWith('idempotency conflict') ? 409 : 403).send({ error: (err as Error).message });
     }
@@ -817,6 +818,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     turns: r.turns,
     exitCode: r.exitCode,
     processTermination: r.processTermination,
+    retryOfRunId: r.retryOfRunId ?? null,
     waitingReason: r.status === 'queued' ? runner.waitingReason(r.id) : null,
     note: r.note,
     humanAction: r.humanAction as 'accepted' | 'corrected' | 'redone' | null,
@@ -896,6 +898,7 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
         ...runRow(row),
         approvalPolicyVersion: row.engineVersion === 1 ? approvals.policyVersion(row.repoId) : null,
         approvalHistory: approvals.history(id),
+        retriedBy: db.select({ id: runs.id }).from(runs).where(eq(runs.retryOfRunId, id)).orderBy(runs.startedTs).limit(20).all().map((r) => r.id),
         verificationEvidence: db.select().from(verificationEvidence).where(eq(verificationEvidence.runId, id)).orderBy(desc(verificationEvidence.recordedTs), desc(verificationEvidence.id)).limit(20).all(),
         verificationAttempts: db.select({ id: verificationAttempts.id, status: verificationAttempts.status, processTermination: verificationAttempts.processTermination, startedTs: verificationAttempts.startedTs, endedTs: verificationAttempts.endedTs, note: verificationAttempts.note }).from(verificationAttempts).where(eq(verificationAttempts.runId, id)).orderBy(desc(verificationAttempts.startedTs), desc(verificationAttempts.id)).limit(20).all(),
         verificationLocked: db.select().from(executionLocks).where(eq(executionLocks.runId, id)).all().some((lock) => lock.owner.startsWith('verify:')),

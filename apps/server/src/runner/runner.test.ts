@@ -293,3 +293,27 @@ describe('API billing guard (T32)', () => {
     sqlite.close();
   });
 });
+
+describe('retry lineage without resume (T31)', () => {
+  it('records a new attempt of a finished run and refuses unsafe retries', async () => {
+    const { db, sqlite } = openDb(':memory:');
+    const runner = new Runner(new Bus(db), db, fakeSpawner(['{"type":"system","subtype":"init","apiKeySource":"none"}'], 1), { cwdFor });
+    const first = runner.dispatch({ repoId: 'sentinel', task: 'x' }).runId;
+    await expect(() => runner.dispatch({ repoId: 'sentinel', task: 'x', retryOf: first })).toThrow('has not finished');
+    await drain();
+    expect(() => runner.dispatch({ repoId: 'sentinel', task: 'x', retryOf: 'run-missing' })).toThrow('was not found');
+    expect(() => runner.dispatch({ repoId: 'other', task: 'x', retryOf: first })).toThrow('another repository');
+    const key = '00000000-0000-4000-8000-000000000031';
+    const second = runner.dispatch({ repoId: 'sentinel', task: 'x', retryOf: first, idempotencyKey: key }).runId;
+    expect(runner.dispatch({ repoId: 'sentinel', task: 'x', retryOf: first, idempotencyKey: key }).runId).toBe(second);
+    expect(() => runner.dispatch({ repoId: 'sentinel', task: 'x', idempotencyKey: key })).toThrow('idempotency conflict');
+    await drain();
+    const rows = db.select().from(runs).all();
+    expect(rows.find((r) => r.id === second)?.retryOfRunId).toBe(first);
+    expect(rows.find((r) => r.id === first)).toMatchObject({ retryOfRunId: null, status: 'failed' });
+    expect(() => db.update(runs).set({ retryOfRunId: null }).where(eq(runs.id, second)).run()).toThrow('immutable');
+    db.update(runs).set({ processTermination: 'unconfirmed' }).where(eq(runs.id, second)).run();
+    expect(() => runner.dispatch({ repoId: 'sentinel', task: 'x', retryOf: second })).toThrow('may still be running');
+    sqlite.close();
+  });
+});

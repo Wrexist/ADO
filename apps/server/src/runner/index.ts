@@ -34,6 +34,8 @@ export interface DispatchInput {
   idempotencyKey?: string;
   taskBinding?: TaskRunBinding;
   automationId?: string;
+  /** A new attempt of this earlier run. No provider supports resume, so this never continues it. */
+  retryOf?: string;
 }
 
 interface RunnerOpts {
@@ -229,6 +231,19 @@ export class Runner {
 
   taskExecution(runId: string) { return this.taskExecutions.get(runId); }
 
+  /**
+   * T31: a retry is a new attempt, never a resume. It must name a finished run of the same
+   * repository whose process is confirmed stopped; task runs are retried through task review.
+   */
+  private assertRetryable(retryOf: string, input: DispatchInput) {
+    const source = this.db.select().from(runs).where(eq(runs.id, retryOf)).get();
+    if (!source) throw new Error('retry refused: the earlier run was not found');
+    if (source.repoId !== input.repoId) throw new Error('retry refused: the earlier run belongs to another repository');
+    if (source.status !== 'done' && source.status !== 'failed') throw new Error('retry refused: the earlier run has not finished');
+    if (source.processTermination === 'unconfirmed') throw new Error('retry refused: the earlier process may still be running');
+    if (this.taskExecutions.get(retryOf) || input.taskBinding) throw new Error('retry refused: start task runs again from the task review, which checks the task version, base and context');
+  }
+
   dispatch(input: DispatchInput): { runId: string } {
     if (this.stopped) throw new Error('runner is stopping; no new dispatches accepted');
     input = { ...input, provider: input.provider ?? this.opts.defaultProvider ?? 'claude' };
@@ -237,7 +252,7 @@ export class Runner {
       const pending = this.db.select().from(automationDispatches).where(and(eq(automationDispatches.automationId, input.automationId), isNull(automationDispatches.recordedTs))).get();
       if (pending) return { runId: pending.runId };
     }
-    const requestHash = createHash('sha256').update(JSON.stringify([input.repoId, input.task, input.model ?? 'default', input.provider, ...(input.taskBinding ? [input.taskBinding] : [])])).digest('hex');
+    const requestHash = createHash('sha256').update(JSON.stringify([input.repoId, input.task, input.model ?? 'default', input.provider, ...(input.taskBinding ? [input.taskBinding] : []), ...(input.retryOf ? [{ retryOf: input.retryOf }] : [])])).digest('hex');
     if (input.idempotencyKey) {
       if (input.idempotencyKey.length > 200) throw new Error('idempotency key too long');
       const existing = this.db.select().from(runs).where(eq(runs.idempotencyKey, input.idempotencyKey)).get();
@@ -246,6 +261,7 @@ export class Runner {
         return { runId: existing.id };
       }
     }
+    if (input.retryOf) this.assertRetryable(input.retryOf, input);
     const blocked = this.opts.blockedReason?.(input.repoId);
     if (blocked) throw new Error(blocked);
     const cwd = this.opts.cwdFor(input.repoId);
@@ -259,7 +275,7 @@ export class Runner {
     const now = new Date().toISOString();
     this.bus.commit((tx) => { tx
       .insert(runs)
-      .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', provider: input.provider, status: 'queued', startedTs: now, engineVersion: 1, idempotencyKey: input.idempotencyKey, requestHash })
+      .values({ id: runId, repoId: input.repoId, task: input.task, model: input.model ?? 'default', provider: input.provider, status: 'queued', startedTs: now, engineVersion: 1, idempotencyKey: input.idempotencyKey, requestHash, retryOfRunId: input.retryOf ?? null })
       .run();
       if (input.taskBinding) this.taskExecutions.enqueue(runId, input.taskBinding, input.task);
       if (input.automationId) tx.insert(automationDispatches).values({ runId, automationId: input.automationId, acceptedTs: now }).run();

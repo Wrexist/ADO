@@ -28,6 +28,8 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   const [detail, setDetail] = useState<RunDetail | null>(null);
   const [err, setErr] = useState('');
   const [confirmKill, setConfirmKill] = useState(false);
+  // T31: a retry is a new attempt; the owner sees the risks first, and one key covers resubmits.
+  const [retryKey, setRetryKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [controlBusy, setControlBusy] = useState(false);
   const [note, setNoteValue] = useState('');
@@ -113,11 +115,13 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
   };
 
   const again = async () => {
+    if (!retryKey) { setRetryKey(crypto.randomUUID()); setNote(''); return; }
     setBusy(true);
     setNote('');
     try {
-      const { runId: newId } = await dispatchPrompt(detail.repoId, detail.task, detail.model === 'default' ? undefined : detail.model, detail.provider);
-      setNote(`Dispatched again — run ${newId.slice(0, 12)}.`);
+      const { runId: newId } = await dispatchPrompt(detail.repoId, detail.task, detail.model === 'default' ? undefined : detail.model, detail.provider, { retryOf: detail.id, idempotencyKey: retryKey });
+      setNote(`New attempt started — run ${newId.slice(0, 12)}.`);
+      setRetryKey(null);
       onChanged();
     } catch (e) {
       setErrorNote((e as Error).message);
@@ -239,15 +243,37 @@ function RunDetailBody({ runId, onChanged }: { runId: string; onChanged: () => v
             {confirmKill ? 'Confirm kill' : detail.status === 'queued' ? 'Cancel run' : 'Kill run'}
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => void again()} disabled={busy || detail.processTermination === 'unconfirmed'}>
-            {busy ? 'Dispatching…' : 'Dispatch again'}
+          <Button size="sm" variant="outline" onClick={() => void again()} disabled={busy || detail.processTermination === 'unconfirmed' || Boolean(detail.taskId)}
+            title={detail.taskId ? 'Task runs start again from the task review' : undefined}>
+            {busy ? 'Dispatching…' : retryKey ? 'Start new attempt' : 'Dispatch again'}
           </Button>
         )}
+        {retryKey && !inFlight ? (
+          <Button size="sm" variant="ghost" onClick={() => setRetryKey(null)} disabled={busy}>Keep this run only</Button>
+        ) : null}
         {confirmKill ? (
           <Button size="sm" variant="ghost" onClick={() => setConfirmKill(false)}>Keep running</Button>
         ) : null}
         {note ? <span ref={errorNote} tabIndex={noteIsError ? -1 : undefined} role={noteIsError ? 'alert' : 'status'} className={cx('scroll-mt-48 text-label', noteIsError ? 'text-danger' : 'text-text2')}>{note}</span> : null}
       </div>
+
+      {retryKey && !inFlight ? (
+        <div role="note" className="mt-2 rounded-tile border border-warning/30 bg-warning/10 p-3 text-label text-text2">
+          <p className="font-medium text-text1">This starts a new attempt; it does not resume this run.</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            <li>{detail.provider === 'codex' ? 'Codex' : 'Claude'} cannot resume an interrupted run here, so the agent starts over from the task text.</li>
+            <li>Anything this run already did outside its working copy (pushes, API calls, installs) is not undone and may happen twice.</li>
+            <li>Changes left in this run’s working copy are not carried over; the new attempt starts from the project’s current state.</li>
+          </ul>
+        </div>
+      ) : null}
+      {detail.taskId && !inFlight ? <p className="mt-2 text-label text-text3">Task runs start again from the task review, which re-checks the task version, base and context.</p> : null}
+      {detail.retryOfRunId || (detail.retriedBy?.length ?? 0) > 0 ? (
+        <p className="mt-2 text-label text-text3">
+          {detail.retryOfRunId ? <>New attempt of run <span className="font-mono">{detail.retryOfRunId.slice(0, 18)}</span>. </> : null}
+          {detail.retriedBy?.length ? <>Retried as {detail.retriedBy.map((id) => <span key={id} className="font-mono">{id.slice(0, 18)} </span>)}</> : null}
+        </p>
+      ) : null}
 
       {/* Work outcomes are human decisions; versioned acceptance requires a prepared review. */}
       {!inFlight ? (

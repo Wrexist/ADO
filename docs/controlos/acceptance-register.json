@@ -1152,7 +1152,8 @@
       "acceptanceStatus": "not_run",
       "specification": "**Grind:** R3. **Krav:** REQ18, REQ13. **Status:** not_run.\n\n**Givet:** Providerkonfigurationen saknar bevisat resumestöd.\n\n**När:** Run detalj öppnas efter avbrott.\n\n**Godkänt endast om:** Resume-knapp visas inte som fungerande. Retry skapar nytt försök med lineage och explicita risker.\n\n**Gäller:** always.",
       "relatedEvidence": [
-        "apps/server/src/runner/providers.ts"
+        "apps/server/src/runner/providers.ts",
+        "docs/controlos/retry-lineage.md"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified."
     },

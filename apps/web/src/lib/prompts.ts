@@ -31,11 +31,12 @@ export async function dispatchPrompt(
   task: string,
   model?: string,
   provider?: 'claude' | 'codex',
+  retry?: { retryOf: string; idempotencyKey: string },
 ): Promise<{ runId: string }> {
   const res = await fetch(`${SERVER_URL}/api/dispatch`, {
     method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ repoId, task, model, provider }),
+    headers: { ...headers(), ...(retry ? { 'idempotency-key': retry.idempotencyKey } : {}) },
+    body: JSON.stringify({ repoId, task, model, provider, ...(retry ? { retryOf: retry.retryOf } : {}) }),
   });
   if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? `dispatch failed (${res.status})`);
   return (await res.json()) as { runId: string };

@@ -83,8 +83,9 @@ export const runs = sqliteTable(
     diagnostics: text('diagnostics'),
     processIdentity: text('process_identity'),
     processTermination: text('process_termination'), // confirmed | unconfirmed | null (legacy/unsupported)
+    retryOfRunId: text('retry_of_run_id'), // T31: a new attempt of this earlier run (providers cannot resume)
   },
-  (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status)],
+  (t) => [index('runs_repo_idx').on(t.repoId), index('runs_status_idx').on(t.status), index('runs_retry_of_idx').on(t.retryOfRunId)],
 );
 
 /** Accepted automation dispatch and its run commit together; JSON history is a projection. */
