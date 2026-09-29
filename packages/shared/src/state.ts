@@ -88,6 +88,8 @@ export const Repo = z.object({
   localPath: z.string().optional(),
   scannedTs: isoTs.optional(),
   githubFullName: z.string().optional(),
+  /** GitHub's numeric repository id — the identity that survives renames and name reuse. */
+  githubRepoId: z.string().regex(/^\d+$/).optional(),
   language: Language.optional(),
   stars: z.number().int().nonnegative().optional(),
   prs: z.number().int().nonnegative().optional(),
@@ -101,6 +103,7 @@ export type Repo = z.infer<typeof Repo>;
 
 /** Enrichment patch — GitHub (2.3) and the runner (P3) merge fields into a scanned repo. */
 export const RepoPatch = z.object({
+  githubRepoId: z.string().regex(/^\d+$/).optional(),
   language: Language.optional(),
   stars: z.number().int().nonnegative().optional(),
   prs: z.number().int().nonnegative().optional(),

@@ -75,14 +75,23 @@ export class GitHubSync {
     for (const gh of repos) {
       if (this.stopped) return enriched;
       const fullName = `${gh.owner}/${gh.name}`.toLowerCase();
-      const matched = Object.values(this.bus.snapshot().state.repos).find((r) => r.githubFullName === fullName && r.localPath);
-      const id = matched?.id ?? `github-${Buffer.from(fullName).toString('base64url')}`;
+      const repoId = gh.externalId && /^\d+$/.test(gh.externalId) ? gh.externalId : undefined;
+      // T01: identity is GitHub's numeric id, never the name. A name reused by a different
+      // repository must not inherit the old entry; a rename keeps its entry.
+      const known = Object.values(this.bus.snapshot().state.repos);
+      const byRepoId = repoId ? known.find((r) => r.githubRepoId === repoId) : undefined;
+      const matched = byRepoId?.localPath ? byRepoId
+        : known.find((r) => r.localPath && r.githubFullName === fullName && (!r.githubRepoId || !repoId || r.githubRepoId === repoId));
+      const legacyId = `github-${Buffer.from(fullName).toString('base64url')}`;
+      const legacy = this.bus.snapshot().state.repos[legacyId];
+      const id = matched?.id ?? byRepoId?.id
+        ?? (!repoId ? legacyId : legacy && !legacy.localPath && !legacy.githubRepoId ? legacyId : `github-${repoId}`);
       const exists = Boolean(matched);
 
       // Create a base repo only when the scanner didn't (avoids clobbering its fields).
       if (!exists) {
         this.bus.publish({
-          id: `gh-base:${id}:${gh.pushedAt}:${gh.description}:${gh.defaultBranch}`,
+          id: `gh-base:${id}:${fullName}:${gh.pushedAt}:${gh.description}:${gh.defaultBranch}`,
           type: 'repo.upserted',
           ts: now(),
           source: { kind: 'github', ref: `${gh.owner}/${gh.name}` },
@@ -96,6 +105,7 @@ export class GitHubSync {
               branch: gh.defaultBranch || 'unknown',
               updatedTs: gh.pushedAt ?? now(),
               githubFullName: fullName,
+              ...(repoId ? { githubRepoId: repoId } : {}),
             },
           },
         });
@@ -112,6 +122,7 @@ export class GitHubSync {
       if (this.stopped) return enriched;
 
       const patch: Record<string, unknown> = {
+        ...(repoId ? { githubRepoId: repoId } : {}),
         stars: gh.stargazers,
         language: toLanguage(gh.language),
       };
@@ -140,6 +151,7 @@ export class GitHubSync {
       const current = this.bus.snapshot().state.repos[id];
       const changed =
         !current ||
+        ('githubRepoId' in patch && current.githubRepoId !== patch.githubRepoId) ||
         ('stars' in patch && current.stars !== patch.stars) ||
         ('language' in patch && current.language !== patch.language) ||
         ('prs' in patch && current.prs !== patch.prs) ||

@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Key synced GitHub repositories by numeric id: renames update the same entry, a reused name gets a new entry, legacy name-keyed entries are adopted once. Full T01 remains open.
+
 - [x] Stop a GitHub sync pass at the first rate limit and wait for GitHub's reset (1–60 min); back off after partial passes; keep last-healthy time and show data age in System Status. Fixture-only; full T34 remains open.
 
 - [x] Smooth service connection: check keys right after saving and once on opening Settings; report GitHub login/scopes and check Claude keys read-only; distinct rejected/unreachable/unchecked states, format hints, readable errors, fewer requested GitHub scopes and Settings links from Setup/System Status. Mocked smoke only; no live provider request.

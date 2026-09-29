@@ -112,3 +112,39 @@ it('keeps same-name owners distinct and publishes actual CI failures once', asyn
   expect(Object.values(bus.snapshot().state.builds).every((b) => b.headSha === 'a'.repeat(40))).toBe(true);
   sqlite.close();
 });
+
+it('keys GitHub repositories by numeric id across renames and reused names (T01)', async () => {
+  const { db, sqlite } = openDb(':memory:'); const bus = new Bus(db);
+  const run = (id: number) => ({ id, headSha: 'a'.repeat(40), branch: 'main', workflowName: 'CI', status: 'completed', conclusion: 'failure' });
+  const client = new FakeClient([REPO('app', { externalId: '1' })], { app: run(11) });
+  const sync = new GitHubSync(bus, client);
+  await sync.sync();
+  const repos = () => Object.values(bus.snapshot().state.repos);
+  const first = repos()[0]!;
+  expect(first).toMatchObject({ id: 'github-1', githubRepoId: '1', name: 'app' });
+
+  // Repo 1 renamed to app2; a different repo 2 now takes the name "app".
+  Object.assign(client, { repos: [REPO('app2', { externalId: '1' }), REPO('app', { externalId: '2' })], runs: { app2: run(12), app: run(21) } });
+  await sync.sync();
+  expect(repos().map((r) => [r.id, r.name, r.githubRepoId]).sort()).toEqual([['github-1', 'app2', '1'], ['github-2', 'app', '2']]);
+  const builds = Object.values(bus.snapshot().state.builds);
+  expect(builds.filter((b) => b.repo === 'github-1').map((b) => b.workflowRunId).sort()).toEqual([11, 12]);
+  expect(builds.filter((b) => b.repo === 'github-2').map((b) => b.workflowRunId)).toEqual([21]);
+  sqlite.close();
+});
+
+it('adopts a legacy name-keyed entry once, without moving a local checkout to a reused name (T01)', async () => {
+  const { db, sqlite } = openDb(':memory:'); const bus = new Bus(db);
+  const legacyId = `github-${Buffer.from('wrexist/old').toString('base64url')}`;
+  bus.publish({ id: 'legacy', type: 'repo.upserted', ts: '2026-07-09T00:00:00.000Z', source: { kind: 'github', ref: 'wrexist/old' },
+    payload: { repo: { id: legacyId, name: 'old', category: 'web', status: 'active', description: '', branch: 'main', updatedTs: '2026-07-09T00:00:00.000Z', githubFullName: 'wrexist/old' } } });
+  bus.publish({ id: 'local', type: 'repo.upserted', ts: '2026-07-09T00:00:00.000Z', source: { kind: 'scanner', ref: '/dev/tool' },
+    payload: { repo: { id: 'tool', name: 'tool', localPath: '/dev/tool', githubFullName: 'wrexist/tool', githubRepoId: '7', category: 'web', status: 'active', description: '', branch: 'main', updatedTs: '2026-07-09T00:00:00.000Z' } } });
+  // "old" upgrades in place; "tool" is now a different repository (id 8) reusing the name.
+  await new GitHubSync(bus, new FakeClient([REPO('old', { externalId: '5' }), REPO('tool', { externalId: '8' })])).sync();
+  const state = bus.snapshot().state.repos;
+  expect(state[legacyId]).toMatchObject({ githubRepoId: '5' });
+  expect(state.tool).toMatchObject({ githubRepoId: '7', localPath: '/dev/tool' });
+  expect(state['github-8']).toMatchObject({ githubRepoId: '8', githubFullName: 'wrexist/tool' });
+  sqlite.close();
+});
