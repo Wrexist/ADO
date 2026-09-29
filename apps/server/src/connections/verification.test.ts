@@ -68,3 +68,29 @@ it('expires checks monotonically at five minutes and never revives an observed s
     expect(store.status('github').checkedTs).toBeNull();
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+it('explains GitHub scopes and login, and checks Anthropic keys read-only', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-connection-detail-'));
+  let reply = () => new Response(null, { status: 500 });
+  const urls: string[] = [];
+  const fake = (async (url: string) => { urls.push(url); return reply(); }) as typeof fetch;
+  const store = new ConnectionsStore(join(root, 'connections.json'), undefined, undefined, fake);
+  const github = (scopes: string | null, login: unknown = 'octo-cat') => () => new Response(JSON.stringify({ login }), { status: 200, headers: scopes === null ? {} : { 'x-oauth-scopes': scopes } });
+  try {
+    store.set('github', 'ghp_fixture');
+    reply = github('repo, workflow'); expect((await store.verify('github')).verificationMessage).toBe('Connected as @octo-cat; public and private repositories are readable.');
+    reply = github('public_repo'); expect((await store.verify('github')).verificationMessage).toContain('only public repositories');
+    reply = github(''); const bare = await store.verify('github');
+    expect(bare).toMatchObject({ authentication: 'verified' }); expect(bare.verificationMessage).toContain('no repo scope');
+    reply = github(null, '<script>'); expect((await store.verify('github')).verificationMessage).toBe('Connected. Fine-grained token: repository access was not checked; missing permissions show as unknown data.');
+    store.set('anthropic', 'sk-ant-fixture');
+    reply = () => new Response(null, { status: 200 }); expect((await store.verify('anthropic')).authentication).toBe('verified');
+    reply = () => new Response(null, { status: 401 }); expect((await store.verify('anthropic')).authentication).toBe('rejected');
+    reply = () => new Response(null, { status: 529 }); expect((await store.verify('anthropic'))).toMatchObject({ authentication: 'unavailable', verificationMessage: expect.stringContaining('529') });
+    expect(urls.at(-1)).toBe('https://api.anthropic.com/v1/models?limit=1');
+    store.set('slack', 'https://hooks.slack.com/services/fixture'); const count = urls.length;
+    expect((await store.verify('slack')).verificationMessage).toContain('would post a message');
+    expect(urls).toHaveLength(count);
+    expect(JSON.stringify(store.statusAll())).not.toMatch(/ghp_fixture|sk-ant-fixture/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

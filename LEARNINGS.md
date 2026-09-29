@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-29: A "Verify" button users must remember is friction; check right after save and once on page open, but keep freshness expiry so an old check never stays green.
+
 - 2026-09-29: A "latest run" is not a check of the latest commit. Store the run SHA and the branch head read with it; only equal SHAs may render as passing. Missing either SHA is unverified, not green.
 
 - 2026-09-28: Cross-request PR summaries need matching head and base identities before and after checks. Withhold the combined result when either changes or cannot be re-read; even matching reads remain observations, not atomic merge authorization.

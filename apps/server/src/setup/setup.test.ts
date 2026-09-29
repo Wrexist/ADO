@@ -48,7 +48,7 @@ describe('setup probe — honest detection', () => {
     for (const authentication of ['unverified', 'rejected', 'stale', 'unsupported', 'unavailable', 'verified'] as const) {
       const result = await probeOne(REQUIREMENT_BY_ID['github-token'], CTX({ connectionStatus: () => ({ configured: true, authentication, checkedTs: TS }) }), TS, CAPS());
       expect(result.status).toBe(authentication === 'verified' ? 'verified' : 'configured');
-      expect(result.detail).toContain(authentication === 'verified' ? 'Repository permissions were not checked' : authentication === 'rejected' ? 'Credential rejected' : '');
+      expect(result.detail).toContain(authentication === 'verified' ? 'Credential accepted' : authentication === 'rejected' ? 'Replace it in Settings' : '');
     }
     expect((await probeOne(REQUIREMENT_BY_ID['github-token'], CTX(), TS, CAPS())).status).toBe('missing');
   });

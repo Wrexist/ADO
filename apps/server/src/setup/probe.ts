@@ -12,7 +12,7 @@ import { CONTROL_OS_RUNTIME, supportsControlOSRuntime, REQUIREMENTS, type Connec
 
 export interface ProbeContext {
   /** Configuration is not authentication; checks may expire between reads. */
-  connectionStatus: (id: string) => Pick<ConnectionStatus, 'configured' | 'authentication' | 'checkedTs'>;
+  connectionStatus: (id: string) => Pick<ConnectionStatus, 'configured' | 'authentication' | 'checkedTs'> & Partial<Pick<ConnectionStatus, 'verificationMessage'>>;
   /** Does the running server have this env var set (non-empty)? */
   envHas: (name: string) => boolean;
   runtimeVersion?: string;
@@ -84,14 +84,16 @@ export interface Capabilities {
 export function connectionProbe(req: Requirement, ctx: ProbeContext, checkedTs: string): ProbeResult {
   if (req.detect.via !== 'connection') throw new Error('Connection detector required');
   const state = ctx.connectionStatus(req.detect.connectionId);
-  const detail = !state.configured ? 'No credential configured.' : {
-    verified: 'Credential accepted by the provider. Repository permissions were not checked.',
-    rejected: 'Credential rejected. Update it in Connections and verify again.',
-    stale: 'Credential verification expired. Verify again in Connections.',
-    unverified: 'Credential saved, but not verified. Verify it in Connections.',
-    unavailable: 'Provider verification was inconclusive. Retry in Connections.',
+  // The provider's own explanation (login, scopes, rejection reason) is the most useful detail.
+  const provider = state.verificationMessage ? `${state.verificationMessage} ` : '';
+  const detail = !state.configured ? 'No credential configured. Add it in Settings.' : {
+    verified: provider || 'Credential accepted by the provider. ',
+    rejected: `${provider || 'Credential rejected. '}Replace it in Settings.`,
+    stale: 'The last check has expired. Opening Settings checks it again.',
+    unverified: 'Credential saved, but not checked yet. Opening Settings checks it.',
+    unavailable: `${provider || 'The provider could not be reached. '}Retry from Settings.`,
     unsupported: 'Provider verification is not supported for this connector.',
-  }[state.authentication];
+  }[state.authentication].trim();
   return { id: req.id, status: !state.configured ? 'missing' : state.authentication === 'verified' ? 'verified' : 'configured', version: null,
     detail: detail + (state.configured && state.checkedTs ? ` Checked ${state.checkedTs}.` : ''), installable: false, checkedTs };
 }

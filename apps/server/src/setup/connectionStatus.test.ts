@@ -19,17 +19,17 @@ it('updates Setup from explicit credential verification and clears prior authent
   try {
     server = await buildServer(env, { startSystem: false });
     const get = async () => (await server!.app.inject({ url: '/api/setup', headers })).json().results.find((r: { id: string }) => r.id === 'github-token');
-    expect(await get()).toMatchObject({ status: 'configured', detail: expect.stringContaining('not verified') });
+    expect(await get()).toMatchObject({ status: 'configured', detail: expect.stringContaining('not checked yet') });
     expect(provider).not.toHaveBeenCalled();
     expect((await server.app.inject({ method: 'POST', url: '/api/connections/github/verify', headers })).statusCode).toBe(200);
-    expect(await get()).toMatchObject({ status: 'configured', detail: expect.stringContaining('Credential rejected') });
+    expect(await get()).toMatchObject({ status: 'configured', detail: expect.stringContaining('GitHub rejected this token') });
     status = 200;
     await server.app.inject({ method: 'POST', url: '/api/connections/github/verify', headers });
-    expect(await get()).toMatchObject({ status: 'verified', detail: expect.stringContaining('permissions were not checked') });
+    expect(await get()).toMatchObject({ status: 'verified', detail: expect.stringContaining('repository access was not checked') });
     expect(provider).toHaveBeenCalledTimes(2);
     await server.close(); server = undefined;
     server = await buildServer(env, { startSystem: false });
-    expect(await get()).toMatchObject({ status: 'configured', detail: expect.stringContaining('not verified') });
+    expect(await get()).toMatchObject({ status: 'configured', detail: expect.stringContaining('not checked yet') });
     expect(provider).toHaveBeenCalledTimes(2);
   } finally { await server?.close(); provider.mockRestore(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
 });

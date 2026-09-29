@@ -32,6 +32,10 @@ export interface Connector {
   placeholder: string;
   getKeyUrl: string;
   docsHint?: string;
+  /** Optional second way to create a key (e.g. a read-only token). */
+  altKey?: { label: string; url: string };
+  /** The server can check this credential with a read-only provider request. */
+  verifiable?: boolean;
   wired: boolean;
 }
 
@@ -58,12 +62,12 @@ const C = (c: Connector): Connector => c;
 
 export const CONNECTORS: Connector[] = [
   // ── Source control ────────────────────────────────────────────────────────
-  C({ id: 'github', name: 'GitHub', group: 'source', blurb: 'Repositories, pull requests, Actions CI, and releases.', kind: 'token', keyLabel: 'Personal Access Token', placeholder: 'ghp_…', getKeyUrl: 'https://github.com/settings/tokens/new?scopes=repo,workflow&description=AI%20Control%20Center', docsHint: 'Scopes: repo + actions:read. Connects live the moment you save.', wired: true }),
+  C({ id: 'github', name: 'GitHub', group: 'source', blurb: 'Repositories, pull requests, Actions CI, and releases.', kind: 'token', keyLabel: 'Personal Access Token', placeholder: 'ghp_…', getKeyUrl: 'https://github.com/settings/tokens/new?scopes=repo&description=ControlOS', docsHint: 'The quick link creates a classic token with the repo scope, which covers private repos, pull requests, Actions and releases. Prefer read-only? Create a fine-grained token with read access to Contents, Pull requests and Actions.', altKey: { label: 'Read-only token', url: 'https://github.com/settings/personal-access-tokens/new' }, verifiable: true, wired: true }),
   C({ id: 'gitlab', name: 'GitLab', group: 'source', blurb: 'Repos, pipelines, and releases on GitLab.', kind: 'token', keyLabel: 'Personal Access Token', placeholder: 'glpat-…', getKeyUrl: 'https://gitlab.com/-/user_settings/personal_access_tokens', wired: false }),
   C({ id: 'bitbucket', name: 'Bitbucket', group: 'source', blurb: 'Repos and Pipelines on Bitbucket.', kind: 'token', keyLabel: 'App Password', placeholder: 'user:app-password', getKeyUrl: 'https://bitbucket.org/account/settings/app-passwords/', wired: false }),
 
   // ── AI providers & subscriptions ──────────────────────────────────────────
-  C({ id: 'anthropic', name: 'Claude (Anthropic)', group: 'ai', blurb: 'Claude models — powers the command center intents and the nightly analyzer.', kind: 'api-key', keyLabel: 'API Key', placeholder: 'sk-ant-…', getKeyUrl: 'https://console.anthropic.com/settings/keys', docsHint: 'Used by the intent parser + analyzer. The agent runner uses Claude Code’s own auth.', wired: true }),
+  C({ id: 'anthropic', name: 'Claude (Anthropic)', group: 'ai', blurb: 'Claude models — powers the command center intents and the nightly analyzer.', kind: 'api-key', keyLabel: 'API Key', placeholder: 'sk-ant-…', getKeyUrl: 'https://console.anthropic.com/settings/keys', docsHint: 'Used by the command center and analyzer. Agents run through Claude Code’s own sign-in (see Setup).', verifiable: true, wired: true }),
   C({ id: 'openai', name: 'GPT (OpenAI)', group: 'ai', blurb: 'GPT models via the universal AI runtime.', kind: 'api-key', keyLabel: 'API Key', placeholder: 'sk-…', getKeyUrl: 'https://platform.openai.com/api-keys', wired: false }),
   C({ id: 'google', name: 'Gemini (Google)', group: 'ai', blurb: 'Gemini models via the universal AI runtime.', kind: 'api-key', keyLabel: 'API Key', placeholder: 'AIza…', getKeyUrl: 'https://aistudio.google.com/app/apikey', wired: false }),
   C({ id: 'mistral', name: 'Mistral', group: 'ai', blurb: 'Open-weight and hosted Mistral models.', kind: 'api-key', keyLabel: 'API Key', placeholder: '…', getKeyUrl: 'https://console.mistral.ai/api-keys/', wired: false }),
@@ -100,8 +104,8 @@ export const CONNECTORS: Connector[] = [
   C({ id: 'unity', name: 'Unity Cloud', group: 'gamedev', blurb: 'Unity DevOps: cloud build & delivery.', kind: 'api-key', keyLabel: 'API Key', placeholder: '…', getKeyUrl: 'https://cloud.unity.com/', wired: false }),
 
   // ── Notifications & project ───────────────────────────────────────────────
-  C({ id: 'slack', name: 'Slack', group: 'comms', blurb: 'Build-failure and deploy notifications to a channel.', kind: 'webhook', keyLabel: 'Incoming Webhook URL', placeholder: 'https://hooks.slack.com/services/…', getKeyUrl: 'https://api.slack.com/messaging/webhooks', docsHint: 'Connects live the moment you save — pings on real CI failures + deploys.', wired: true }),
-  C({ id: 'discord', name: 'Discord', group: 'comms', blurb: 'Build-failure and deploy notifications to a channel.', kind: 'webhook', keyLabel: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/…', getKeyUrl: 'https://support.discord.com/hc/en-us/articles/228383668', docsHint: 'Connects live the moment you save — pings on real CI failures + deploys.', wired: true }),
+  C({ id: 'slack', name: 'Slack', group: 'comms', blurb: 'Build-failure and deploy notifications to a channel.', kind: 'webhook', keyLabel: 'Incoming Webhook URL', placeholder: 'https://hooks.slack.com/services/…', getKeyUrl: 'https://api.slack.com/messaging/webhooks', docsHint: 'Used as soon as you save: posts when CI fails or a deploy lands.', wired: true }),
+  C({ id: 'discord', name: 'Discord', group: 'comms', blurb: 'Build-failure and deploy notifications to a channel.', kind: 'webhook', keyLabel: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/…', getKeyUrl: 'https://support.discord.com/hc/en-us/articles/228383668', docsHint: 'Used as soon as you save: posts when CI fails or a deploy lands.', wired: true }),
   C({ id: 'telegram', name: 'Telegram', group: 'comms', blurb: 'Bot notifications to your phone.', kind: 'token', keyLabel: 'Bot Token', placeholder: '123456:ABC…', getKeyUrl: 'https://t.me/botfather', wired: false }),
   C({ id: 'linear', name: 'Linear', group: 'comms', blurb: 'Issues and project tracking.', kind: 'api-key', keyLabel: 'API Key', placeholder: 'lin_api_…', getKeyUrl: 'https://linear.app/settings/api', wired: false }),
   C({ id: 'notion', name: 'Notion', group: 'comms', blurb: 'Docs and knowledge base.', kind: 'token', keyLabel: 'Integration Token', placeholder: 'secret_…', getKeyUrl: 'https://www.notion.so/my-integrations', wired: false }),

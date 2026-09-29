@@ -94,10 +94,18 @@ export function RightRail() {
         <div className="mt-2 flex flex-col">
           {status.map((s) => {
             const look = STATE_LOOK[s.state];
+            // A credential-backed service that isn't healthy links to where it's fixed.
+            const fixable = (s.id === 'github' || s.id === 'anthropic') && s.state !== 'operational';
             return (
               <div key={s.id} className="flex items-center justify-between py-2">
                 <span className="text-body text-text2">{s.name}</span>
-                <StatusDot dotAfter tone={look.tone} label={look.label} />
+                {fixable ? (
+                  <Link to="/settings" title={`Open ${s.name} connection settings`} className="rounded transition-opacity duration-150 ease-soft hover:opacity-80">
+                    <StatusDot dotAfter tone={look.tone} label={look.label} />
+                  </Link>
+                ) : (
+                  <StatusDot dotAfter tone={look.tone} label={look.label} />
+                )}
               </div>
             );
           })}

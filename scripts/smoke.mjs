@@ -297,13 +297,18 @@ try {
     await page.setViewportSize({ width, height: 1024 });
     await page.goto(base + '/settings'); await pair();
     await page.getByLabel('Filter services').fill('github');
-    await page.getByText('Configured · not verified', { exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Verify GitHub', exact: true }).click();
-    await page.getByText('Credential rejected', { exact: true }).waitFor();
+    // Opening Settings checks a saved, unchecked key once without a click.
+    await page.getByText('Key rejected', { exact: true }).waitFor();
+    await page.getByText('DEMO: GitHub rejected this credential.', { exact: true }).waitFor();
+    await page.getByRole('link', { name: 'Create a new key ↗' }).waitFor();
+    connectionFixture.authentication = 'unverified';
+    await page.getByRole('button', { name: 'Check GitHub again', exact: true }).click();
+    await page.getByText('Key rejected', { exact: true }).waitFor();
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Credential verification mobile overflow');
     await page.screenshot({ path: join(out, `credential-rejected-${width}.png`), fullPage: true });
     await page.locator('input[type="password"]').fill('DEMO replacement fixture');
-    await page.getByRole('button', { name: 'Update', exact: true }).click();
+    await page.getByText('This doesn’t look like the expected format (GitHub tokens start with ghp_ or github_pat_). You can still save it.', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Replace', exact: true }).click();
     await page.getByText(connectionRecovery, { exact: true }).waitFor();
     await Promise.all([
       page.waitForResponse((response) => response.url() === `${base}/api/connections/github` && response.request().method() === 'DELETE' && response.status() === 400),

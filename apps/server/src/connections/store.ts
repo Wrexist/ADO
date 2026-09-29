@@ -129,15 +129,11 @@ export class ConnectionsStore {
     if (!value) return this.status(id);
     const revision = (this.revisions.get(id) ?? 0) + 1; this.revisions.set(id, revision);
     let state: ConnectionStatus['authentication'] = 'unsupported';
-    let message = 'No credential verification is implemented for this connector.';
-    if (id === 'github') {
-      try {
-        const response = await this.fetchImpl('https://api.github.com/user', { redirect: 'error', signal: AbortSignal.timeout(10000), headers: { authorization: `Bearer ${value}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2026-03-10' } });
-        state = response.status === 200 ? 'verified' : response.status === 401 ? 'rejected' : 'unavailable';
-        message = state === 'verified' ? 'GitHub accepted this credential. Repository permissions were not checked.' : state === 'rejected' ? 'GitHub rejected this credential.' : 'GitHub verification was inconclusive; retry later.';
-        await response.body?.cancel();
-      } catch { state = 'unavailable'; message = 'GitHub could not be verified; check connectivity and retry.'; }
-    }
+    let message = CONNECTOR_BY_ID[id].kind === 'webhook'
+      ? 'Saved. Webhooks are not tested automatically because a test would post a message.'
+      : 'Saved. This connector has no live check yet.';
+    if (id === 'github') ({ state, message } = await this.checkGithub(value));
+    if (id === 'anthropic') ({ state, message } = await this.checkAnthropic(value));
     if (this.revisions.get(id) === revision && this.resolve(id) === value) {
       const at = this.now(), elapsedAt = this.elapsedNow();
       // Invalid clocks cannot produce a serializable verification timestamp.
@@ -145,6 +141,38 @@ export class ConnectionsStore {
       else this.checks.set(id, { fingerprint: this.fingerprint(value), at, elapsedAt, lastWall: at, lastElapsed: elapsedAt, stale: false, state, message });
     }
     return this.status(id);
+  }
+
+  private async checkGithub(value: string): Promise<{ state: ConnectionStatus['authentication']; message: string }> {
+    try {
+      const response = await this.fetchImpl('https://api.github.com/user', { redirect: 'error', signal: AbortSignal.timeout(10000), headers: { authorization: `Bearer ${value}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2026-03-10' } });
+      if (response.status !== 200) {
+        await response.body?.cancel();
+        return response.status === 401
+          ? { state: 'rejected', message: 'GitHub rejected this token. It may be expired or revoked; create a new one.' }
+          : { state: 'unavailable', message: `GitHub answered ${response.status}; the token could not be checked. Try again shortly.` };
+      }
+      const body = await response.json().catch(() => null) as { login?: unknown } | null;
+      const login = typeof body?.login === 'string' && /^[A-Za-z0-9-]{1,39}$/.test(body.login) ? ` as @${body.login}` : '';
+      // Classic tokens report their scopes; fine-grained and app tokens do not.
+      const header = response.headers.get('x-oauth-scopes');
+      if (header === null) return { state: 'verified', message: `Connected${login}. Fine-grained token: repository access was not checked; missing permissions show as unknown data.` };
+      const scopes = header.split(',').map((scope) => scope.trim()).filter(Boolean);
+      const access = scopes.includes('repo') ? 'public and private repositories are readable.'
+        : scopes.includes('public_repo') ? 'only public repositories are readable (no repo scope).'
+        : 'this token has no repo scope, so repositories, pull requests and CI will be missing.';
+      return { state: 'verified', message: `Connected${login}; ${access}` };
+    } catch { return { state: 'unavailable', message: 'Could not reach GitHub. Check your connection and try again.' }; }
+  }
+
+  private async checkAnthropic(value: string): Promise<{ state: ConnectionStatus['authentication']; message: string }> {
+    try {
+      const response = await this.fetchImpl('https://api.anthropic.com/v1/models?limit=1', { redirect: 'error', signal: AbortSignal.timeout(10000), headers: { 'x-api-key': value, 'anthropic-version': '2023-06-01' } });
+      await response.body?.cancel();
+      if (response.status === 200) return { state: 'verified', message: 'Connected. Anthropic accepted this API key.' };
+      if (response.status === 401) return { state: 'rejected', message: 'Anthropic rejected this API key. It may be disabled or deleted; create a new one.' };
+      return { state: 'unavailable', message: `Anthropic answered ${response.status}; the key could not be checked. Try again shortly.` };
+    } catch { return { state: 'unavailable', message: 'Could not reach Anthropic. Check your connection and try again.' }; }
   }
 
   /** Status for every connector in the catalog. */

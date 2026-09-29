@@ -1,5 +1,11 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Smidigare anslutning av tjänster
+
+Nycklar kontrolleras direkt efter sparande och en gång när Inställningar öppnas om kontrollen saknas eller har gått ut; femminutersgränsen är oförändrad. GitHub-kontrollen visar inloggning och token-scopes (eller att fine-grained-behörigheter inte kontrollerats). Claude-nycklar kontrolleras skrivskyddat. Slack/Discord testas inte eftersom ett test skulle posta ett meddelande. Avvisad, onåbar och okontrollerad nyckel har egna lägen; felmeddelanden är begripliga och formatvarningar hindrar inte sparande. GitHub-länken begär inte längre `workflow`-scope och en skrivskyddad fine-grained-länk finns. Setup och systemstatus leder till Inställningar.
+
+`scripts/verify.sh` och `npm run smoke` passerade (Inställningar vid 1536/390 px med mockade svar). Inga riktiga GitHub- eller Anthropic-anrop gjordes. Underlag: `docs/controlos/connection-setup.md`. T25 och R1–R4 återstår; fortsatt 18/46.
+
 ## CI-status binds till aktuell commit
 
 Projektkort och Ops kunde visa en äldre commits gröna körning som godkänd kontroll direkt efter en push. CI-resultatet bär nu körningens SHA, starttid och default-branchens aktuella head (exakt branchnamn). Endast lika SHA får visas som godkänd/misslyckad. Äldre körningar visas dämpade med SHA och ålder; saknad SHA ger “unverified”, även för äldre lagrade händelser.

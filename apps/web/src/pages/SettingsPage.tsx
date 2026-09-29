@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CONNECTORS,
+  CONNECTOR_BY_ID,
   CONNECTOR_GROUPS,
   type ConnectionStatus,
   type Connector,
   type ConnectorGroup,
 } from '@ado/shared';
-import { Button, Card, Chip, Icon, StatusDot, cx, type IconName } from '../kit';
+import { Button, Card, Chip, Icon, StatusDot, cx, type IconName, type Tone } from '../kit';
 import { PageShell } from '../chrome/PageShell';
-import { fetchConnections, removeConnection, saveConnection, verifyConnection } from '../lib/connections';
+import { fetchConnections, removeConnection, saveConnection, shapeWarning, verifyConnection } from '../lib/connections';
+import { timeAgo } from '../lib/time';
 
 const ICON: Record<string, IconName> = {
   // source
@@ -33,48 +35,55 @@ const ICON: Record<string, IconName> = {
   figma: 'wand', sentry: 'health', posthog: 'chart', stripe: 'billing',
 };
 
+type Look = { tone: Tone; label: string };
+/** One visible state per outcome, so a rejected key never looks like an unchecked one. */
+function lookOf(c: Connector, status: ConnectionStatus | undefined, checking: boolean): Look {
+  if (checking) return { tone: 'info', label: 'Checking…' };
+  if (!status?.configured) return { tone: 'muted', label: 'Not connected' };
+  switch (status.authentication) {
+    case 'verified': return { tone: 'success', label: 'Connected' };
+    case 'rejected': return { tone: 'danger', label: 'Key rejected' };
+    case 'unavailable': return { tone: 'warning', label: 'Couldn’t check' };
+    case 'stale': return { tone: 'muted', label: 'Needs a fresh check' };
+    case 'unsupported': return { tone: 'info', label: 'Saved' };
+    case 'unverified': return c.verifiable ? { tone: 'warning', label: 'Saved · not checked yet' } : { tone: 'info', label: 'Saved' };
+  }
+}
+
 function ConnectorCard({
   c,
   status,
+  checking,
   onChanged,
+  onCheck,
 }: {
   c: Connector;
   status: ConnectionStatus | undefined;
+  checking: boolean;
   onChanged: (s: ConnectionStatus) => void;
+  onCheck: () => Promise<void>;
 }) {
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const connected = status?.configured ?? false;
-  const verified = status?.authentication === 'verified';
+  const look = lookOf(c, status, checking);
+  const warning = shapeWarning(c.id, value);
 
-  const save = async () => {
+  const act = async (work: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try { await work(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  // Saving stores the key; verifiable services are then checked straight away.
+  const save = () => act(async () => {
     if (!value.trim()) return;
-    setBusy(true);
-    setMsg(null);
-    try {
-      onChanged(await saveConnection(c.id, value));
-      setValue('');
-      setMsg('Saved ✓');
-    } catch (e) {
-      setMsg((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const disconnect = async () => {
-    setBusy(true);
-    setMsg(null);
-    try {
-      onChanged(await removeConnection(c.id));
-      setMsg('Disconnected');
-    } catch (e) {
-      setMsg((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+    onChanged(await saveConnection(c.id, value));
+    setValue('');
+    if (c.verifiable) await onCheck();
+  });
+  const disconnect = () => act(async () => { onChanged(await removeConnection(c.id)); });
+  const message = connected ? status?.verificationMessage ?? (c.verifiable ? null : 'Saved. This connector has no live check yet.') : null;
 
   return (
     <Card className="flex flex-col gap-3 p-5">
@@ -85,67 +94,67 @@ function ConnectorCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate text-body font-semibold text-text1">{c.name}</p>
-            {c.wired ? (
-              <Chip size="sm">Available</Chip>
-            ) : (
-              <Chip size="sm">Preview</Chip>
-            )}
+            {c.wired ? null : <Chip size="sm">Preview</Chip>}
           </div>
           <p className="mt-0.5 text-label text-text2">{c.blurb}</p>
         </div>
-        <div className="w-full"><StatusDot
-          dotAfter
-          tone={verified ? 'success' : 'muted'}
-          label={!connected ? 'Not set' : verified ? 'Verified recently' : status?.authentication === 'rejected' ? 'Credential rejected' : status?.authentication === 'stale' ? 'Check expired' : 'Configured · not verified'}
-        /></div>
+        <StatusDot dotAfter tone={look.tone} label={look.label} />
       </div>
 
-      {connected && status?.hint ? (
-        <p className="text-label text-text3">
-          Key on file: <span className="font-mono tabular-nums text-text2">{status.hint}</span>
-          {status.updatedTs && status.updatedTs !== 'from .env' ? '' : status.updatedTs === 'from .env' ? ' · from .env' : ''}
-        </p>
+      {connected ? (
+        <div className="flex flex-col gap-1 rounded-tile bg-elevated px-3 py-2 text-label">
+          <p className="text-text3">
+            Key on file <span className="font-mono tabular-nums text-text2">{status?.hint}</span>
+            {status?.updatedTs === 'from .env' ? ' · from .env' : ''}
+            {status?.checkedTs ? ` · checked ${timeAgo(status.checkedTs)}` : ''}
+          </p>
+          {message ? <p className={cx(status?.authentication === 'rejected' ? 'text-danger' : 'text-text2')}>{message}</p> : null}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {c.verifiable ? (
+              <Button size="sm" variant="ghost" disabled={busy || checking} aria-label={`Check ${c.name} again`} onClick={() => void act(onCheck)}>
+                Check again
+              </Button>
+            ) : null}
+            <Button size="sm" variant="ghost" onClick={() => void disconnect()} disabled={busy}>
+              Disconnect
+            </Button>
+          </div>
+        </div>
       ) : null}
 
-      <div className="flex items-center gap-2">
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(e) => { e.preventDefault(); void save(); }}
+      >
         <input
           type="password"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void save()}
-          placeholder={connected ? 'Paste a new value to replace…' : c.placeholder}
+          placeholder={connected ? 'Paste a new key to replace it…' : c.placeholder}
           aria-label={`${c.name} ${c.keyLabel}`}
+          autoComplete="off"
           className="h-9 min-w-0 flex-1 rounded-tile border-none bg-elevated px-3 font-mono text-body text-text1 placeholder:font-sans placeholder:text-text3 focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
-        <Button size="sm" onClick={() => void save()} disabled={busy || !value.trim()}>
-          {connected ? 'Update' : 'Save key'}
+        <Button size="sm" type="submit" disabled={busy || !value.trim()}>
+          {connected ? 'Replace' : c.verifiable ? 'Connect' : 'Save'}
         </Button>
-        {connected ? (
-          <Button size="sm" variant="ghost" onClick={() => void disconnect()} disabled={busy}>
-            Disconnect
-          </Button>
-        ) : null}
-      </div>
-      {connected && <div className="flex flex-wrap items-center gap-2 text-label text-text3">
-        <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
-          setBusy(true); setMsg(null);
-          void verifyConnection(c.id).then(onChanged).catch((error: Error) => setMsg(error.message)).finally(() => setBusy(false));
-        }}>Verify {c.name}</Button>
-        <span>{status?.verificationMessage ?? 'Saving a key does not verify access.'}{status?.checkedTs ? ` Checked ${new Date(status.checkedTs).toLocaleString()}.` : ''}</span>
-      </div>}
+      </form>
+      {warning ? <p className="text-label text-warning">{warning}</p> : null}
 
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-label text-text3">{c.docsHint ?? `Paste your ${c.keyLabel.toLowerCase()}.`}</span>
-        <a
-          href={c.getKeyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 text-label font-medium text-primary transition-colors duration-150 ease-soft hover:text-text1"
-        >
-          Get {c.kind === 'url' ? 'set up' : 'key'} ↗
-        </a>
+      <div className="flex flex-col gap-1.5">
+        <p className="text-label text-text3">{c.docsHint ?? `Paste your ${c.keyLabel.toLowerCase()}.`}</p>
+        <span className="flex flex-wrap gap-x-4 gap-y-1">
+          {c.altKey ? (
+            <a href={c.altKey.url} target="_blank" rel="noopener noreferrer" className="text-label font-medium text-primary transition-colors duration-150 ease-soft hover:text-text1">
+              {c.altKey.label} ↗
+            </a>
+          ) : null}
+          <a href={c.getKeyUrl} target="_blank" rel="noopener noreferrer" className="text-label font-medium text-primary transition-colors duration-150 ease-soft hover:text-text1">
+            {c.kind === 'url' ? 'Set up' : status?.authentication === 'rejected' ? 'Create a new key' : 'Get a key'} ↗
+          </a>
+        </span>
       </div>
-      {msg ? <p className={cx('text-label', msg.includes('✓') || msg === 'Disconnected' ? 'text-success' : 'text-danger')}>{msg}</p> : null}
+      {error ? <p role="alert" className="text-label text-danger">{error}</p> : null}
     </Card>
   );
 }
@@ -155,17 +164,40 @@ export function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
+  const [checking, setChecking] = useState<Record<string, boolean>>({});
+  const autoChecked = useRef(new Set<string>());
+
+  const check = useCallback(async (id: string) => {
+    setChecking((prev) => ({ ...prev, [id]: true }));
+    try {
+      const status = await verifyConnection(id);
+      setStatuses((prev) => ({ ...prev, [id]: status }));
+    } finally {
+      setChecking((prev) => ({ ...prev, [id]: false }));
+    }
+  }, []);
 
   useEffect(() => {
     const refresh = () => { void fetchConnections()
-      .then((list) => setStatuses(Object.fromEntries(list.map((s) => [s.id, s]))))
+      .then((list) => {
+        setStatuses(Object.fromEntries(list.map((s) => [s.id, s])));
+        setError(null);
+        // Once per visit, re-check saved keys whose check is missing or expired, so the
+        // page opens on a current answer instead of asking for a click.
+        for (const s of list) {
+          if (!s.configured || !CONNECTOR_BY_ID[s.id]?.verifiable || autoChecked.current.has(s.id)) continue;
+          if (s.authentication !== 'unverified' && s.authentication !== 'stale') continue;
+          autoChecked.current.add(s.id);
+          void check(s.id).catch(() => undefined);
+        }
+      })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoaded(true)); };
     refresh();
     const timer = setInterval(refresh, 15000);
     window.addEventListener('focus', refresh);
     return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
-  }, []);
+  }, [check]);
 
   const byGroup = useMemo(() => {
     const map = new Map<ConnectorGroup, Connector[]>();
@@ -177,7 +209,8 @@ export function SettingsPage() {
     return map;
   }, []);
 
-  const connectedCount = Object.values(statuses).filter((s) => s.configured).length;
+  const wired = CONNECTORS.filter((c) => c.wired);
+  const connectedCount = wired.filter((c) => statuses[c.id]?.authentication === 'verified').length;
 
   return (
     <PageShell
@@ -195,7 +228,7 @@ export function SettingsPage() {
             Keys stay on this machine. Desktop encrypts them with your OS account; CLI profiles use protected files.
           </span>
           <span className="text-label text-text3">
-            {connectedCount} of {CONNECTORS.length} credentials configured
+            {connectedCount} of {wired.length} live integrations connected
           </span>
         </div>
 
@@ -213,7 +246,7 @@ export function SettingsPage() {
 
         {error ? (
           <Card className="mt-6 border-danger/25 bg-danger/10 p-4 text-body text-danger">
-            Couldn’t reach the server ({error}). Start the server and set <span className="font-mono">ACC_TOKEN</span> in <span className="font-mono">.env</span>.
+            {error}
           </Card>
         ) : null}
 
@@ -226,7 +259,9 @@ export function SettingsPage() {
               key={c.id}
               c={c}
               status={statuses[c.id]}
+              checking={checking[c.id] ?? false}
               onChanged={(s) => setStatuses((prev) => ({ ...prev, [c.id]: s }))}
+              onCheck={() => check(c.id)}
             />
           );
           const active = CONNECTORS.filter((c) => c.wired && match(c));
