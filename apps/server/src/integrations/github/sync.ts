@@ -15,6 +15,25 @@ import { randomUUID } from 'node:crypto';
 
 const BASE_INTERVAL_MS = 60_000;
 const MAX_INTERVAL_MS = 10 * 60_000;
+const MAX_RATE_LIMIT_WAIT_MS = 60 * 60_000;
+
+/** GitHub asked us to stop: the pass ends at once and the next one waits for `waitMs`. */
+export class GitHubRateLimited extends Error {
+  constructor(readonly waitMs: number) { super(`rate limited for ${Math.round(waitMs / 1000)}s`); }
+}
+
+/** Recognise primary/secondary rate limits from an Octokit error; null for other failures. */
+export function rateLimitWait(err: unknown, nowMs = Date.now()): number | null {
+  const e = err as { status?: number; response?: { headers?: Record<string, string | number | undefined> } };
+  const headers = e?.response?.headers ?? {};
+  const header = (name: string) => { const v = headers[name]; return v === undefined ? null : Number(v); };
+  const retryAfter = header('retry-after'), remaining = header('x-ratelimit-remaining'), reset = header('x-ratelimit-reset');
+  const limited = e?.status === 429 || (e?.status === 403 && (remaining === 0 || retryAfter !== null));
+  if (!limited) return null;
+  const wait = retryAfter !== null && Number.isFinite(retryAfter) ? retryAfter * 1000
+    : reset !== null && Number.isFinite(reset) ? reset * 1000 - nowMs : BASE_INTERVAL_MS;
+  return Math.min(Math.max(wait, BASE_INTERVAL_MS), MAX_RATE_LIMIT_WAIT_MS);
+}
 
 export class GitHubSync {
   private timer: NodeJS.Timeout | null = null;
@@ -22,6 +41,7 @@ export class GitHubSync {
   private stopped = false;
   private started = false;
   private pending: Promise<number> | null = null;
+  private partial = false;
 
   constructor(
     private bus: Bus,
@@ -40,9 +60,13 @@ export class GitHubSync {
     return job;
   }
 
+  /** Delay before the next scheduled pass (exposed for tests and diagnostics). */
+  get nextDelayMs(): number { return this.interval; }
+
   private async syncPass(): Promise<number> {
     const now = () => new Date().toISOString();
-    const repos = await this.client.listRepos();
+    this.partial = false;
+    const repos = await this.client.listRepos().catch((e: unknown) => { throw this.limited(e) ?? e; });
     if (this.stopped) return 0;
     this.observe?.(repos, now());
     let enriched = 0;
@@ -79,10 +103,10 @@ export class GitHubSync {
 
       // Enrich: stars, language, PR count, latest CI. Each sub-call is best-effort.
       const [prs, run, branchHead] = await Promise.all([
-        this.client.openPrCount(gh.owner, gh.name).catch(() => { degraded = true; return undefined; }),
-        this.client.latestRun(gh.owner, gh.name, gh.defaultBranch || undefined).catch(() => { degraded = true; return null; }),
+        this.client.openPrCount(gh.owner, gh.name).catch((e: unknown) => { this.softFail(e); degraded = true; return undefined; }),
+        this.client.latestRun(gh.owner, gh.name, gh.defaultBranch || undefined).catch((e: unknown) => { this.softFail(e); degraded = true; return null; }),
         gh.defaultBranch
-          ? this.client.branchHead(gh.owner, gh.name, gh.defaultBranch).catch(() => { degraded = true; return null; })
+          ? this.client.branchHead(gh.owner, gh.name, gh.defaultBranch).catch((e: unknown) => { this.softFail(e); degraded = true; return null; })
           : Promise.resolve(null),
       ]);
       if (this.stopped) return enriched;
@@ -134,7 +158,7 @@ export class GitHubSync {
       }
 
       // Releases → deployments (idempotent by release id).
-      const releases = await this.client.listReleases(gh.owner, gh.name).catch(() => { degraded = true; return []; });
+      const releases = await this.client.listReleases(gh.owner, gh.name).catch((e: unknown) => { this.softFail(e); degraded = true; return []; });
       if (this.stopped) return enriched;
       for (const rel of releases) {
         this.bus.publish({
@@ -156,8 +180,20 @@ export class GitHubSync {
       }
     }
 
+    this.partial = degraded;
     this.emitHealth(degraded ? 'degraded' : 'operational');
     return enriched;
+  }
+
+  private limited(err: unknown): GitHubRateLimited | null {
+    const wait = rateLimitWait(err);
+    return wait === null ? null : new GitHubRateLimited(wait);
+  }
+
+  /** Swallow an ordinary per-repo failure; rethrow a rate limit so the pass stops. */
+  private softFail(err: unknown): void {
+    const limited = this.limited(err);
+    if (limited) throw limited;
   }
 
   private emitHealth(state: 'operational' | 'degraded' | 'down'): void {
@@ -171,7 +207,10 @@ export class GitHubSync {
     });
   }
 
-  /** Poll with backoff: reset to 60s on success, double to 10m on failure. */
+  /**
+   * Poll with backoff: 60s after a clean pass; doubling to 10m after a failed or partial
+   * pass; after a rate limit, wait until GitHub's reset (1–60m). Never retries in parallel.
+   */
   start(): void {
     if (this.started || this.stopped) return;
     this.started = true;
@@ -180,13 +219,13 @@ export class GitHubSync {
       try {
         const n = await this.sync();
         if (this.stopped) return;
-        this.interval = BASE_INTERVAL_MS;
-        this.log(`github: enriched ${n} repo(s)`);
+        this.interval = this.partial ? Math.min(this.interval * 2, MAX_INTERVAL_MS) : BASE_INTERVAL_MS;
+        this.log(`github: enriched ${n} repo(s)${this.partial ? `; some calls failed, next pass in ${this.interval / 1000}s` : ''}`);
       } catch (err) {
         if (this.stopped) return;
-        this.interval = Math.min(this.interval * 2, MAX_INTERVAL_MS);
+        this.interval = err instanceof GitHubRateLimited ? err.waitMs : Math.min(this.interval * 2, MAX_INTERVAL_MS);
         this.emitHealth('degraded');
-        this.log(`github: sync failed (${(err as Error).message}); backing off to ${this.interval / 1000}s`);
+        this.log(`github: sync failed (${(err as Error).message}); next pass in ${this.interval / 1000}s`);
       }
       if (!this.stopped) this.timer = setTimeout(tick, this.interval);
     };

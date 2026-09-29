@@ -84,6 +84,7 @@ export function systemStatusRows(s: BusState) {
     id: service,
     name: label,
     state: (s.health[service]?.state ?? 'unknown') as ServiceState | 'unknown',
+    lastOkTs: s.health[service]?.lastOkTs ?? null,
   }));
 }
 

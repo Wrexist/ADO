@@ -98,7 +98,12 @@ export function RightRail() {
             const fixable = (s.id === 'github' || s.id === 'anthropic') && s.state !== 'operational';
             return (
               <div key={s.id} className="flex items-center justify-between py-2">
-                <span className="text-body text-text2">{s.name}</span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-body text-text2">{s.name}</span>
+                  {s.state !== 'operational' && s.state !== 'unknown' && s.lastOkTs ? (
+                    <span className="text-label text-text3">Data from {timeAgo(s.lastOkTs)}</span>
+                  ) : null}
+                </span>
                 {fixable ? (
                   <Link to="/settings" title={`Open ${s.name} connection settings`} className="rounded transition-opacity duration-150 ease-soft hover:opacity-80">
                     <StatusDot dotAfter tone={look.tone} label={look.label} />

@@ -174,6 +174,8 @@ export const HealthCheck = z.object({
   service: HealthService,
   state: ServiceState,
   checkedTs: isoTs,
+  /** Last check that found the service operational; absent when never seen healthy. */
+  lastOkTs: isoTs.optional(),
 });
 export type HealthCheck = z.infer<typeof HealthCheck>;
 
@@ -321,7 +323,9 @@ export function reduce(state: BusState, evt: ReducibleEvent): BusState {
         ...state,
         health: {
           ...state.health,
-          [check.service]: { service: check.service, state: check.state, checkedTs: evt.ts },
+          // lastOkTs survives degraded/down checks so the UI can say how old external data is.
+          [check.service]: { service: check.service, state: check.state, checkedTs: evt.ts,
+            ...(check.state === 'operational' ? { lastOkTs: evt.ts } : state.health[check.service]?.lastOkTs ? { lastOkTs: state.health[check.service]!.lastOkTs } : {}) },
         },
       };
     }

@@ -1,5 +1,9 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## GitHub otillgängligt eller rate-limitat
+
+En synk avbryts nu vid första rate-limit (429, eller 403 med `x-ratelimit-remaining: 0`/`retry-after`) och nästa försök väntar till GitHubs återställning, begränsat till 1–60 minuter. Delvis misslyckade pass ger fördubblad väntetid i stället för 60 s. Tidigare repodata ändras inte. Systemstatus visar “Data from …” för degraderad tjänst via senaste friska kontroll. 485 tester och smoke passerade; endast fixturer, ingen verklig GitHub-störning. Underlag: `docs/controlos/github-unavailable.md`. Full T34 återstår; fortsatt 18/46.
+
 ## Smidigare anslutning av tjänster
 
 Nycklar kontrolleras direkt efter sparande och en gång när Inställningar öppnas om kontrollen saknas eller har gått ut; femminutersgränsen är oförändrad. GitHub-kontrollen visar inloggning och token-scopes (eller att fine-grained-behörigheter inte kontrollerats). Claude-nycklar kontrolleras skrivskyddat. Slack/Discord testas inte eftersom ett test skulle posta ett meddelande. Avvisad, onåbar och okontrollerad nyckel har egna lägen; felmeddelanden är begripliga och formatvarningar hindrar inte sparande. GitHub-länken begär inte längre `workflow`-scope och en skrivskyddad fine-grained-länk finns. Setup och systemstatus leder till Inställningar.

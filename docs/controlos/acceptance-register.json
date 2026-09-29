@@ -1185,7 +1185,9 @@
         "apps/server/src/integrations/github/github.test.ts",
         "apps/server/src/projects/registry.test.ts",
         "apps/server/src/projects/registryApi.test.ts",
-        "docs/controlos/project-registry.md"
+        "docs/controlos/project-registry.md",
+        "apps/server/src/integrations/github/rateLimit.test.ts",
+        "docs/controlos/github-unavailable.md"
       ],
       "coverageNote": "Separate project/repository/checkout metadata registry has local regression evidence for stable IDs, observation freshness, explicit import and preservation of manual fields. Task/context isolation, verified branch-head baseline and the complete offline-roadmap scenario remain unaccepted."
     },
