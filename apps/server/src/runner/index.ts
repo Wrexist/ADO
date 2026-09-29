@@ -7,6 +7,7 @@
  * spawns get a turn cap + minimal env (in the Spawner). Registry survives restart: a
  * `running` row on boot is an orphan, reconciled to `failed`.
  */
+import { execFileSync } from 'node:child_process';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { Bus } from '../bus';
 import type { Db } from '../db';
@@ -224,7 +225,15 @@ export class Runner {
     const existing = this.db.select().from(runs).where(eq(runs.idempotencyKey, request.idempotencyKey)).get();
     const checkout = this.db.select().from(portfolioCheckouts).where(eq(portfolioCheckouts.id, request.checkoutId)).get();
     if (!checkout) throw new Error('Checkout not found');
-    if (!existing) this.opts.assertDefaultBase?.(request.checkoutId, request.baseSha, request.nonDefaultBase === true);
+    if (!existing) {
+      this.opts.assertDefaultBase?.(request.checkoutId, request.baseSha, request.nonDefaultBase === true);
+      // T11: refuse before queueing if the working copy moved since review, so the task
+      // is not left blocked and reviewed context is re-checked against the new base.
+      const live = liveHead(checkout.canonicalPath);
+      if (live !== request.baseSha) throw new Error(live
+        ? `The working copy moved from the reviewed base ${request.baseSha.slice(0, 12)} to ${live.slice(0, 12)}. Reload, re-check the base and context, then start again.`
+        : 'The working copy commit could not be read. Reload and re-check the base before starting.');
+    }
     return this.dispatch({ repoId: existing?.repoId ?? checkout.sourceId, task: taskPrompt(task), provider: request.provider, model: request.model, idempotencyKey: request.idempotencyKey,
       taskBinding: { taskId, taskVersion: request.version, checkoutId: request.checkoutId, baseSha: request.baseSha, ...(request.contextPackage ? { contextPackage: request.contextPackage } : {}) } });
   }
@@ -704,4 +713,11 @@ export class Runner {
     }
     await Promise.allSettled([...this.jobs]);
   }
+}
+
+function liveHead(path: string): string | null {
+  try {
+    const out = execFileSync('git', ['rev-parse', '--verify', 'HEAD^{commit}'], { cwd: path, encoding: 'utf8', windowsHide: true, timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(out) ? out : null;
+  } catch { return null; }
 }

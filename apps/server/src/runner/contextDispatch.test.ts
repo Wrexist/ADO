@@ -74,3 +74,35 @@ it('rechecks a durable queued package after restart and refuses revoked context 
     expect(new TaskExecutionStore(db).get('queued')?.contextPackage).toEqual(h.binding.contextPackage);
   } finally { sqlite.close(); }
 });
+
+it('marks packages for re-check when the base or task moved, and refuses a moved working copy before queueing (T11)', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const { writeFileSync, rmSync } = await import('node:fs');
+  const { eq } = await import('drizzle-orm');
+  const h = fixture();
+  const root = mkdtempSync(join(tmpdir(), 'controlos-context-recheck-'));
+  const git = (args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  try {
+    h.approve();
+    const recheck = () => h.packages.list(h.task.id).packages[0].recheck;
+    const checkout = h.binding.checkoutId;
+    expect(recheck()).toBe('checkout_unknown');
+    h.db.update(portfolioCheckouts).set({ headSha: h.binding.baseSha }).where(eq(portfolioCheckouts.id, checkout)).run();
+    expect(recheck()).toBe('current');
+    h.db.update(portfolioCheckouts).set({ headSha: 'c'.repeat(40) }).where(eq(portfolioCheckouts.id, checkout)).run();
+    expect(recheck()).toBe('base_moved');
+    expect(h.packages.list(h.task.id).packages[0].decision).toBe('approved_for_context'); // history kept, not re-verified
+
+    git(['init', '-q']); git(['config', 'user.name', 'Fixture']); git(['config', 'user.email', 'fixture@example.test']);
+    writeFileSync(join(root, 'a.txt'), '1'); git(['add', '.']); git(['commit', '-qm', 'one']);
+    const reviewed = git(['rev-parse', 'HEAD']);
+    writeFileSync(join(root, 'a.txt'), '2'); git(['commit', '-qam', 'two']);
+    h.db.update(portfolioCheckouts).set({ canonicalPath: root }).where(eq(portfolioCheckouts.id, checkout)).run();
+    const runner = new Runner(new Bus(h.db), h.db, { spawn: () => { throw new Error('not started'); } }, { cwdFor: () => root, workspaceRoot: root, assertCheckout: () => ({}) as never });
+    const request = { version: h.task.version, checkoutId: checkout, baseSha: reviewed, provider: 'claude', idempotencyKey: randomUUID() };
+    expect(() => runner.dispatchTask(h.task.id, request)).toThrow(`moved from the reviewed base ${reviewed.slice(0, 12)}`);
+    expect(h.db.select().from(runs).all().map((r) => r.id)).toEqual(['queued']);
+    expect(h.db.select().from(taskExecutions).all()).toEqual([]);
+    runner.stop();
+  } finally { h.sqlite.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
+}, 60000);

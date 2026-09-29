@@ -24,6 +24,12 @@ export const ContextReview = z.object({ id: z.string().uuid(), packageId: z.stri
 export const ContextPackageRecord = z.object({ id: z.string().uuid(), digest: z.string(), createdTs: z.string(), payload: ContextPackagePayload, reviewVersion: z.number().int().nonnegative(), review: ContextReview.nullable(), history: z.array(ContextReview), freshness: z.literal('not_checked') });
 export type ContextPackageRecord = z.infer<typeof ContextPackageRecord>;
 export const ContextPackageStatus = z.object({ packageId: z.string().uuid(), digest: z.string(), reviewVersion: z.number().int().nonnegative(), decision: z.enum(['approved_for_context', 'revoked']).nullable(), reviewedAt: z.string().nullable(), freshness: z.literal('not_checked') });
-export const ContextPackageSummary = ContextPackageStatus.extend({ taskVersion: z.number().int().positive(), checkoutId: z.string().uuid(), baseSha: z.string(), createdTs: z.string() });
+/**
+ * T11: how the package relates to what a run would start from now. Anything but `current`
+ * needs a new package; an earlier approval is history, not a fresh check.
+ */
+export const ContextRecheck = z.enum(['current', 'base_moved', 'task_changed', 'checkout_unknown']);
+export type ContextRecheck = z.infer<typeof ContextRecheck>;
+export const ContextPackageSummary = ContextPackageStatus.extend({ taskVersion: z.number().int().positive(), checkoutId: z.string().uuid(), baseSha: z.string(), createdTs: z.string(), recheck: ContextRecheck.optional() });
 export const ContextPackageList = z.object({ packages: z.array(ContextPackageSummary), nextCursor: z.string().uuid().nullable() });
 export type ContextPackageSummary = z.infer<typeof ContextPackageSummary>;

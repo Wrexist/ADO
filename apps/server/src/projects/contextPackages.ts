@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { and, desc, eq, lt, or } from 'drizzle-orm';
 import { ContextPackageCreate, ContextPackagePayload, ContextPackageReviewRequest, ContextSourcePreview } from '@ado/shared';
 import type { Db } from '../db';
-import { contextPackages, contextPackageReviews, planningTasks } from '../db/schema';
+import { contextPackages, contextPackageReviews, planningTasks, portfolioCheckouts } from '../db/schema';
 import { taskRevision } from '../runner/taskRevision';
 import { LOCAL_OWNER } from '../runner/approvals';
 
@@ -23,7 +23,13 @@ export class ContextPackages {
       const before = cursor ? this.row(cursor) : null;
       if (before && before.taskId !== taskId) throw new Error('Context list cursor belongs to another task');
       const rows = this.db.select().from(contextPackages).where(and(eq(contextPackages.taskId, taskId), before ? or(lt(contextPackages.createdTs, before.createdTs), and(eq(contextPackages.createdTs, before.createdTs), lt(contextPackages.id, before.id))) : undefined)).orderBy(desc(contextPackages.createdTs), desc(contextPackages.id)).limit(51).all();
-      return { packages: rows.slice(0, 50).map(row => ({ ...this.status(row.id), taskVersion: row.taskVersion, checkoutId: row.checkoutId, baseSha: row.baseSha, createdTs: row.createdTs })), nextCursor: rows.length > 50 ? rows[49].id : null };
+      const task = this.db.select().from(planningTasks).where(eq(planningTasks.id, taskId)).get();
+      const recheck = (row: typeof contextPackages.$inferSelect) => {
+        if (!task || task.version !== row.taskVersion) return 'task_changed' as const;
+        const head = this.db.select().from(portfolioCheckouts).where(eq(portfolioCheckouts.id, row.checkoutId)).get()?.headSha;
+        return !head ? 'checkout_unknown' as const : head === row.baseSha ? 'current' as const : 'base_moved' as const;
+      };
+      return { packages: rows.slice(0, 50).map(row => ({ ...this.status(row.id), taskVersion: row.taskVersion, checkoutId: row.checkoutId, baseSha: row.baseSha, createdTs: row.createdTs, recheck: recheck(row) })), nextCursor: rows.length > 50 ? rows[49].id : null };
     });
   }
   status(id: string) {

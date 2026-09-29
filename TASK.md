@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] Mark context packages for re-check when the base or task moved (history kept, not re-verified) and refuse task dispatch before queueing when the working copy moved. Instruction-file hashing and full T11 remain open.
+
 - [x] Make retries explicit new attempts: immutable retry lineage (migration 0024), server refusals for unfinished/unconfirmed/task/other-repo runs, risk confirmation, idempotency key and lineage links in run detail. Full T31 remains open.
 
 - [x] Record the verified exact-case default-branch head per GitHub repository; refuse task runs from another commit unless explicitly confirmed; show base status in run review. Plain dispatch/auto-review and full T02 remain open.
