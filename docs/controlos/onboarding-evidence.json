@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-29T19:11:18.389Z",
+  "baseRevision": "93586f381a342eca2a9bd99305f37034f615c0be",
+  "environment": {
+    "platform": "win32",
+    "node": "v22.18.0",
+    "chromium": "153.0.8010.12",
+    "claudeSignedIn": true
+  },
+  "checks": [
+    "empty profile shows Get started with real step status",
+    "1536/390 px without horizontal overflow",
+    "folder added from the checklist is scanned and its repository appears",
+    "checklist gives way to repositories; finish-setup reminder only if Claude sign-in is missing",
+    "Setup reports project folders installed after adding in the app",
+    "no page errors"
+  ],
+  "sourceSha256": {
+    "scripts/probe-onboarding.mts": "45cab0faa8bcd416327f2f7fb3d83bae81aba5be6ec1c60435d6320c6ce0b1d2",
+    "apps/web/src/views/command/GettingStarted.tsx": "b4c8336f82abec8cdf7d78ee326dac390ef046e377a3b4fadfdcf4bf0d93ecfc",
+    "apps/web/src/views/command/MainColumn.tsx": "c044e2753ba08201bf019ce7477e2a341d69209176455eba9d73fa32d4155a8d",
+    "apps/web/src/views/AddProjectPanel.tsx": "20066053bc2cffb4ccc4694c10dc334036fc4e00dd694d2036569e8fdf956d01",
+    "apps/server/src/setup/probe.ts": "72604869f1d7c5c10c9827a458acb073f492a6a5296c8c3d06b17e7bbb381c5e",
+    "apps/server/src/app.ts": "db130d72bbf2f13f814eb45e3f0b036c9483d86af23af78e1c85a39bb0f150ea"
+  },
+  "screenshotSha256": {
+    "smoke-shots/onboarding-empty-1536.png": "efbf336ed09c55cacbe8a421c68482816f8c3805639ff5380ab93a539d851823",
+    "smoke-shots/onboarding-empty-390.png": "c1491430f8bc0fb70a2f86f5e491902df41742e2bc4489f7c7beae7450883f87",
+    "smoke-shots/onboarding-after-folder-1536.png": "404858f255a9ee3912c2b53267870e0804c672f92d96726c29f3280d4e565a32"
+  },
+  "scope": "Built renderer and production server with an empty profile. Setup probed on this machine (read-only). No GitHub token, provider run or installer."
+}

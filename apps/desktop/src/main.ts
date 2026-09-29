@@ -129,6 +129,13 @@ async function start(): Promise<void> {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
+  // Native "choose folder" for onboarding. Only the app's own window may ask, and only a
+  // path the user picked comes back; the server still validates it before scanning.
+  ipcMain.handle('acc:pickFolder', async (event) => {
+    if (event.sender !== win.webContents) return null;
+    const result = await dialog.showOpenDialog(win, { title: 'Choose a folder with your code', properties: ['openDirectory'] });
+    return result.canceled ? null : result.filePaths[0] ?? null;
+  });
   await win.loadURL(appOrigin);
 
   if (app.isPackaged && launch.checkUpdates && !recovery) {

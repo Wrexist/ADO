@@ -10,7 +10,7 @@
 import { spawn } from 'node:child_process';
 import { PassThrough } from 'node:stream';
 import { createInterface } from 'node:readline';
-import { commandFor, processEnv, supervise } from './processControl';
+import { processEnv, supervise, toolCommand } from './processControl';
 
 export interface MergedProc {
   lines: AsyncIterable<string>;
@@ -20,8 +20,8 @@ export interface MergedProc {
 
 
 export function spawnMerged(cmd: string, args: string[], cwd?: string): MergedProc {
-  const executable = commandFor(cmd, args);
-  const child = spawn(executable.command, executable.args, { cwd, env: processEnv(), windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
+  const executable = toolCommand(cmd, args);
+  const child = spawn(executable.command, executable.args, { cwd, env: processEnv(), shell: executable.shell, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
   const kill = supervise(child);
   const merged = new PassThrough();
   child.stdout.pipe(merged, { end: false });

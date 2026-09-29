@@ -59,7 +59,7 @@ import { respond, execute } from './command/execute';
 import { TokenRollup } from './command/tokens';
 import { Scheduler } from './scheduler';
 import { backupDatabase } from './backup';
-import { connectionProbe, probeAll, detectCapabilities, type ProbeContext } from './setup/probe';
+import { connectionProbe, envProbe, probeAll, detectCapabilities, type ProbeContext } from './setup/probe';
 import { Installer } from './setup/install';
 import { readWorkflows, findWorkflowsDir } from './workflows/catalog';
 import { AutomationStore } from './automations/store';
@@ -1454,7 +1454,8 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
   // auto-installable ones. Reads real state (never fabricates "installed"); the install
   // command is derived server-side from the catalog by id — the client only sends an id.
   const envHas = (name: string): boolean => {
-    if (name === 'PROJECT_DIRS') return env.projectDirs.length > 0;
+    // Folders added in the app count too; .env is only one way to set them.
+    if (name === 'PROJECT_DIRS') return allProjectDirs().length > 0;
     if (name === 'ACC_TOKEN') return Boolean(env.accToken);
     const v = process.env[name];
     return typeof v === 'string' && v.trim().length > 0;
@@ -1464,9 +1465,11 @@ export async function buildServer(env: Env, deps: AccDeps = {}): Promise<AccServ
     envHas,
   };
   let setupResults: ProbeResult[] = [];
+  const live = (via: string) => via === 'connection' || via === 'env';
   const currentSetup = () => [
-    ...setupResults.filter((result) => REQUIREMENT_BY_ID[result.id]?.detect.via !== 'connection'),
-    ...Object.values(REQUIREMENT_BY_ID).filter((req) => req.detect.via === 'connection').map((req) => connectionProbe(req, probeCtx, new Date().toISOString())),
+    ...setupResults.filter((result) => !live(REQUIREMENT_BY_ID[result.id]?.detect.via ?? '')),
+    ...Object.values(REQUIREMENT_BY_ID).filter((req) => live(req.detect.via)).map((req) =>
+      req.detect.via === 'env' ? envProbe(req, probeCtx, new Date().toISOString()) : connectionProbe(req, probeCtx, new Date().toISOString())),
   ];
   const refreshSetup = async () => {
     try {

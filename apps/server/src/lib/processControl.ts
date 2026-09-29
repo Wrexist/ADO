@@ -28,6 +28,26 @@ export function commandFor(command: string, args: string[]): { command: string; 
   throw new ProcessNotStartedError(`${command} was not found. Install its native CLI or npm package, then restart ControlOS.`);
 }
 
+/**
+ * Setup-catalog tools (git, npm, code, gh, brew, claude) — never user input. On Windows
+ * many are `.cmd` shims that Node cannot spawn directly; those run through cmd.exe with
+ * only plain arguments, so nothing a shell would interpret can reach it.
+ */
+export function toolCommand(command: string, args: string[]): { command: string; args: string[]; shell: boolean } {
+  if (command === 'claude' || command === 'codex') return { ...commandFor(command, args), shell: false };
+  if (process.platform !== 'win32' || /[\\/]/.test(command)) return { command, args, shell: false };
+  const path = Object.entries(process.env).find(([key]) => key.toLowerCase() === 'path')?.[1] ?? '';
+  const dirs = path.split(delimiter).filter((dir) => dir && isAbsolute(dir));
+  for (const dir of dirs) { const exe = join(dir, `${command}.exe`); if (existsSync(exe)) return { command: exe, args, shell: false }; }
+  for (const dir of dirs) {
+    const shim = join(dir, `${command}.cmd`);
+    if (!existsSync(shim)) continue;
+    if (args.some((arg) => !/^[\w@.:=/-]+$/.test(arg))) throw new ProcessNotStartedError(`${command} arguments are not plain; refused`);
+    return { command: `"${shim}"`, args, shell: true };
+  }
+  return { command, args, shell: false };
+}
+
 /** Each POSIX child owns a process group; Windows taskkill targets only its PID tree. */
 export function supervise(child: ChildProcess, timeoutMs = 15 * 60_000, stopOwned?: () => void): () => void {
   let settled = false;

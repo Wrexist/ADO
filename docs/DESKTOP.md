@@ -140,3 +140,30 @@ without changing their values. Run `npm run smoke:native-profile` for the
 disposable interruption/reopen fixture. See
 [native credential evidence and recovery limits](controlos/native-credentials.md).
 This does not establish installer-update or full-profile restore acceptance.
+
+## Build the Windows installer locally
+
+`npm run app:windows` builds `apps/desktop/release/ACC-Setup-<version>.exe` from the
+**last commit** (commit first; uncommitted changes are not included). It works in a
+throwaway `git archive` copy, so Electron's rebuild of `better-sqlite3` never touches this
+checkout's Node modules. Takes roughly 10–15 minutes, most of it `npm ci`.
+
+Install: double-click the `.exe`. It is unsigned, so Windows SmartScreen shows
+"Windows protected your PC" → **More info → Run anyway** the first time. The one-click
+installer puts **AI Control Center** in the Start menu and on the desktop and opens it.
+Data lives in `%APPDATA%\AI Control Center`; uninstalling keeps it.
+
+## First run
+
+The app opens on the overview with a **Get started** checklist (it replaces the empty
+repository list until the first repository is found):
+
+1. **Add the folder with your code** — "Browse…" opens the Windows folder picker (desktop
+   only), or type a path. The folder is scanned immediately; no `.env` or restart.
+2. **Sign in to Claude** — shows whether Claude Code is installed and signed in with a
+   subscription. Install / Sign in run the built-in command and open the browser.
+3. **Connect GitHub** (optional) — paste a token; it is checked immediately.
+
+Each step shows its real status (checked live, never assumed). After repositories exist, a
+slim "Finish setup" reminder remains only while a required step is open.
+

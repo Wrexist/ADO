@@ -16,6 +16,7 @@ import { useBus } from '../../store/bus';
 import { repoTabs, runningAgents, statDelta, weekDelta } from '../../lib/selectors';
 import { approxTokens } from '../../lib/time';
 import { RepoCard } from './RepoCard';
+import { FinishSetupBanner, GettingStarted, useSetupSnapshot } from './GettingStarted';
 
 /**
  * View A main column — renders EXCLUSIVELY from the bus store (Prompt 2.1).
@@ -51,6 +52,7 @@ export function MainColumn() {
   const [layout, setLayout] = useState<Layout>('grid');
   const [sort, setSort] = useState<SortId>('recent');
   const [sortOpen, setSortOpen] = useState(false);
+  const setup = useSetupSnapshot();
 
   const tabs = repoTabs(state);
   const running = runningAgents(state);
@@ -184,8 +186,9 @@ export function MainColumn() {
           </div>
         </div>
 
+        {repos.length > 0 ? <FinishSetupBanner snap={setup.snap} /> : null}
         {repos.length === 0 ? (
-          <FirstRunCard />
+          <GettingStarted snap={setup.snap} refresh={setup.refresh} />
         ) : visible.length === 0 ? (
           <div className="mt-4 rounded-card border bg-card">
             <EmptyState icon="repos" title={`No ${tab} yet`} hint="Nothing in this category — switch tabs to see your other projects." />
@@ -230,44 +233,5 @@ export function MainColumn() {
         )}
       </div>
     </main>
-  );
-}
-
-/**
- * First-run onboarding — shown only when there are genuinely zero repos (server online but
- * no projects scanned yet). Honest: it never masks real data, and points at the ONE real
- * step (PROJECT_DIRS). Copy is a single-shot draft for Isac to edit (convention 6).
- */
-function FirstRunCard() {
-  return (
-    <div className="mt-4 flex flex-col items-center gap-4 rounded-card border bg-card px-6 py-12 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-tile bg-primary/15 text-primary">
-        <Icon name="repos" size={22} />
-      </span>
-      <div>
-        <p className="text-section font-semibold text-text1">Let's bring in your projects</p>
-        <p className="mx-auto mt-1 max-w-[52ch] text-body text-text2">
-          Connect GitHub to see your repos instantly, or point us at a local folder. Then AI Control Center
-          tracks their builds, agents, and deployments right here.
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Link to="/settings">
-          <Button>
-            <Icon name="github" size={14} />
-            Connect GitHub
-          </Button>
-        </Link>
-        <Link to="/repositories?add=1">
-          <Button variant="ghost">
-            <Icon name="plus" size={14} />
-            Add a local folder
-          </Button>
-        </Link>
-      </div>
-      <p className="max-w-[52ch] text-label text-text3">
-        GitHub pulls your repos in under a minute — no restart. A local folder is scanned live on this machine.
-      </p>
-    </div>
   );
 }

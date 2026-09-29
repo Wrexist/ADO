@@ -1,5 +1,9 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## Installerare och smidig första start
+
+`npm run app:windows` bygger `ACC-Setup-<version>.exe` från senaste commit i en separat kopia (utvecklingskopians SQLite-modul rörs inte). Första start visar en checklista på översikten: lägg till kodmapp (Windows-mappväljare i skrivbordsappen), installera/logga in Claude Code (prenumeration krävs) och valfritt GitHub, med verklig status per steg. Setup räknar nu mappar som lagts till i appen, och verktygskontroller/installation fungerar med Windows `.cmd`-verktyg (`npm`, `code`). 504 tester, smoke och ett webbläsarprov på tom profil passerade. Installeraren är osignerad (SmartScreen); själva installationen är inte automatiskt testad.
+
 ## T18 avgränsat till dashboardens egna GitHub-operationer
 
 Beslut 2026-09-29 (Isac): T18 gäller endast GitHub-operationer som ControlOS själv utför. Agenters GitHub-skrivningar via egna verktyg ligger utanför. ControlOS läser bara GitHub, och det är nu tvingat i koden: adaptern nekar alla metoder utom GET/HEAD innan anropet lämnar processen (test i `checks.test.ts`). Regler för eventuella framtida skrivningar (stabil identitet, journal, `unknown_outcome`, uppslag före omförsök) står i `docs/controlos/t18-scope.md`. Scenariostatus ändras inte här; det är ett grindbeslut.

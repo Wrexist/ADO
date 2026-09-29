@@ -9,6 +9,7 @@ import {
   type WorkflowMeta,
 } from '@ado/shared';
 import { Button, Card, Chip, Icon, StatusDot, cx, type Tone } from '../kit';
+import { IS_DESKTOP } from '../lib/config';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
 import { timeAgo } from '../lib/time';
@@ -354,7 +355,7 @@ export function AutomationsPage() {
 
       {error ? (
         <Card className="mt-6 border-danger/25 bg-danger/10 p-4 text-body text-danger">
-          Couldn’t reach the server ({error}). Start it and set <span className="font-mono">ACC_TOKEN</span> in <span className="font-mono">.env</span>.
+          {IS_DESKTOP ? `Couldn’t load automations (${error}). Restart ControlOS and try again.` : <>Couldn’t reach the server ({error}). Start it and set <span className="font-mono">ACC_TOKEN</span> in <span className="font-mono">.env</span>.</>}
         </Card>
       ) : null}
 
@@ -362,7 +363,7 @@ export function AutomationsPage() {
         <Card className="mt-6 p-8 text-center">
           <p className="text-body text-text2">No repositories to automate yet</p>
           <p className="mt-1 text-label text-text3">
-            Point <span className="font-mono">PROJECT_DIRS</span> at your code on the <Link to="/setup" className="text-primary hover:text-text1">Setup page</Link> — scanned repos show up here.
+            <Link to="/repositories?add=1" className="text-primary hover:text-text1">Add the folder with your code</Link> — its repositories show up here.
           </p>
         </Card>
       ) : null}

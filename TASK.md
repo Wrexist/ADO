@@ -4,6 +4,8 @@ Living tracker. Updated every session. Current phase drives what's actionable; `
 
 **Current work: ControlOS recovery (2026-09-27).** [STATUS.md](./STATUS.md) supersedes historical phase claims for release readiness. The 24 requirements, 20 work packages and 46 acceptance scenarios are tracked in `docs/controlos/acceptance-register.json`.
 
+- [x] One-command Windows installer build (`npm run app:windows`, isolated copy) and a guided first run: Get started checklist (folder with native picker, Claude install/sign-in, optional GitHub), live Setup folder status, Windows `.cmd` tool probes/installs, desktop-appropriate copy. Browser probe on an empty profile; installer install itself not automated.
+
 - [x] Scope T18 to the dashboard's own GitHub operations (Isac, 2026-09-29): enforce the read-only Octokit adapter in code, record the rule any future write must follow, and document agent writes as out of scope. Acceptance status left for the gate.
 
 - [x] Mark context packages for re-check when the base or task moved (history kept, not re-verified) and refuse task dispatch before queueing when the working copy moved. Instruction-file hashing and full T11 remain open.

@@ -33,3 +33,16 @@ it('updates Setup from explicit credential verification and clears prior authent
     expect(provider).toHaveBeenCalledTimes(2);
   } finally { await server?.close(); provider.mockRestore(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
 });
+
+it('counts project folders added in the app, not only PROJECT_DIRS in .env', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'controlos-setup-folders-'));
+  const env = { port: 8787, webOrigin: 'http://localhost:5173', accToken: 'fixture-access', dbPath: join(root, 'profile.sqlite'), projectDirs: [], demo: false };
+  const headers = { host: '127.0.0.1:8787', 'x-acc-token': env.accToken };
+  const server = await buildServer(env, { startSystem: false, startScanner: false });
+  try {
+    const folders = async () => (await server.app.inject({ url: '/api/setup', headers })).json().results.find((r: { id: string }) => r.id === 'project-dirs');
+    expect(await folders()).toMatchObject({ status: 'missing', detail: 'No project folder added yet.' });
+    expect((await server.app.inject({ method: 'POST', url: '/api/projects', headers, payload: { dir: root } })).statusCode).toBe(200);
+    expect(await folders()).toMatchObject({ status: 'installed' });
+  } finally { await server.close(); rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); }
+});

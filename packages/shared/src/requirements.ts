@@ -103,6 +103,7 @@ export const REQUIREMENTS: Requirement[] = [
     install: { via: 'brew', formula: 'git' },
     docsUrl: 'https://git-scm.com/downloads',
     commands: [
+      { label: 'Windows', command: 'winget install --id Git.Git -e' },
       { label: 'macOS (Homebrew)', command: 'brew install git' },
       { label: 'Debian/Ubuntu', command: 'sudo apt-get install -y git' },
     ],
@@ -190,21 +191,21 @@ export const REQUIREMENTS: Requirement[] = [
     install: { via: 'manual' },
     actionTo: '/settings',
     actionLabel: 'Manage and verify',
-    docsUrl: 'https://github.com/settings/tokens/new?scopes=repo,workflow&description=AI%20Control%20Center',
+    docsUrl: 'https://github.com/settings/tokens/new?scopes=repo&description=ControlOS',
   }),
 
   // ── Configuration ───────────────────────────────────────────────────────────
   R({
     id: 'project-dirs',
-    name: 'PROJECT_DIRS',
+    name: 'Project folders',
     category: 'config',
     required: true,
-    blurb: 'Folders to scan for your repositories.',
-    why: 'The dashboard only sees repos inside these directories — and agents can only run in scanned repos. Set it in .env, e.g. PROJECT_DIRS=/Users/you/code. Without it the dashboard has nothing to show or dispatch into.',
+    blurb: 'The folders that hold your code.',
+    why: 'ControlOS shows the Git repositories inside these folders, and agents can only work in them. Add a folder such as C:\\Users\\you\\code. Developers running from source can also set PROJECT_DIRS in .env.',
     detect: { via: 'env', envVar: 'PROJECT_DIRS' },
     install: { via: 'manual' },
-    docsUrl: 'https://code.claude.com/docs/en/claude-code-on-the-web',
-    commands: [{ label: '.env', command: 'PROJECT_DIRS=/absolute/path/to/your/code' }],
+    actionTo: '/repositories?add=1',
+    actionLabel: 'Add a folder',
   }),
   R({
     id: 'acc-token',

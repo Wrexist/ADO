@@ -9,6 +9,7 @@ import {
   type Requirement,
 } from '@ado/shared';
 import { Button, Card, Chip, Icon, StatusDot, cx, type IconName, type Tone } from '../kit';
+import { IS_DESKTOP } from '../lib/config';
 import { PageShell } from '../chrome/PageShell';
 import { fetchSetup, probeSetup, startInstall, pollInstall } from '../lib/setup';
 
@@ -247,7 +248,7 @@ export function SetupPage() {
   return (
     <PageShell
       title="Setup"
-      subtitle="Everything the dashboard needs to run for real — detected live on this machine. Click Install (via Homebrew, npm, or the VS Code CLI) or Sign in and the local server does it for you; where the package manager isn't present it falls back to a one-line command + link."
+      subtitle="Everything ControlOS needs, checked live on this computer. Click Install or Sign in and it is done for you; where that isn't possible you get the exact command and a link."
       actions={
         <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={checking}>
           {checking ? 'Checking…' : 'Re-check'}
@@ -266,8 +267,8 @@ export function SetupPage() {
 
       {error ? (
         <Card className="mt-6 border-danger/25 bg-danger/10 p-4 text-body text-danger">
-          Couldn’t reach the server ({error}). Start the server and set{' '}
-          <span className="font-mono">ACC_TOKEN</span> in <span className="font-mono">.env</span>.
+          {IS_DESKTOP ? `Couldn’t read the setup status (${error}). Restart ControlOS and try again.` : <>Couldn’t reach the server ({error}). Start the server and set{' '}
+          <span className="font-mono">ACC_TOKEN</span> in <span className="font-mono">.env</span>.</>}
         </Card>
       ) : null}
 

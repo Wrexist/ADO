@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Icon, cx } from '../kit';
 import { addProject, listProjects, removeProject } from '../lib/projects';
 import { cloneFromGithub } from '../lib/projectSettings';
+import { EXAMPLE_FOLDER, pickFolder } from '../lib/config';
 
 /** Last two path segments — enough to tell tracked folders apart in the picker. */
 const shortDir = (d: string): string => {
@@ -43,8 +44,13 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
     if (autoFocus) inputRef.current?.focus();
   }, [autoFocus]);
 
-  const submit = async () => {
-    const dir = path.trim();
+  const browse = async () => {
+    const picked = await pickFolder?.();
+    if (picked) await submit(picked);
+  };
+
+  const submit = async (chosen?: string) => {
+    const dir = (chosen ?? path).trim();
     if (!dir || busy) return;
     setBusy(true);
     setMsg(null);
@@ -97,7 +103,7 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
         Point at a git repo, or a folder that holds several repos. We scan it live — no restart.
       </p>
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <input
           ref={inputRef}
           type="text"
@@ -106,10 +112,15 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
           onKeyDown={(e) => {
             if (e.key === 'Enter') void submit();
           }}
-          placeholder="~/code/my-app  or  ~/code"
+          placeholder={EXAMPLE_FOLDER}
           aria-label="Project folder path"
-          className="h-9 flex-1 rounded-tile border bg-elevated px-3 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
+          className="h-9 min-w-[12rem] flex-1 rounded-tile border bg-elevated px-3 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
         />
+        {pickFolder ? (
+          <Button variant="outline" onClick={() => void browse()} disabled={busy}>
+            Browse…
+          </Button>
+        ) : null}
         <Button onClick={() => void submit()} disabled={busy || !path.trim()}>
           {busy ? 'Scanning…' : 'Add & scan'}
         </Button>
@@ -128,7 +139,7 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
         <p className="mt-1 text-label text-text3">
           Paste <span className="font-mono text-text2">owner/repo</span> or a github.com URL — we clone it into your projects folder and scan it. Private repos need GitHub connected in Settings.
         </p>
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <input
             type="text"
             value={ghRepo}
@@ -138,7 +149,7 @@ export function AddProjectPanel({ autoFocus = false, onDone }: { autoFocus?: boo
             }}
             placeholder="wrexist/my-game  or  https://github.com/wrexist/my-game"
             aria-label="GitHub repository"
-            className="h-9 flex-1 rounded-tile border bg-elevated px-3 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
+            className="h-9 min-w-[12rem] flex-1 rounded-tile border bg-elevated px-3 text-body text-text1 placeholder:text-text3 focus:border-primary/50 focus:outline-none"
           />
           {allDirs.length > 1 ? (
             <select

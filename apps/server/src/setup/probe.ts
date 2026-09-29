@@ -8,6 +8,7 @@
  * with a minimal env allow-list and a short timeout, so probing is safe and can't hang boot.
  */
 import { spawn } from 'node:child_process';
+import { processEnv, toolCommand } from '../lib/processControl';
 import { CONTROL_OS_RUNTIME, supportsControlOSRuntime, REQUIREMENTS, type ConnectionStatus, type ProbeResult, type Requirement } from '@ado/shared';
 
 export interface ProbeContext {
@@ -18,11 +19,6 @@ export interface ProbeContext {
   runtimeVersion?: string;
 }
 
-/** Minimal env for a probe child — never the dashboard's secrets. */
-function minimalEnv(): NodeJS.ProcessEnv {
-  const { PATH, HOME, USER, LANG, TERM, TMPDIR } = process.env;
-  return { PATH, HOME, USER, LANG, TERM, TMPDIR };
-}
 
 interface ExecResult {
   code: number | null;
@@ -43,7 +39,10 @@ export function exec(command: string, args: string[], timeoutMs = 5000): Promise
     };
     let child;
     try {
-      child = spawn(command, args, { env: minimalEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
+      // processEnv: an allow-list without secrets, but with USERPROFILE/APPDATA so a CLI
+      // launched from the desktop app finds its own sign-in on Windows.
+      const tool = toolCommand(command, args);
+      child = spawn(tool.command, tool.args, { env: processEnv(), shell: tool.shell, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     } catch {
       return done({ code: null, out: '', failed: true });
     }
@@ -79,6 +78,14 @@ export interface Capabilities {
   code: boolean; // VS Code `code` CLI (extension installs)
   brew: boolean; // Homebrew (formula + cask installs)
   claude: boolean; // Claude Code CLI (sign-in)
+}
+
+/** Configuration read live on every Setup request (cheap; changes without a re-probe). */
+export function envProbe(req: Requirement, ctx: ProbeContext, checkedTs: string): ProbeResult {
+  if (req.detect.via !== 'env') throw new Error('Environment detector required');
+  const ok = ctx.envHas(req.detect.envVar);
+  const unset = req.detect.envVar === 'PROJECT_DIRS' ? 'No project folder added yet.' : `${req.detect.envVar} is not set`;
+  return { id: req.id, status: ok ? 'installed' : 'missing', version: null, detail: ok ? null : unset, installable: false, checkedTs };
 }
 
 export function connectionProbe(req: Requirement, ctx: ProbeContext, checkedTs: string): ProbeResult {
@@ -147,10 +154,7 @@ export async function probeOne(
   if (d.via === 'manual') {
     return { ...base, status: 'manual', version: null, detail: null, installable };
   }
-  if (d.via === 'env') {
-    const ok = ctx.envHas(d.envVar);
-    return { ...base, status: ok ? 'installed' : 'missing', version: null, detail: ok ? null : `${d.envVar} is not set`, installable };
-  }
+  if (d.via === 'env') return envProbe(req, ctx, checkedTs);
   if (d.via === 'connection') {
     return connectionProbe(req, ctx, checkedTs);
   }
@@ -160,11 +164,17 @@ export async function probeOne(
       return { ...base, status: 'missing', version: null, detail: 'the `claude` CLI is not installed — install it first', installable };
     }
     let loggedIn = r.code === 0;
+    let authMethod: string | null = null;
     try {
-      const parsed = JSON.parse(r.out) as { loggedIn?: boolean };
+      const parsed = JSON.parse(r.out) as { loggedIn?: boolean; authMethod?: unknown };
       if (typeof parsed.loggedIn === 'boolean') loggedIn = parsed.loggedIn;
+      if (typeof parsed.authMethod === 'string') authMethod = parsed.authMethod.slice(0, 40);
     } catch {
       /* older CLI without JSON output — fall back to the exit code */
+    }
+    // Agents run only on a Claude subscription sign-in (T32); say so before a run is refused.
+    if (loggedIn && authMethod && authMethod !== 'claude.ai') {
+      return { ...base, status: 'configured', version: null, detail: `Signed in with ${authMethod}, which bills per use. ControlOS runs agents only with a Claude subscription: click Sign in and choose your Claude account.`, installable };
     }
     return { ...base, status: loggedIn ? 'installed' : 'missing', version: null, detail: loggedIn ? null : 'not signed in — click Sign in', installable };
   }

@@ -14,4 +14,10 @@ const config: { serverUrl?: string; accToken?: string } = {
   ...(typeof obj.accToken === 'string' ? { accToken: obj.accToken } : {}),
 };
 
-contextBridge.exposeInMainWorld('__ACC_DESKTOP__', config);
+contextBridge.exposeInMainWorld('__ACC_DESKTOP__', {
+  ...config,
+  pickFolder: async (): Promise<string | null> => {
+    const picked: unknown = await ipcRenderer.invoke('acc:pickFolder');
+    return typeof picked === 'string' ? picked : null;
+  },
+});
