@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useBus } from '../store/bus';
+import { ciView } from '../lib/ci';
 import { RunHistory } from './RunHistory';
 import { StaleBanner } from '../chrome/StaleBanner';
 
@@ -16,7 +17,7 @@ export function MobileOverview() {
         {repos.map((repo) => <Link key={repo.id} to={`/repositories/${encodeURIComponent(repo.id)}`} className="block rounded-tile border bg-card p-4">
           <h2 className="text-section font-semibold">{repo.name}</h2>
           <p className="mt-1 break-words text-body text-text2">{repo.description}</p>
-          <p className="mt-2 text-label text-text3">{repo.status} · {repo.openTasks ?? '—'} open tasks · CI {repo.ci?.state ?? 'unknown'}</p>
+          <p className="mt-2 text-label text-text3">{repo.status} · {repo.openTasks ?? '—'} open tasks · CI {repo.ci ? (ciView(repo.ci).note ?? repo.ci.state) : 'unknown'}</p>
         </Link>)}
       </section>
       <section><h2 className="mb-3 text-section font-semibold">Recent jobs</h2><RunHistory /></section>

@@ -78,9 +78,12 @@ export class GitHubSync {
       }
 
       // Enrich: stars, language, PR count, latest CI. Each sub-call is best-effort.
-      const [prs, run] = await Promise.all([
+      const [prs, run, branchHead] = await Promise.all([
         this.client.openPrCount(gh.owner, gh.name).catch(() => { degraded = true; return undefined; }),
         this.client.latestRun(gh.owner, gh.name, gh.defaultBranch || undefined).catch(() => { degraded = true; return null; }),
+        gh.defaultBranch
+          ? this.client.branchHead(gh.owner, gh.name, gh.defaultBranch).catch(() => { degraded = true; return null; })
+          : Promise.resolve(null),
       ]);
       if (this.stopped) return enriched;
 
@@ -89,7 +92,7 @@ export class GitHubSync {
         language: toLanguage(gh.language),
       };
       if (typeof prs === 'number') patch.prs = prs;
-      if (run) patch.ci = ciFromRun(run);
+      if (run) patch.ci = ciFromRun(run, branchHead);
       if (run?.id && run.headSha && run.branch) {
         const state = ciFromRun(run).state;
         // Only actual completed successes/failures trigger automation. Unknown or

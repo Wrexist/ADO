@@ -1,5 +1,11 @@
 # ControlOS — verifierat nuläge 2026-09-28
 
+## CI-status binds till aktuell commit
+
+Projektkort och Ops kunde visa en äldre commits gröna körning som godkänd kontroll direkt efter en push. CI-resultatet bär nu körningens SHA, starttid och default-branchens aktuella head (exakt branchnamn). Endast lika SHA får visas som godkänd/misslyckad. Äldre körningar visas dämpade med SHA och ålder; saknad SHA ger “unverified”, även för äldre lagrade händelser.
+
+`scripts/verify.sh` passerade typkontroll, lint, 479 tester i 104 filer och byggning; `npm run smoke` passerade. Command/Ops-bilderna är oförändrade eftersom DEMO-körningarna gäller aktuell head. Äldre-commit-läget är bevisat med enhetstester, inte med renderat webbläsarprov. Lokala utcheckningar med opushade commits jämförs inte. Underlag: `docs/controlos/ci-revision.md`. Full T03 och R1–R4 återstår; fortsatt 18/46 lokalt godkända scenarier.
+
 ## PR-checks kräver komplett framgångsunderlag
 
 GitHub-adaptern kunde tidigare visa grön PR-checkstatus för en ofullständig första sida eller okända slutresultat. Grön status kräver nu komplett antal svar, unika check-ID:n, samma revision som den hämtade PR:n och uttryckligt lyckade checks. Saknade, neutrala, överhoppade och okända slutsatser ger okänd status. Kända pågående eller felaktiga checks ger fortsatt pending/failing. Detta är en sammanfattning av hämtade check runs, inte verifierade branch-protection-regler eller mergebehörighet.

@@ -10,7 +10,8 @@ import {
   StatusDot,
   cx,
 } from '../../kit';
-import { CATEGORY_ICON, CATEGORY_TAG, CI_TONE, REPO_STATUS_LOOK } from '../../lib/repoLook';
+import { CATEGORY_ICON, CATEGORY_TAG, REPO_STATUS_LOOK } from '../../lib/repoLook';
+import { ciView } from '../../lib/ci';
 import { ENV_LABEL } from '../ops/maps';
 import { useBus } from '../../store/bus';
 import { latestDeployment } from '../../lib/selectors';
@@ -23,6 +24,7 @@ export function RepoCard({ repo }: { repo: Repo }) {
   const deploy = useBus((s) => latestDeployment(s.state, repo.id));
 
   const open = () => navigate(`/repositories/${repo.id}`);
+  const ci = repo.ci ? ciView(repo.ci) : null;
 
   return (
     <HoverCard
@@ -96,16 +98,17 @@ export function RepoCard({ repo }: { repo: Repo }) {
       </div>
 
       {/* progress row — pct in a reserved tabular slot; absent CI = honest state */}
-      {repo.ci ? (
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-label text-text2">{repo.ci.label}</span>
-          {repo.ci.state === 'success' ? (
-            <Icon name="check" size={12} className="shrink-0 text-success" />
-          ) : null}
-          <GradientProgress pct={repo.ci.pct} tone={CI_TONE[repo.ci.state]} />
-          <span className="w-10 shrink-0 text-right text-label tabular-nums text-text2">
-            {repo.ci.state === 'success' || repo.ci.state === 'failed' ? `${repo.ci.pct}%` : repo.ci.state}
-          </span>
+      {repo.ci && ci ? (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-label text-text2">{repo.ci.label}</span>
+            {ci.current && repo.ci.state === 'success' ? (
+              <Icon name="check" size={12} className="shrink-0 text-success" />
+            ) : null}
+            <GradientProgress pct={repo.ci.pct} tone={ci.tone} />
+            <span className={cx('shrink-0 text-right text-label tabular-nums text-text2', ci.current ? 'w-10' : 'w-16')}>{ci.slot}</span>
+          </div>
+          {ci.note ? <p className="truncate text-label text-text3" title={ci.note}>{ci.note}</p> : null}
         </div>
       ) : (
         <p className="text-label text-text3">No CI runs yet</p>

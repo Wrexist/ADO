@@ -4,7 +4,7 @@
  * (deltas need daily snapshots — 2.4; agent-count/health series — 2.4), the value is
  * absent and the UI shows its honest state instead.
  */
-import type { Agent, BusState, Deployment, HealthService, Repo, ServiceState, StatPoint } from '@ado/shared';
+import { ciRevision, type Agent, type BusState, type Deployment, type HealthService, type Repo, type ServiceState, type StatPoint } from '@ado/shared';
 
 export function reposList(s: BusState): Repo[] {
   return Object.values(s.repos).sort((a, b) => b.updatedTs.localeCompare(a.updatedTs));
@@ -136,10 +136,14 @@ export const HEALTH_FORMULA_DOC =
   'System Health = 100 − (10·degraded + 25·down + 5·unknown per service) − 15·(failed builds ÷ total builds), clamped 0–100. Deterministic; computed from stored health-check and build events only.';
 
 /** View B project-row status chip — derived honestly from CI + repo status. */
-export type ProjectStatusKind = 'building' | 'queued' | 'failed' | 'passing' | 'testing';
+export type ProjectStatusKind = 'building' | 'queued' | 'failed' | 'passing' | 'testing' | 'older' | 'unverified';
 export function projectStatus(repo: Repo): { kind: ProjectStatusKind; label: string; detail?: string } | null {
   if (repo.status === 'testing') return { kind: 'testing', label: 'Testing' };
   if (!repo.ci) return null; // no CI known — render the honest "no CI" state
+  // T03: a run for another commit (or an unknown head) is not a check of the current code.
+  const revision = ciRevision(repo.ci);
+  if (revision === 'older') return { kind: 'older', label: 'Older commit', detail: repo.ci.headSha?.slice(0, 7) };
+  if (revision === 'unverified') return { kind: 'unverified', label: 'Unverified' };
   switch (repo.ci.state) {
     case 'running':
       return { kind: 'building', label: 'Building' };

@@ -7,7 +7,7 @@ import type { GhRepo, GitHubClient } from './types';
 
 const repo: GhRepo = { owner: 'fixture', name: 'repo', description: 'Synthetic lifecycle test', language: 'TypeScript', stargazers: 1, defaultBranch: 'main', pushedAt: '2026-09-28T00:00:00.000Z' };
 const deferred = <T>() => { let resolve!: (value: T) => void, reject!: (reason: Error) => void; const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
-const client = (): GitHubClient => ({ listRepos: async () => [repo], openPrCount: async () => 1, openPrForBranch: async () => null, latestRun: async () => ({ id: 1, headSha: 'a'.repeat(40), branch: 'main', workflowName: 'Fixture', status: 'completed', conclusion: 'success' }), listReleases: async () => [{ id: 1, tag: 'fixture', publishedAt: null }] });
+const client = (): GitHubClient => ({ listRepos: async () => [repo], openPrCount: async () => 1, openPrForBranch: async () => null, latestRun: async () => ({ id: 1, headSha: 'a'.repeat(40), branch: 'main', workflowName: 'Fixture', status: 'completed', conclusion: 'success' }), branchHead: async () => 'a'.repeat(40), listReleases: async () => [{ id: 1, tag: 'fixture', publishedAt: null }] });
 afterEach(() => vi.useRealTimers());
 
 it('clears persisted GitHub health when removing the last credential without starting a client', async () => {

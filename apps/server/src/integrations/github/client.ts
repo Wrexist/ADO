@@ -159,6 +159,19 @@ export class OctokitClient implements GitHubClient {
     };
   }
 
+  async branchHead(owner: string, name: string, branch: string): Promise<string | null> {
+    const data = await this.cond(`head:${owner}/${name}:${branch}`, (etag) =>
+      this.octokit.repos.getBranch({
+        owner,
+        repo: name,
+        branch,
+        headers: etag ? { 'if-none-match': etag } : {},
+      }),
+    );
+    const sha = data.name === branch ? data.commit?.sha : undefined;
+    return typeof sha === 'string' && /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(sha) ? sha : null;
+  }
+
   async listReleases(owner: string, name: string): Promise<GhRelease[]> {
     const data = await this.cond(`rel:${owner}/${name}`, (etag) =>
       this.octokit.repos.listReleases({

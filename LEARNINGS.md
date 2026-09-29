@@ -2,6 +2,8 @@
 
 One line per learning. The nightly analyzer (parked, p5) consumes this file; keep entries terse and factual.
 
+- 2026-09-29: A "latest run" is not a check of the latest commit. Store the run SHA and the branch head read with it; only equal SHAs may render as passing. Missing either SHA is unverified, not green.
+
 - 2026-09-28: Cross-request PR summaries need matching head and base identities before and after checks. Withhold the combined result when either changes or cannot be re-read; even matching reads remain observations, not atomic merge authorization.
 
 - 2026-09-28: A successful first page of checks is not evidence that all checks passed. Require complete counts, unique identities, the reviewed revision and explicit successful conclusions; keep observed check summaries separate from branch-protection or merge authorization.

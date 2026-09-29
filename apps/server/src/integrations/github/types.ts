@@ -48,5 +48,7 @@ export interface GitHubClient {
   /** The open PR whose head is `owner:branch`, or null when there is none. */
   openPrForBranch(owner: string, name: string, branch: string): Promise<GhPr | null>;
   latestRun(owner: string, name: string, branch?: string): Promise<GhRun | null>;
+  /** Current head commit of `branch`, or null when it cannot be read. */
+  branchHead(owner: string, name: string, branch: string): Promise<string | null>;
   listReleases(owner: string, name: string): Promise<GhRelease[]>;
 }

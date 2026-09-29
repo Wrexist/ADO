@@ -41,4 +41,6 @@ export const PROJECT_STATUS_TONE: Record<ProjectStatusKind, Tone> = {
   failed: 'danger',
   passing: 'success',
   testing: 'warning',
+  older: 'muted',
+  unverified: 'muted',
 };

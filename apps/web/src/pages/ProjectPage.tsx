@@ -4,7 +4,8 @@ import { PROJECT_FEATURES, type Automation, type BuildState, type ProjectFeature
 import { AgentTile, Button, Card, Chip, FeedRow, GradientProgress, Icon, IconTile, StatusDot, cx, type Tone } from '../kit';
 import { PageShell } from '../chrome/PageShell';
 import { useBus } from '../store/bus';
-import { CATEGORY_ICON, CATEGORY_TAG, CI_TONE, REPO_STATUS_LOOK } from '../lib/repoLook';
+import { CATEGORY_ICON, CATEGORY_TAG, REPO_STATUS_LOOK } from '../lib/repoLook';
+import { ciView } from '../lib/ci';
 import { LANG_LABEL, ENV_LABEL, ENV_TONE, asIcon } from '../views/ops/maps';
 import { timeAgo } from '../lib/time';
 import { dispatchPrompt } from '../lib/prompts';
@@ -374,13 +375,19 @@ export function ProjectPage() {
         {repo.prs != null ? <Meta label="Open PRs" value={repo.prs} /> : null}
         {repo.openTasks != null ? <Meta label="Open tasks" value={repo.openTasks} /> : null}
         <div className="ml-auto min-w-[200px]">
-          {repo.ci ? (
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 text-label text-text2">{repo.ci.label}</span>
-              <GradientProgress pct={repo.ci.pct} tone={CI_TONE[repo.ci.state]} />
-              <span className="w-10 shrink-0 text-right text-label tabular-nums text-text2">{repo.ci.state === 'success' || repo.ci.state === 'failed' ? `${repo.ci.pct}%` : repo.ci.state}</span>
-            </div>
-          ) : (
+          {repo.ci ? (() => {
+            const ci = ciView(repo.ci);
+            return (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-label text-text2">{repo.ci.label}</span>
+                  <GradientProgress pct={repo.ci.pct} tone={ci.tone} />
+                  <span className={cx('shrink-0 text-right text-label tabular-nums text-text2', ci.current ? 'w-10' : 'w-16')}>{ci.slot}</span>
+                </div>
+                {ci.note ? <p className="text-label text-text3">{ci.note}</p> : null}
+              </div>
+            );
+          })() : (
             <span className="text-label text-text3">No CI runs yet</span>
           )}
         </div>

@@ -275,7 +275,12 @@
       "id": "T03",
       "title": "Gammal CI-information",
       "acceptanceStatus": "not_run",
-      "specification": "**Grind:** R2. **Krav:** REQ02, REQ22. **Status:** not_run.\n\n**Givet:** Senast kända gröna CI gäller en äldre commit.\n\n**När:** Projektkortet visar en nyare commit.\n\n**Godkänt endast om:** Den äldre körningen visas med SHA och ålder, inte som godkänd kontroll av nya koden.\n\n**Gäller:** always."
+      "specification": "**Grind:** R2. **Krav:** REQ02, REQ22. **Status:** not_run.\n\n**Givet:** Senast kända gröna CI gäller en äldre commit.\n\n**När:** Projektkortet visar en nyare commit.\n\n**Godkänt endast om:** Den äldre körningen visas med SHA och ålder, inte som godkänd kontroll av nya koden.\n\n**Gäller:** always.",
+      "relatedEvidence": [
+        "apps/server/src/integrations/github/ciRevision.test.ts",
+        "apps/web/src/lib/ci.test.ts",
+        "docs/controlos/ci-revision.md"
+      ]
     },
     {
       "id": "T04",

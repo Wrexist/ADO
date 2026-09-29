@@ -31,11 +31,12 @@ describe('github mappers (pure)', () => {
 /** Deterministic fake — records call counts so we can assert ETag-style caching upstream. */
 class FakeClient implements GitHubClient {
   calls = { repos: 0, prs: 0, runs: 0, releases: 0 };
-  constructor(private repos: GhRepo[], private runs: Record<string, GhRun | null> = {}, private rels: Record<string, GhRelease[]> = {}) {}
+  constructor(private repos: GhRepo[], private runs: Record<string, GhRun | null> = {}, private rels: Record<string, GhRelease[]> = {}, public heads: Record<string, string | null> = {}) {}
   async listRepos() { this.calls.repos++; return this.repos; }
   async openPrCount() { this.calls.prs++; return 2; }
   async openPrForBranch() { return null; }
   async latestRun(_o: string, n: string) { this.calls.runs++; return this.runs[n] ?? null; }
+  async branchHead(_o: string, n: string) { return this.heads[n] ?? null; }
   async listReleases(_o: string, n: string) { this.calls.releases++; return this.rels[n] ?? []; }
 }
 

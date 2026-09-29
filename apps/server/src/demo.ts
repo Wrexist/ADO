@@ -4,6 +4,7 @@
  * land in 2.2–2.4/3/4). Deterministic and idempotent: stable ids + frozen fixture
  * clock; re-running changes nothing. This is the seed the P3.5 baselines render.
  */
+import { createHash } from 'node:crypto';
 import type { AutoReview } from '@ado/shared';
 import { MOCK_NOW, MOCK_VIEW_A, MOCK_VIEW_B } from '@ado/shared/mock';
 import type { Bus } from './bus';
@@ -35,7 +36,9 @@ export function seedDemo(bus: Bus): void {
         language: b?.language,
         stars: b?.stars,
         prs: b?.prs,
-        ci: { label: r.progress.label, pct: r.progress.pct, state: r.progress.state },
+        // Demo runs are fixtures for the repo's current head; the SHA is a stable synthetic id.
+        ci: { label: r.progress.label, pct: r.progress.pct, state: r.progress.state,
+          headSha: demoSha(r.id), branchHeadSha: demoSha(r.id), runTs: r.updatedTs },
         agents: (r.agents ?? []).map((a) => AGENT_MAP[a] ?? a),
       },
     });
@@ -251,4 +254,8 @@ export function seedDemo(bus: Bus): void {
       },
     });
   }
+}
+
+function demoSha(id: string): string {
+  return createHash('sha1').update(`demo:${id}`).digest('hex');
 }

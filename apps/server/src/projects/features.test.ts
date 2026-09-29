@@ -98,6 +98,7 @@ class FakeGh implements GitHubClient {
   async openPrCount(): Promise<number> { return 0; }
   async openPrForBranch(): Promise<GhPr | null> { return this.pr; }
   async latestRun(): Promise<GhRun | null> { return null; }
+  async branchHead(): Promise<string | null> { return null; }
   async listReleases(): Promise<GhRelease[]> { return []; }
 }
 

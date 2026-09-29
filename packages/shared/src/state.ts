@@ -51,12 +51,31 @@ export const isoTs = z.string().datetime({ offset: true });
 
 // —— entities —————————————————————————————————————————————————————————————————
 
+const CommitSha = z.string().regex(/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/);
+
 export const RepoCI = z.object({
   label: z.string(), // workflow name ("Build & Test")
   pct: z.number().min(0).max(100),
   state: CiState,
+  /** Commit the run executed against. Absent on legacy events → revision unverified. */
+  headSha: CommitSha.optional(),
+  /** When the run started (GitHub's timestamp, not the observation time). */
+  runTs: isoTs.optional(),
+  /** Default-branch head observed with the run; absent when it could not be read. */
+  branchHeadSha: CommitSha.optional(),
 });
 export type RepoCI = z.infer<typeof RepoCI>;
+
+/**
+ * Whether a CI result describes the branch's current code. Only `current` may render as
+ * a passing/failing check of that code; `older` is history for a previous commit and
+ * `unverified` means either revision is unknown. Never infer currency from timing.
+ */
+export type CiRevision = 'current' | 'older' | 'unverified';
+export function ciRevision(ci: RepoCI): CiRevision {
+  if (!ci.headSha || !ci.branchHeadSha) return 'unverified';
+  return ci.headSha === ci.branchHeadSha ? 'current' : 'older';
+}
 
 export const Repo = z.object({
   id: z.string(),
