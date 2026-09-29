@@ -4,7 +4,7 @@
 
 Projektkort och Ops kunde visa en äldre commits gröna körning som godkänd kontroll direkt efter en push. CI-resultatet bär nu körningens SHA, starttid och default-branchens aktuella head (exakt branchnamn). Endast lika SHA får visas som godkänd/misslyckad. Äldre körningar visas dämpade med SHA och ålder; saknad SHA ger “unverified”, även för äldre lagrade händelser.
 
-`scripts/verify.sh` passerade typkontroll, lint, 479 tester i 104 filer och byggning; `npm run smoke` passerade. Command/Ops-bilderna är oförändrade eftersom DEMO-körningarna gäller aktuell head. Äldre-commit-läget är bevisat med enhetstester, inte med renderat webbläsarprov. Lokala utcheckningar med opushade commits jämförs inte. Underlag: `docs/controlos/ci-revision.md`. Full T03 och R1–R4 återstår; fortsatt 18/46 lokalt godkända scenarier.
+`scripts/verify.sh` passerade typkontroll, lint, 479 tester i 104 filer och byggning; `npm run smoke` passerade. Command/Ops-bilderna är oförändrade eftersom DEMO-körningarna gäller aktuell head. Ett webbläsarprov genom byggd webb och produktionsserver visar äldre-commit-läget på desktop/mobil och “Passing” som positiv kontroll (`scripts/probe-ci-revision.mts`). Lokala utcheckningar med opushade commits jämförs inte. Underlag: `docs/controlos/ci-revision.md`. Full T03 och R1–R4 återstår; fortsatt 18/46 lokalt godkända scenarier.
 
 ## PR-checks kräver komplett framgångsunderlag
 

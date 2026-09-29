@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-29T07:33:13.621Z",
+  "baseRevision": "443d9ed0cc84e01ff7d25ecdf6bd76fb4c05a4b8",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.18.0",
+    "chromium": "153.0.8010.12"
+  },
+  "checks": [
+    "older green run shows SHA and age on repositories, project and mobile views",
+    "Ops shows Older commit and no Passing",
+    "matching run renders Passing (positive control)",
+    "390 px without horizontal overflow",
+    "no page errors"
+  ],
+  "sourceSha256": {
+    "scripts/probe-ci-revision.mts": "9a3b11e9544f656a4e69c4f62cffff0248c6836283f6b1d5aa31c2d39da1b7f3",
+    "apps/web/src/lib/ci.ts": "33320261a8d9d72544051f57643852afc1c88dc3c61e1f78ad279617aa188c5d",
+    "apps/web/src/lib/selectors.ts": "59582fbf56fb12ac3562ece945e28cc092d7999d54d5e5666075b596972684dc",
+    "apps/web/src/views/command/RepoCard.tsx": "5511222375c9aa5fbca6ce8acd78e143148adead9d1e0a6c72061446d3f4401a",
+    "apps/web/src/pages/ProjectPage.tsx": "5c5e6b4455460206a4a681a9b00d95b19771bee6bbc577eda206e38cb6166c45",
+    "apps/web/src/views/MobileOverview.tsx": "18617b91e212954eaef13e7ab7c2322050b955908f73ca806efb7e0b142c3d66",
+    "packages/shared/src/state.ts": "76b5de9beacabaad5a8b58ae38b40881dee8fde0e6ce3007e742184a44fad0bc"
+  },
+  "screenshotSha256": {
+    "smoke-shots/ci-revision-repositories-1536.png": "ea957824961613ea192d0d658d0abffed2914915d3e884131a84ea8680ff1844",
+    "smoke-shots/ci-revision-project-1536.png": "3c7cc447beb80b1199a729f31fb44323aa7fa4e213f7959dc82221986adc2cce",
+    "smoke-shots/ci-revision-ops-older-1536.png": "1652631f75d961ed65db91de1d9127bfa666847a23496881fa60029051222ec2",
+    "smoke-shots/ci-revision-ops-current-1536.png": "4e0c190267a900fb044e0aecfb233c8a95b0308abfe84be19ca9813088d53e10",
+    "smoke-shots/ci-revision-mobile-390.png": "c6e5e24c7f0c8b01fd7e3527d64efa4caa7bf57e7386dfed12b459e1b0ec2876"
+  },
+  "scope": "Synthetic CI events through the production server and built renderer. No GitHub request."
+}

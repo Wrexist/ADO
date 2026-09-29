@@ -33,8 +33,14 @@ canonical `/command` and `/ops` screenshots are unchanged.
 Limits: the comparison is against the GitHub default branch, not a local
 checkout with unpushed commits or another checked-out branch. Two reads are not
 an atomic snapshot; a push right after the head read is caught on the next
-sync. The older-commit state is proven by unit tests, not a rendered browser
-probe. Full T03 acceptance remains open.
+sync. Full T03 acceptance remains open.
 
 Verification (2026-09-29): focused tests 83/83; `scripts/verify.sh` passed
 typecheck, lint, 479 tests in 104 files and build; `npm run smoke` passed.
+
+Rendered probe: `node --import tsx scripts/probe-ci-revision.mts` publishes
+synthetic CI events through the production server and the built renderer. The
+older green run shows SHA and age on Repositories, the project page and the
+390 px overview; Ops shows "Older commit" and no "Passing"; a matching run
+renders "Passing" as positive control. No page errors or horizontal overflow.
+Record: `ci-revision-evidence.json`; images `smoke-shots/ci-revision-*.png`.

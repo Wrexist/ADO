@@ -279,7 +279,8 @@
       "relatedEvidence": [
         "apps/server/src/integrations/github/ciRevision.test.ts",
         "apps/web/src/lib/ci.test.ts",
-        "docs/controlos/ci-revision.md"
+        "docs/controlos/ci-revision.md",
+        "scripts/probe-ci-revision.mts"
       ]
     },
     {
