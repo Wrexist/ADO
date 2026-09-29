@@ -1114,7 +1114,9 @@
         "apps/server/src/app.test.ts",
         "apps/server/src/securityOrigin.test.ts",
         "apps/server/src/security.ts",
-        "docs/controlos/incident-export.md"
+        "docs/controlos/incident-export.md",
+        "apps/server/src/securityBoundaries.test.ts",
+        "docs/controlos/hostile-origin.md"
       ],
       "coverageNote": "Related implementation/regression evidence only; the complete acceptance scenario is not certified. An export regression reproduced a hostile Origin receiving a response with a valid key. Explicit server Origin checks now precede CORS preflight and ignore fabricated proxy headers, with independent Host/key tests and trusted-origin 401 preservation. This does not certify private remote connections, device sessions or the complete browser attack scenario."
     },

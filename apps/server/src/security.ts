@@ -60,12 +60,8 @@ export function registerSecurity(app: FastifyInstance, env: Env): void {
   });
 }
 
-/** SSE token check — query param or header (used inside the /events route). */
+/** SSE token check — header only. A key in the URL leaks into logs, history and referrers. */
 export function sseAuthorized(env: Env, req: FastifyRequest): boolean {
-  const q = (req.query as Record<string, unknown>).token;
   const h = req.headers['x-acc-token'];
-  return (
-    tokenMatches(env.accToken, typeof q === 'string' ? q : undefined) ||
-    tokenMatches(env.accToken, typeof h === 'string' ? h : undefined)
-  );
+  return tokenMatches(env.accToken, typeof h === 'string' ? h : undefined);
 }
